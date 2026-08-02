@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.example.ai_companion.AiCompanionMod;
+import com.example.ai_companion.agent.AgentMode;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.IOException;
@@ -20,6 +21,7 @@ public final class ClientSettings {
 
 	public String primaryKey = "V";
 	public String secondaryKey = "B";
+	public String defaultAgentMode = AgentMode.HUNTER.name();
 	public String apiBase = "https://api.openai.com/v1";
 	public String model = "gpt-5-mini";
 	public boolean goldenSpearRushEnabled = true;
@@ -42,6 +44,9 @@ public final class ClientSettings {
 			if (loaded != null && !root.has("f3BGlowingHitboxesEnabled")) {
 				loaded.f3BGlowingHitboxesEnabled = true;
 			}
+			if (loaded != null && !root.has("defaultAgentMode")) {
+				loaded.defaultAgentMode = AgentMode.HUNTER.name();
+			}
 			return loaded == null ? new ClientSettings() : loaded.normalized();
 		} catch (Exception error) {
 			AiCompanionMod.LOGGER.error("Cannot read client UI settings {}; using defaults", PATH, error);
@@ -52,6 +57,11 @@ public final class ClientSettings {
 	public ClientSettings normalized() {
 		primaryKey = normalizeKey(primaryKey, "V");
 		secondaryKey = normalizeKey(secondaryKey, "B");
+		try {
+			defaultAgentMode = AgentMode.valueOf(defaultAgentMode).name();
+		} catch (RuntimeException ignored) {
+			defaultAgentMode = AgentMode.HUNTER.name();
+		}
 		apiBase = apiBase == null || apiBase.isBlank() ? "https://api.openai.com/v1" : apiBase.strip();
 		model = model == null || model.isBlank() ? "gpt-5-mini" : model.strip();
 		durabilityEvery = Math.clamp(durabilityEvery, 1, 1000);
@@ -59,6 +69,18 @@ public final class ClientSettings {
 		hungerCost = Math.clamp(hungerCost, 0, 20);
 		rushStrength = Math.clamp(rushStrength, 0.1, 4.0);
 		return this;
+	}
+
+	public AgentMode defaultAgentMode() {
+		try {
+			return AgentMode.valueOf(defaultAgentMode);
+		} catch (RuntimeException ignored) {
+			return AgentMode.HUNTER;
+		}
+	}
+
+	public void setDefaultAgentMode(AgentMode mode) {
+		defaultAgentMode = (mode == null ? AgentMode.HUNTER : mode).name();
 	}
 
 	public int primaryCode() {

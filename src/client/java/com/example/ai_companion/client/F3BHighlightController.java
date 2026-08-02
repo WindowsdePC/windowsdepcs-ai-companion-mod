@@ -1,5 +1,6 @@
 package com.example.ai_companion.client;
 
+import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.debug.DebugScreenEntries;
 import net.minecraft.world.entity.Entity;
@@ -22,6 +23,8 @@ public final class F3BHighlightController {
 	}
 
 	public static boolean shouldGlow(Minecraft minecraft, Entity entity) {
-		return replacesHitboxes(minecraft) && entity != minecraft.getCameraEntity();
+		if (!replacesHitboxes(minecraft) || entity.isInvisible()) return false;
+		return entity != minecraft.getCameraEntity()
+			|| minecraft.options.getCameraType() != CameraType.FIRST_PERSON;
 	}
 }

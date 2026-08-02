@@ -1,10 +1,13 @@
 package com.example.ai_companion.client;
 
+import com.example.ai_companion.agent.AgentMode;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+
+import java.util.Optional;
 
 /** Kept isolated so EclipseUI-only installations never resolve Cloth Config classes. */
 final class ClothConfigApiBridge {
@@ -23,12 +26,20 @@ final class ClothConfigApiBridge {
 			.setTitle(Component.literal("WindowsdePC's AI Companion Mod"));
 		ConfigEntryBuilder entries = builder.entryBuilder();
 
-		category(builder, entries, "AI系统", "保存或返回后进入完整 AI 管理中心");
+		ConfigCategory ai = builder.getOrCreateCategory(Component.literal("AI系统"));
+		ai.addEntry(entries.startEnumSelector(Component.literal("默认 AI 模式"), AgentMode.class,
+			settings.defaultAgentMode()).setDefaultValue(AgentMode.HUNTER)
+			.setSaveConsumer(settings::setDefaultAgentMode).build());
+		ai.addEntry(entries.startTextDescription(Component.literal("保存或返回后进入完整 AI 管理中心"))
+			.build());
+
 		ConfigCategory shortcuts = builder.getOrCreateCategory(Component.literal("快捷键修改"));
 		shortcuts.addEntry(entries.startStrField(Component.literal("快捷键一"), settings.primaryKey)
-			.setDefaultValue("V").setSaveConsumer(value -> settings.primaryKey = value).build());
+			.setDefaultValue("V").setErrorSupplier(ClothConfigApiBridge::keyError)
+			.setSaveConsumer(value -> settings.primaryKey = value).build());
 		shortcuts.addEntry(entries.startStrField(Component.literal("快捷键二"), settings.secondaryKey)
-			.setDefaultValue("B").setSaveConsumer(value -> settings.secondaryKey = value).build());
+			.setDefaultValue("B").setErrorSupplier(ClothConfigApiBridge::keyError)
+			.setSaveConsumer(value -> settings.secondaryKey = value).build());
 
 		ConfigCategory gameplay = builder.getOrCreateCategory(Component.literal("游戏增强"));
 		gameplay.addEntry(entries.startBooleanToggle(Component.literal("金矛二级突进"),
@@ -40,6 +51,12 @@ final class ClothConfigApiBridge {
 		gameplay.addEntry(entries.startIntSlider(Component.literal("饥饿消耗间隔"),
 			settings.hungerEvery, 1, 1000).setDefaultValue(30)
 			.setSaveConsumer(value -> settings.hungerEvery = value).build());
+		gameplay.addEntry(entries.startIntSlider(Component.literal("饥饿消耗点数"),
+			settings.hungerCost, 0, 20).setDefaultValue(2)
+			.setSaveConsumer(value -> settings.hungerCost = value).build());
+		gameplay.addEntry(entries.startDoubleField(Component.literal("突进强度"), settings.rushStrength)
+			.setMin(0.1).setMax(4.0).setDefaultValue(0.916)
+			.setSaveConsumer(value -> settings.rushStrength = value).build());
 
 		ConfigCategory client = builder.getOrCreateCategory(Component.literal("客户端增强"));
 		client.addEntry(entries.startBooleanToggle(Component.literal("F3+B 使用原版发光轮廓"),
@@ -60,5 +77,10 @@ final class ClothConfigApiBridge {
 			String name, String description) {
 		builder.getOrCreateCategory(Component.literal(name))
 			.addEntry(entries.startTextDescription(Component.literal(description)).build());
+	}
+
+	private static Optional<Component> keyError(String value) {
+		return value != null && value.matches("[A-Za-z]")
+			? Optional.empty() : Optional.of(Component.literal("只支持一个 A-Z 字母"));
 	}
 }

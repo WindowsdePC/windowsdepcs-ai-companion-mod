@@ -22,15 +22,21 @@ loom {
 }
 
 repositories {
-	maven { name = "Modrinth"; url = "https://api.modrinth.com/maven" }
+	maven {
+		name = "Modrinth"
+		url = "https://api.modrinth.com/maven"
+		content { includeGroup "maven.modrinth" }
+	}
 }
 
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	implementation "maven.modrinth:eclipseui:${project.eclipse_ui_version}"
-	implementation "maven.modrinth:9s6osm5g:${project.cloth_config_version}"
+
+	// Alternative client UI backends. Neither is bundled; runtime routing prefers EclipseUI.
+	modCompileOnly "maven.modrinth:eclipseui:EW0sBZm4"
+	modCompileOnly "maven.modrinth:cloth-config:Nv3xnWXd"
 }
 
 processResources {

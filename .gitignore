@@ -4,4 +4,5 @@ run/
 *.iml
 .idea/
 .vscode/
+.tooling/
 config/mc-ai-players.json

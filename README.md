@@ -1,120 +1,137 @@
-# WindowsdePC's AI Companion Mod 0.5.0（Fabric 26.2）
+# WindowsdePC's AI Companion Mod
 
-包含 OpenAI Chat Completions 兼容 API、Fabric FakePlayer、猎人/队友/PvP 教练模式、
-天眼快照、EclipseUI/Cloth Config 双 UI、F3+B 发光轮廓，以及可配置的金矛二级突进功能。
+WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与游戏增强模组。
+它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
+动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-## 构建
+当前版本：`0.5.1`
 
-要求 JDK 25：
+## 环境要求
+
+- Minecraft `26.2`
+- Fabric Loader `0.19.3` 或更高版本
+- Fabric API `0.155.2+26.2` 或兼容版本
+- Java `25`
+- 下列 UI 支持库二选一：
+  - [EclipseUI](https://modrinth.com/mod/eclipseui) `1.0.5+mc26.2-rc-2` 或兼容版本（优先）
+  - [Cloth Config](https://modrinth.com/mod/cloth-config) `26.2.155` 或兼容版本（备用）
+
+当两个 UI 库同时安装时，模组只使用 EclipseUI；安装 EclipseUI 后不需要 Cloth Config。
+如果两者都未安装，客户端会明确报告缺少 UI 支持库。
+
+## 主要功能
+
+### AI 玩家
+
+- 创建、批量创建、列出和移除具有独立名称与 UUID 的可见 `FakePlayer`。
+- 猎人、队友、PvP 教练和空闲四种任务模式。
+- 选择当前在线玩家作为目标，并为指定 AI 分配提示词预设。
+- 通过异步 OpenAI 兼容 API 请求取得 `say`、`move`、`wait` 白名单动作。
+- 天眼快照记录目标当时的维度、坐标与采集时间，不传送 AI。
+- 支持 Mojang 纹理值与签名形式的自定义皮肤数据。
+
+### 双 UI 配置
+
+同时按 `V+B` 打开配置界面；组合键可在模组界面中修改，不注册到原版“控制”列表。
+
+EclipseUI 模式提供分类卡片、图标、开关、滑块、下拉菜单和说明文字；未安装 EclipseUI
+时使用 Cloth Config 备用界面。两种后端都包含九个主栏目：
+
+1. AI系统
+2. 快捷键修改
+3. 游戏增强
+4. 客户端增强
+5. 小游戏中心
+6. 休闲系统
+7. 性能优化
+8. 兼容设置
+9. 高级设置
+
+“AI系统”可进入完整 AI 管理器，继续使用批量生成、在线玩家选择、模式分配、API 配置和
+多行提示词编辑等既有功能。小游戏、休闲和性能栏目是后续设计文档功能的固定入口，相关
+功能会按版本逐项启用。
+
+### F3+B 原版发光轮廓
+
+“客户端增强”与完整管理器的“其他”页包含 `F3+B 发光轮廓` 开关，默认开启。
+
+- 按下 F3+B 后，实体碰撞箱线框会替换为原版光灵箭使用的发光轮廓。
+- 实现直接接入 `Minecraft.shouldEntityAppearGlowing`，不复制轮廓渲染算法。
+- 仅改变当前客户端的渲染判定，不给实体写入发光状态，也不影响服务器或其他玩家。
+- 关闭选项后恢复原版 F3+B 实体碰撞箱样式。
+- 从 0.4.1 升级时，旧客户端配置会自动迁移为默认开启。
+
+### 金矛突进
+
+- 默认开启，金矛无需附魔即可获得二级突进的水平冲量。
+- 默认每 15 次消耗 1 点耐久，每 30 次消耗 2 点饥饿值。
+- 创造模式不消耗耐久或饥饿。
+- 金矛从原版突进附魔支持标签中排除；其他材质的矛仍需正常附魔。
+- 开关、消耗间隔、饥饿点数和冲量强度均可在 UI 中修改。
+
+## API 与密钥
+
+模组支持 OpenAI Chat Completions 兼容接口。API 地址、模型和令牌可在完整 AI 管理器中
+配置；客户端不会保存令牌。专用服务器推荐使用环境变量：
 
 ```bash
-./gradlew clean build
+MCAI_API_KEY=your_api_key
 ```
 
-Windows：
+不要把 API 密钥、GitHub Token、服务器配置或 `.env` 文件提交到仓库。
 
-```powershell
-.\gradlew.bat clean build
-```
+## 游戏内命令
 
-输出：
-
-- `windowsdepcs-ai-companion-0.5.0.jar`：放进 `mods/` 的正式模组；
-- `windowsdepcs-ai-companion-0.5.0-sources.jar`：源码；
-- `windowsdepcs-ai-companion-0.5.0-javadoc.jar`：开发文档。
-
-## 统一游戏内 UI
-
-进入世界或服务器后同时按 `V+B` 打开。这个快捷键不会占用原版“按键绑定”列表，
-可在“快捷键修改”中把两个按键改为任意 A-Z 字母组合。
-
-界面会优先使用 EclipseUI；没有 EclipseUI 时使用 Cloth Config。两者至少安装一个，
-否则客户端会明确报错并停止加载。界面共有九个主分类：`AI系统`、`快捷键修改`、
-`游戏增强`、`客户端增强`、`小游戏中心`、`休闲系统`、`性能优化`、`兼容设置`、
-`高级设置`。保存或返回后可进入完整的 AI 管理、API 与提示词工作台。
-
-栏目：
-
-- `AI 管理`：批量生成 1-20 个 AI、展开选择当前在线玩家、选择追杀/队友/PvP
-  教练模式、分配提示词并触发 AI 决策；
-- `API`：设置 OpenAI 兼容接口地址、模型和令牌；
-- `提示词`：编辑、创建、删除、恢复并分配命名预设；
-- `游戏增强`：设置金矛突进、消耗数值与冲量强度；
-- `客户端增强`：设置 F3+B 实体显示行为。
-
-内置提示词：
-
-- `idle`：自由生存玩家；
-- `hunter`：猎人/追杀；
-- `teammate`：队友协作；
-- `pvp_coach`：与指定玩家对练并提供 PvP 建议。
-
-提示词允许正常玩家可以进行的探索、挖掘、建造、合成、战斗、交易和合作，只明确
-禁止作弊、管理员命令、创造能力、传送、复制和未授权透视信息。`{targets}` 会在
-决策时替换为 UI 中选择的目标玩家。
-
-修改服务器配置、全局提示词和 AI 分配需要管理员权限。API 令牌不会写入客户端
-设置文件；推荐专用服务器使用 `MCAI_API_KEY` 环境变量。
-
-## 金矛突进
-
-- 默认开启；
-- 金矛无需附魔，攻击实体时获得原版突进 II 的水平冲量，默认强度 `0.916`；
-- 每15次突进消耗1点耐久；
-- 每30次突进消耗2点饥饿值，即一个完整鸡腿图标；
-- 创造模式不消耗耐久或饥饿；
-- 金矛从原版 `enchantable/lunge` 标签中排除，不能正常获得突进附魔；
-- 木、石、铜、铁、钻石、下界合金矛仍需正常附魔才能获得原版突进；
-- 开关与所有数值可在“游戏增强”栏目修改。
-
-## F3+B 发光轮廓
-
-- 默认开启且只影响本地客户端；
-- 开启时，原版 F3+B 的实体碰撞箱线框会替换为原版发光轮廓效果；
-- 关闭后，F3+B 恢复原版碰撞箱显示；
-- 不修改服务端实体状态，也不会给实体添加药水效果。
-
-## 命令备用入口
+UI 是主要入口，管理员也可以使用命令：
 
 ```text
 /aiplayer create <名称>
 /aiplayer create-many <名称前缀> <1-20>
+/aiplayer remove <AI名>
+/aiplayer list
 /aiplayer hunt <AI名> <玩家名>
 /aiplayer team <AI名> <玩家名>
 /aiplayer coach <AI名> <玩家名>
 /aiplayer idle <AI名>
+/aiplayer eye <AI名>
 /aiplayer ask <AI名> <任务>
 /aiplayer prompt list
 /aiplayer prompt assign <AI名> <预设ID>
 /aiplayer feature status
 ```
 
+修改服务器 API、全局提示词、AI 分配和玩法数值需要管理员权限。
+
+## 构建
+
+仓库包含 Gradle Wrapper。使用 JDK 25：
+
+Linux / macOS：
+
+```bash
+./gradlew clean build
+```
+
+Windows PowerShell：
+
+```powershell
+.\gradlew.bat clean build
+```
+
+构建产物位于 `build/libs/`：
+
+- `windowsdepcs-ai-companion-0.5.1.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.5.1-sources.jar`：源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.5.1-javadoc.jar`：Java API 文档包。
+
+普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
+
 ## 当前边界
 
-- 已实现：可见 FakePlayer、API 调用、统一 UI、模式与目标、可编辑提示词、短距离
-  `say/move/wait` 动作、天眼快照和金矛突进。
-- 仍未实现：复杂地形寻路、完整挖掘/战斗/背包执行器和 AI 语音协议。
-- PvP 教练目前拥有独立目标状态和提示词，但受现有 `say/move/wait` 执行器限制，
-  尚不能完成完整自动 PvP。
-- 目前模组版本为 Minecraft Fabric `26.2`。
+0.5.1 保留现有 AI 决策与任务框架，但复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
+多 AI 共识与领队选举、Simple Voice Chat 协议等仍在后续版本开发。设计路线见
+[`docs/My Mod Design Document.md`](docs/My%20Mod%20Design%20Document.md)。
 
-## 玩家安装说明
+## 许可证
 
-- 普通玩家只需下载并放入 `mods` 文件夹：
-
-- `windowsdepcs-ai-companion-版本号.jar`
-
-- 还需要安装：
-
-- Fabric Loader
-- Fabric API
-- EclipseUI 1.0.5（优先）或 Cloth Config 26.2（二选一，至少安装一个）
-- 与模组版本匹配的 Minecraft 26.2
-- Java 25
-
-- 不要放入 `mods`：
-
-- `-sources.jar`
-- `-javadoc.jar`
-- `Source code(zip)`
-- `SHA-256_SUMS.txt`
+本项目使用 [MIT License](LICENSE)。

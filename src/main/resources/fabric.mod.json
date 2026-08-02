@@ -3,7 +3,7 @@
 	"id": "ai_companion",
 	"version": "${version}",
 	"name": "WindowsdePC's AI Companion Mod",
-	"description": "AI controlled fake players, unified in-game configuration UI, and optional golden-spear rush.",
+	"description": "AI-controlled players, dual configuration UIs, client enhancements, and optional gameplay features.",
 	"authors": ["WindowsdePC"],
 	"license": "MIT",
 	"environment": "*",

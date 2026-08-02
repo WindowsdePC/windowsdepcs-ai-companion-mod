@@ -88,6 +88,7 @@ public final class PromptConfigScreen extends Screen {
 		secondaryKey = settings.secondaryKey;
 		apiBase = settings.apiBase;
 		apiModel = settings.model;
+		selectedMode = settings.defaultAgentMode();
 		reloadPromptIds();
 		if (!promptIds.isEmpty()) loadPrompt(promptIds.getFirst());
 	}
@@ -392,6 +393,8 @@ public final class PromptConfigScreen extends Screen {
 	private void applyAgentSetup() {
 		try {
 			validateAgent();
+			settings.setDefaultAgentMode(selectedMode);
+			settings.save();
 			if (selectedPlayer.isBlank()) throw new IllegalArgumentException("请展开并选择当前世界玩家");
 			String modeCommand = switch (selectedMode) {
 				case HUNTER -> "hunt";
@@ -402,7 +405,7 @@ public final class PromptConfigScreen extends Screen {
 			sendCommand("aiplayer " + modeCommand + " " + agentName + " " + selectedPlayer);
 			if (!promptId.isBlank()) sendCommand("aiplayer prompt assign " + agentName + " " + promptId);
 			status = "已应用 " + modeLabel() + "，目标 " + selectedPlayer + "，提示词 " + promptId;
-		} catch (RuntimeException error) {
+		} catch (RuntimeException | IOException error) {
 			status = "应用失败: " + error.getMessage();
 		}
 	}
