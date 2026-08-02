@@ -2,6 +2,8 @@ package com.example.ai_companion.client;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.example.ai_companion.AiCompanionMod;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -25,6 +27,7 @@ public final class ClientSettings {
 	public int hungerEvery = 30;
 	public int hungerCost = 2;
 	public double rushStrength = 0.916;
+	public boolean f3BGlowingHitboxesEnabled = true;
 
 	public static ClientSettings load() {
 		try {
@@ -33,8 +36,12 @@ public final class ClientSettings {
 				created.save();
 				return created;
 			}
-			ClientSettings loaded = GSON.fromJson(Files.readString(PATH, StandardCharsets.UTF_8),
-				ClientSettings.class);
+			String json = Files.readString(PATH, StandardCharsets.UTF_8);
+			JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+			ClientSettings loaded = GSON.fromJson(root, ClientSettings.class);
+			if (loaded != null && !root.has("f3BGlowingHitboxesEnabled")) {
+				loaded.f3BGlowingHitboxesEnabled = true;
+			}
 			return loaded == null ? new ClientSettings() : loaded.normalized();
 		} catch (Exception error) {
 			AiCompanionMod.LOGGER.error("Cannot read client UI settings {}; using defaults", PATH, error);

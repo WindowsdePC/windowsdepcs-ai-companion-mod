@@ -17,11 +17,31 @@ import java.util.List;
 
 /** Unified in-game configuration UI with AI, prompt and optional-feature sections. */
 public final class PromptConfigScreen extends Screen {
-	private enum Tab { AI, API, PROMPTS, OTHER }
+	private enum Tab {
+		AI_SYSTEM("AI系统"),
+		SHORTCUTS("快捷键修改"),
+		GAMEPLAY("游戏增强"),
+		CLIENT("客户端增强"),
+		MINIGAMES("小游戏中心"),
+		LEISURE("休闲系统"),
+		PERFORMANCE("性能优化"),
+		COMPATIBILITY("兼容设置"),
+		ADVANCED("高级设置");
+
+		private final String label;
+
+		Tab(String label) {
+			this.label = label;
+		}
+	}
+
+	private enum AiSection { MANAGEMENT, API, PROMPTS }
 
 	private final PromptStore promptStore;
 	private final ClientSettings settings;
-	private Tab tab = Tab.AI;
+	private final UiBackend backend;
+	private Tab tab = Tab.AI_SYSTEM;
+	private AiSection aiSection = AiSection.MANAGEMENT;
 	private String status = "修改服务器设置和分配 AI 需要管理员权限";
 
 	private String baseName = "AI_";
@@ -38,6 +58,7 @@ public final class PromptConfigScreen extends Screen {
 	private String promptText = "";
 
 	private boolean rushEnabled;
+	private boolean glowingHitboxesEnabled;
 	private String durabilityEvery;
 	private String hungerEvery;
 	private String hungerCost;
@@ -52,11 +73,13 @@ public final class PromptConfigScreen extends Screen {
 	private EditBox agentBox;
 	private MultiLineEditBox promptBox;
 
-	public PromptConfigScreen(PromptStore promptStore, ClientSettings settings) {
+	public PromptConfigScreen(PromptStore promptStore, ClientSettings settings, UiBackend backend) {
 		super(Component.literal("WindowsdePC's AI Companion Mod · 统一设置"));
 		this.promptStore = promptStore;
 		this.settings = settings;
+		this.backend = backend;
 		rushEnabled = settings.goldenSpearRushEnabled;
+		glowingHitboxesEnabled = settings.f3BGlowingHitboxesEnabled;
 		durabilityEvery = Integer.toString(settings.durabilityEvery);
 		hungerEvery = Integer.toString(settings.hungerEvery);
 		hungerCost = Integer.toString(settings.hungerCost);
@@ -76,26 +99,59 @@ public final class PromptConfigScreen extends Screen {
 
 	private void rebuildPanel() {
 		clearWidgets();
-		int panelWidth = Math.min(780, width - 24);
-		int left = (width - panelWidth) / 2;
-		int tabWidth = (panelWidth - 12) / 4;
-		addRenderableWidget(Button.builder(Component.literal("AI 管理"), b -> switchTab(Tab.AI))
-			.bounds(left, 25, tabWidth, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("API"), b -> switchTab(Tab.API))
-			.bounds(left + tabWidth + 4, 25, tabWidth, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("提示词"), b -> switchTab(Tab.PROMPTS))
-			.bounds(left + (tabWidth + 4) * 2, 25, tabWidth, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("其他"), b -> switchTab(Tab.OTHER))
-			.bounds(left + (tabWidth + 4) * 3, 25, tabWidth, 20).build());
+		int fullWidth = Math.min(920, width - 24);
+		int left = (width - fullWidth) / 2;
+		int sidebarWidth = 148;
+		int panelLeft = left + sidebarWidth + 10;
+		int panelWidth = fullWidth - sidebarWidth - 10;
+		int y = 28;
+		for (Tab candidate : Tab.values()) {
+			String marker = candidate == tab ? "▶ " : "  ";
+			addRenderableWidget(Button.builder(Component.literal(marker + candidate.label),
+				button -> switchTab(candidate)).bounds(left, y, sidebarWidth, 20).build());
+			y += 23;
+		}
 
 		switch (tab) {
-			case AI -> buildAiPanel(left, panelWidth);
-			case API -> buildApiPanel(left, panelWidth);
-			case PROMPTS -> buildPromptPanel(left, panelWidth);
-			case OTHER -> buildOtherPanel(left, panelWidth);
+			case AI_SYSTEM -> buildAiSystemPanel(panelLeft, panelWidth);
+			case SHORTCUTS -> buildShortcutPanel(panelLeft, panelWidth);
+			case GAMEPLAY -> buildGameplayPanel(panelLeft, panelWidth);
+			case CLIENT -> buildClientPanel(panelLeft, panelWidth);
+			case MINIGAMES -> buildPlaceholderPanel("小游戏中心将在后续独立功能版本中逐项开放");
+			case LEISURE -> buildPlaceholderPanel("休闲系统将在后续独立功能版本中逐项开放");
+			case PERFORMANCE -> buildPlaceholderPanel("性能优化选项将在对应功能实现后加入");
+			case COMPATIBILITY -> buildPlaceholderPanel("当前 UI 后端：" + backend.displayName()
+				+ "；Simple Voice Chat 为可选兼容项");
+			case ADVANCED -> buildPlaceholderPanel("高级设置保留给调试、迁移与实验功能");
 		}
 		addRenderableWidget(Button.builder(Component.literal("完成"), b -> onClose())
-			.bounds(left + panelWidth - 90, height - 25, 90, 20).build());
+			.bounds(left + fullWidth - 90, height - 25, 90, 20).build());
+	}
+
+	private void buildAiSystemPanel(int left, int panelWidth) {
+		int sectionWidth = (panelWidth - 8) / 3;
+		addRenderableWidget(Button.builder(Component.literal("AI 管理"), b -> switchAiSection(AiSection.MANAGEMENT))
+			.bounds(left, 28, sectionWidth, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("API"), b -> switchAiSection(AiSection.API))
+			.bounds(left + sectionWidth + 4, 28, sectionWidth, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("提示词"), b -> switchAiSection(AiSection.PROMPTS))
+			.bounds(left + (sectionWidth + 4) * 2, 28, sectionWidth, 20).build());
+		switch (aiSection) {
+			case MANAGEMENT -> buildAiPanel(left, panelWidth);
+			case API -> buildApiPanel(left, panelWidth);
+			case PROMPTS -> buildPromptPanel(left, panelWidth);
+		}
+	}
+
+	private void switchAiSection(AiSection next) {
+		capturePromptDraft();
+		aiSection = next;
+		playersExpanded = false;
+		rebuildPanel();
+	}
+
+	private void buildPlaceholderPanel(String message) {
+		status = message;
 	}
 
 	private void buildApiPanel(int left, int panelWidth) {
@@ -225,7 +281,7 @@ public final class PromptConfigScreen extends Screen {
 			.bounds(left + (buttonWidth + gap) * 6, y, buttonWidth, 20).build());
 	}
 
-	private void buildOtherPanel(int left, int panelWidth) {
+	private void buildGameplayPanel(int left, int panelWidth) {
 		addRenderableWidget(Button.builder(Component.literal("金矛二级突进：" + (rushEnabled ? "开启" : "关闭")),
 			b -> {
 				rushEnabled = !rushEnabled;
@@ -238,19 +294,34 @@ public final class PromptConfigScreen extends Screen {
 		EditBox strength = numberBox(left + 600, 120, rushStrength, 5, value -> rushStrength = value);
 		strength.setWidth(Math.max(80, panelWidth - 600));
 
-		EditBox primary = addRenderableWidget(new EditBox(font, left, 205, 90, 20,
+		addRenderableWidget(Button.builder(Component.literal("保存游戏增强设置"), b -> saveGameplay())
+			.bounds(left, 190, 220, 20).build());
+	}
+
+	private void buildShortcutPanel(int left, int panelWidth) {
+		EditBox primary = addRenderableWidget(new EditBox(font, left, 85, 120, 20,
 			Component.literal("快捷键一")));
 		primary.setMaxLength(1);
 		primary.setValue(primaryKey);
 		primary.setResponder(value -> primaryKey = value);
-		EditBox secondary = addRenderableWidget(new EditBox(font, left + 100, 205, 90, 20,
+		EditBox secondary = addRenderableWidget(new EditBox(font, left + 135, 85, 120, 20,
 			Component.literal("快捷键二")));
 		secondary.setMaxLength(1);
 		secondary.setValue(secondaryKey);
 		secondary.setResponder(value -> secondaryKey = value);
 
-		addRenderableWidget(Button.builder(Component.literal("保存“其他”设置"), b -> saveOther())
-			.bounds(left, 250, 220, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("保存快捷键"), b -> saveShortcuts())
+			.bounds(left, 130, 180, 20).build());
+	}
+
+	private void buildClientPanel(int left, int panelWidth) {
+		addRenderableWidget(Button.builder(Component.literal("F3+B 发光轮廓："
+				+ (glowingHitboxesEnabled ? "开启" : "关闭")), b -> {
+			glowingHitboxesEnabled = !glowingHitboxesEnabled;
+			rebuildPanel();
+		}).bounds(left, 75, 260, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("保存客户端增强设置"), b -> saveClientEnhancements())
+			.bounds(left, 120, 220, 20).build());
 	}
 
 	private EditBox numberBox(int x, int y, String value, int maxLength,
@@ -451,26 +522,44 @@ public final class PromptConfigScreen extends Screen {
 		promptIndex = Math.max(0, promptIds.indexOf(id));
 	}
 
-	private void saveOther() {
+	private void saveShortcuts() {
 		try {
 			settings.primaryKey = ClientSettings.normalizeKey(primaryKey, "V");
 			settings.secondaryKey = ClientSettings.normalizeKey(secondaryKey, "B");
+			settings.save();
+			primaryKey = settings.primaryKey;
+			secondaryKey = settings.secondaryKey;
+			status = "已保存；新快捷键为 " + primaryKey + "+" + secondaryKey;
+		} catch (RuntimeException | IOException error) {
+			status = "保存失败: " + error.getMessage();
+		}
+	}
+
+	private void saveGameplay() {
+		try {
 			settings.goldenSpearRushEnabled = rushEnabled;
 			settings.durabilityEvery = parseInt(durabilityEvery, 1, 1000, "耐久间隔");
 			settings.hungerEvery = parseInt(hungerEvery, 1, 1000, "饥饿间隔");
 			settings.hungerCost = parseInt(hungerCost, 0, 20, "饥饿消耗");
 			settings.rushStrength = parseDouble(rushStrength, 0.1, 4.0, "突进强度");
 			settings.save();
-
 			sendCommand("aiplayer feature enabled " + rushEnabled);
 			sendCommand("aiplayer feature durability-every " + settings.durabilityEvery);
 			sendCommand("aiplayer feature hunger-every " + settings.hungerEvery);
 			sendCommand("aiplayer feature hunger-cost " + settings.hungerCost);
 			sendCommand("aiplayer feature strength " + settings.rushStrength);
-			primaryKey = settings.primaryKey;
-			secondaryKey = settings.secondaryKey;
-			status = "已保存；新快捷键为 " + primaryKey + "+" + secondaryKey;
+			status = "已保存金矛突进设置";
 		} catch (RuntimeException | IOException error) {
+			status = "保存失败: " + error.getMessage();
+		}
+	}
+
+	private void saveClientEnhancements() {
+		try {
+			settings.f3BGlowingHitboxesEnabled = glowingHitboxesEnabled;
+			settings.save();
+			status = "已保存；F3+B 将" + (glowingHitboxesEnabled ? "使用原版发光轮廓" : "恢复原版碰撞箱");
+		} catch (IOException error) {
 			status = "保存失败: " + error.getMessage();
 		}
 	}
@@ -521,33 +610,43 @@ public final class PromptConfigScreen extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
 		super.extractRenderState(graphics, mouseX, mouseY, delta);
 		graphics.centeredText(font, title, width / 2, 9, 0xFFFFFF);
-		int left = (width - Math.min(780, width - 24)) / 2;
+		int fullWidth = Math.min(920, width - 24);
+		int left = (width - fullWidth) / 2 + 158;
+		int panelWidth = fullWidth - 158;
 		switch (tab) {
-			case AI -> {
-				graphics.text(font, "批量生成 AI（名称自动加 1、2、3…）", left, 56, 0xA0A0A0);
-				graphics.text(font, "AI 模式、当前玩家目标与提示词", left, 106, 0xA0A0A0);
-				graphics.text(font, "立即请求一次 AI 决策", left, 191, 0xA0A0A0);
+			case AI_SYSTEM -> {
+				switch (aiSection) {
+					case MANAGEMENT -> {
+						graphics.text(font, "批量生成 AI（名称自动加 1、2、3…）", left, 56, 0xA0A0A0);
+						graphics.text(font, "AI 模式、当前玩家目标与提示词", left, 106, 0xA0A0A0);
+						graphics.text(font, "立即请求一次 AI 决策", left, 191, 0xA0A0A0);
+					}
+					case API -> {
+						graphics.text(font, "OpenAI Chat Completions 兼容 API 地址", left, 61, 0xA0A0A0);
+						graphics.text(font, "模型名称", left, 111, 0xA0A0A0);
+						graphics.text(font, "令牌（可留空；输入后仅发送到服务器，不保存在客户端）",
+							left, 161, 0xA0A0A0);
+					}
+					case PROMPTS -> {
+						graphics.text(font, "提示词 ID", left, 55, 0xA0A0A0);
+						graphics.text(font, "分配给 AI（可选）", left + panelWidth / 2 + 5, 55, 0xA0A0A0);
+					}
+				}
 			}
-			case API -> {
-				graphics.text(font, "OpenAI Chat Completions 兼容 API 地址", left, 61, 0xA0A0A0);
-				graphics.text(font, "模型名称", left, 111, 0xA0A0A0);
-				graphics.text(font, "令牌（可留空；输入后仅发送到服务器，不保存在客户端）",
-					left, 161, 0xA0A0A0);
-			}
-			case PROMPTS -> {
-				graphics.text(font, "提示词 ID", left, 55, 0xA0A0A0);
-				graphics.text(font, "分配给 AI（可选）", left + Math.min(780, width - 24) / 2 + 5,
-					55, 0xA0A0A0);
-			}
-			case OTHER -> {
+			case GAMEPLAY -> {
 				graphics.text(font, "金矛无需附魔即可获得原版二级突进强度；其他材质仍需突进附魔",
 					left, 55, 0xA0A0A0);
 				graphics.text(font, "每多少次消耗1耐久", left, 106, 0xA0A0A0);
 				graphics.text(font, "每多少次消耗饥饿", left + 200, 106, 0xA0A0A0);
 				graphics.text(font, "饥饿点数（1鸡腿=2）", left + 400, 106, 0xA0A0A0);
 				graphics.text(font, "突进强度", left + 600, 106, 0xA0A0A0);
-				graphics.text(font, "打开 UI 快捷键（仅支持 A-Z 双键组合）", left, 190, 0xA0A0A0);
 			}
+			case SHORTCUTS -> graphics.text(font, "打开 UI 快捷键（仅支持 A-Z 双键组合）", left, 62, 0xA0A0A0);
+			case CLIENT -> graphics.text(font,
+				"开启后，按 F3+B 时隐藏实体线框并调用原版发光轮廓；默认开启且仅本地生效",
+				left, 55, 0xA0A0A0);
+			case COMPATIBILITY -> graphics.text(font, "UI 后端：" + backend.displayName(), left, 55, 0xA0A0A0);
+			case MINIGAMES, LEISURE, PERFORMANCE, ADVANCED -> { }
 		}
 		graphics.text(font, status, 12, height - 22, status.contains("失败") ? 0xFF7777 : 0xA8E6A3);
 	}

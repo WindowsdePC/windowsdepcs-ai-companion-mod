@@ -1,7 +1,7 @@
-# WindowsdePC's AI Companion Mod 0.4.1（Fabric 26.2）
+# WindowsdePC's AI Companion Mod 0.5.0（Fabric 26.2）
 
 包含 OpenAI Chat Completions 兼容 API、Fabric FakePlayer、猎人/队友/PvP 教练模式、
-天眼快照、统一游戏内配置 UI，以及可配置的金矛二级突进功能。
+天眼快照、EclipseUI/Cloth Config 双 UI、F3+B 发光轮廓，以及可配置的金矛二级突进功能。
 
 ## 构建
 
@@ -19,14 +19,19 @@ Windows：
 
 输出：
 
-- `windowsdepcs-ai-companion-0.4.1.jar`：放进 `mods/` 的正式模组；
-- `windowsdepcs-ai-companion-0.4.1-sources.jar`：源码；
-- `windowsdepcs-ai-companion-0.4.1-javadoc.jar`：开发文档。
+- `windowsdepcs-ai-companion-0.5.0.jar`：放进 `mods/` 的正式模组；
+- `windowsdepcs-ai-companion-0.5.0-sources.jar`：源码；
+- `windowsdepcs-ai-companion-0.5.0-javadoc.jar`：开发文档。
 
 ## 统一游戏内 UI
 
-进入世界或服务器后同时按 `V+B` 打开。可在“其他”栏目把两个按键修改为任意
-A-Z 字母组合。
+进入世界或服务器后同时按 `V+B` 打开。这个快捷键不会占用原版“按键绑定”列表，
+可在“快捷键修改”中把两个按键改为任意 A-Z 字母组合。
+
+界面会优先使用 EclipseUI；没有 EclipseUI 时使用 Cloth Config。两者至少安装一个，
+否则客户端会明确报错并停止加载。界面共有九个主分类：`AI系统`、`快捷键修改`、
+`游戏增强`、`客户端增强`、`小游戏中心`、`休闲系统`、`性能优化`、`兼容设置`、
+`高级设置`。保存或返回后可进入完整的 AI 管理、API 与提示词工作台。
 
 栏目：
 
@@ -34,7 +39,8 @@ A-Z 字母组合。
   教练模式、分配提示词并触发 AI 决策；
 - `API`：设置 OpenAI 兼容接口地址、模型和令牌；
 - `提示词`：编辑、创建、删除、恢复并分配命名预设；
-- `其他`：设置金矛突进、消耗数值、冲量强度和 UI 快捷键。
+- `游戏增强`：设置金矛突进、消耗数值与冲量强度；
+- `客户端增强`：设置 F3+B 实体显示行为。
 
 内置提示词：
 
@@ -59,7 +65,14 @@ A-Z 字母组合。
 - 创造模式不消耗耐久或饥饿；
 - 金矛从原版 `enchantable/lunge` 标签中排除，不能正常获得突进附魔；
 - 木、石、铜、铁、钻石、下界合金矛仍需正常附魔才能获得原版突进；
-- 开关与所有数值可在“其他”栏目修改。
+- 开关与所有数值可在“游戏增强”栏目修改。
+
+## F3+B 发光轮廓
+
+- 默认开启且只影响本地客户端；
+- 开启时，原版 F3+B 的实体碰撞箱线框会替换为原版发光轮廓效果；
+- 关闭后，F3+B 恢复原版碰撞箱显示；
+- 不修改服务端实体状态，也不会给实体添加药水效果。
 
 ## 命令备用入口
 
@@ -80,8 +93,7 @@ A-Z 字母组合。
 
 - 已实现：可见 FakePlayer、API 调用、统一 UI、模式与目标、可编辑提示词、短距离
   `say/move/wait` 动作、天眼快照和金矛突进。
-- 仍未实现：复杂地形寻路、完整挖掘/战斗/背包执行器、AI 语音协议，以及客户端
-  透视高亮渲染。
+- 仍未实现：复杂地形寻路、完整挖掘/战斗/背包执行器和 AI 语音协议。
 - PvP 教练目前拥有独立目标状态和提示词，但受现有 `say/move/wait` 执行器限制，
   尚不能完成完整自动 PvP。
 - 目前模组版本为 Minecraft Fabric `26.2`。
@@ -96,6 +108,7 @@ A-Z 字母组合。
 
 - Fabric Loader
 - Fabric API
+- EclipseUI 1.0.5（优先）或 Cloth Config 26.2（二选一，至少安装一个）
 - 与模组版本匹配的 Minecraft 26.2
 - Java 25
 

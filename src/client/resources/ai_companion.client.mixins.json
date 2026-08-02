@@ -1,0 +1,12 @@
+{
+	"required": true,
+	"package": "com.example.ai_companion.client.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"EntityHitboxDebugRendererMixin",
+		"MinecraftGlowMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
