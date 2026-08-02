@@ -84,14 +84,4 @@ A-Z 字母组合。
   透视高亮渲染。
 - PvP 教练目前拥有独立目标状态和提示词，但受现有 `say/move/wait` 执行器限制，
   尚不能完成完整自动 PvP。
-- 模组元数据锁定 Minecraft `26.2`，没有虚假声明已经验证 `26.3`。
-
-## 排错材料
-
-请遮盖令牌后发送：
-
-- `logs/latest.log`
-- 最新 `crash-reports/*.txt`
-- `./gradlew clean build --stacktrace --info` 输出
-- `java -version`、`./gradlew --version`
-- `mods/` 中全部文件名
+- 目前模组版本为 Minecraft Fabric `26.2`。
