@@ -1,0 +1,79 @@
+package com.example.ai_companion.client;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.example.ai_companion.AiCompanionMod;
+import net.fabricmc.loader.api.FabricLoader;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+/** Client-local UI preferences and an editable mirror of server gameplay defaults. */
+public final class ClientSettings {
+	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+	private static final Path PATH = FabricLoader.getInstance().getConfigDir()
+		.resolve("windowsdepcs-ai-companion-client-settings.json");
+
+	public String primaryKey = "V";
+	public String secondaryKey = "B";
+	public String apiBase = "https://api.openai.com/v1";
+	public String model = "gpt-5-mini";
+	public boolean goldenSpearRushEnabled = true;
+	public int durabilityEvery = 15;
+	public int hungerEvery = 30;
+	public int hungerCost = 2;
+	public double rushStrength = 0.916;
+
+	public static ClientSettings load() {
+		try {
+			if (Files.notExists(PATH)) {
+				ClientSettings created = new ClientSettings();
+				created.save();
+				return created;
+			}
+			ClientSettings loaded = GSON.fromJson(Files.readString(PATH, StandardCharsets.UTF_8),
+				ClientSettings.class);
+			return loaded == null ? new ClientSettings() : loaded.normalized();
+		} catch (Exception error) {
+			AiCompanionMod.LOGGER.error("Cannot read client UI settings {}; using defaults", PATH, error);
+			return new ClientSettings();
+		}
+	}
+
+	public ClientSettings normalized() {
+		primaryKey = normalizeKey(primaryKey, "V");
+		secondaryKey = normalizeKey(secondaryKey, "B");
+		apiBase = apiBase == null || apiBase.isBlank() ? "https://api.openai.com/v1" : apiBase.strip();
+		model = model == null || model.isBlank() ? "gpt-5-mini" : model.strip();
+		durabilityEvery = Math.clamp(durabilityEvery, 1, 1000);
+		hungerEvery = Math.clamp(hungerEvery, 1, 1000);
+		hungerCost = Math.clamp(hungerCost, 0, 20);
+		rushStrength = Math.clamp(rushStrength, 0.1, 4.0);
+		return this;
+	}
+
+	public int primaryCode() {
+		return keyCode(primaryKey);
+	}
+
+	public int secondaryCode() {
+		return keyCode(secondaryKey);
+	}
+
+	public void save() throws IOException {
+		normalized();
+		Files.createDirectories(PATH.getParent());
+		Files.writeString(PATH, GSON.toJson(this) + System.lineSeparator(), StandardCharsets.UTF_8);
+	}
+
+	public static String normalizeKey(String value, String fallback) {
+		String normalized = value == null ? "" : value.strip().toUpperCase();
+		return normalized.matches("[A-Z]") ? normalized : fallback;
+	}
+
+	private static int keyCode(String key) {
+		return normalizeKey(key, "B").charAt(0);
+	}
+}

@@ -1,0 +1,23 @@
+{
+	"schemaVersion": 1,
+	"id": "ai_companion",
+	"version": "${version}",
+	"name": "WindowsdePC's AI Companion Mod",
+	"description": "AI controlled fake players, unified in-game configuration UI, and optional golden-spear rush.",
+	"authors": ["WindowsdePC"],
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": ["com.example.ai_companion.AiCompanionMod"],
+		"client": ["com.example.ai_companion.client.AiCompanionClient"]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": ">=0.155.2"
+	},
+	"suggests": {
+		"voicechat": "*"
+	}
+}
