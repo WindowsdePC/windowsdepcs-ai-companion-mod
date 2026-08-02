@@ -85,3 +85,23 @@ A-Z 字母组合。
 - PvP 教练目前拥有独立目标状态和提示词，但受现有 `say/move/wait` 执行器限制，
   尚不能完成完整自动 PvP。
 - 目前模组版本为 Minecraft Fabric `26.2`。
+
+## 玩家安装说明
+
+- 普通玩家只需下载并放入 `mods` 文件夹：
+
+- `windowsdepcs-ai-companion-版本号.jar`
+
+- 还需要安装：
+
+- Fabric Loader
+- Fabric API
+- 与模组版本匹配的 Minecraft 26.2
+- Java 25
+
+- 不要放入 `mods`：
+
+- `-sources.jar`
+- `-javadoc.jar`
+- `Source code(zip)`
+- `SHA-256_SUMS.txt`
