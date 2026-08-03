@@ -6,6 +6,7 @@ import com.example.ai_companion.config.GameplayConfig;
 import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
 import com.example.ai_companion.gameplay.GoldenSpearRush;
+import com.example.ai_companion.gameplay.MinigameRewardManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -22,6 +23,7 @@ public final class AiCompanionMod implements ModInitializer {
 	private PromptStore prompts;
 	private GameplayConfig gameplay;
 	private GoldenSpearRush goldenSpearRush;
+	private MinigameRewardManager minigameRewards;
 
 	@Override
 	public void onInitialize() {
@@ -30,13 +32,15 @@ public final class AiCompanionMod implements ModInitializer {
 		prompts = PromptStore.loadServer();
 		agents = new AgentManager(() -> config, prompts);
 		goldenSpearRush = new GoldenSpearRush(() -> gameplay);
+		minigameRewards = new MinigameRewardManager();
 		goldenSpearRush.register();
 		AiPlayerCommands.register(agents, prompts, () -> config, updated -> config = updated,
-			() -> gameplay, updated -> gameplay = updated);
+			() -> gameplay, updated -> gameplay = updated, minigameRewards);
 		ServerTickEvents.END_SERVER_TICK.register(agents::tick);
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			agents.close();
 			goldenSpearRush.clearCounters();
+			minigameRewards.clear();
 		});
 		LOGGER.info("WindowsdePC's AI Companion Mod initialized. API key present: {}", config.hasApiKey());
 	}

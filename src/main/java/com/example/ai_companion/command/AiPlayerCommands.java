@@ -4,39 +4,34 @@ import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.example.ai_companion.agent.AgentManager;
 import com.example.ai_companion.agent.AgentMode;
 import com.example.ai_companion.config.GameplayConfig;
 import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
+import com.example.ai_companion.gameplay.MinigameRewardManager;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.permissions.Permissions;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /** Registers the /aiplayer command tree. */
 public final class AiPlayerCommands {
-	private static final Map<UUID, Long> LAST_MINIGAME_REWARD_TIME = new HashMap<>();
-	private static final long MINIGAME_REWARD_COOLDOWN_MILLIS = 60_000L;
 	private AiPlayerCommands() {}
 
 	public static void register(AgentManager agents, PromptStore prompts,
 								Supplier<ModConfig> config, Consumer<ModConfig> update,
-								Supplier<GameplayConfig> gameplay, Consumer<GameplayConfig> updateGameplay) {
+								Supplier<GameplayConfig> gameplay, Consumer<GameplayConfig> updateGameplay,
+								MinigameRewardManager minigameRewards) {
 		CommandRegistrationCallback.EVENT.register((dispatcher, access, environment) ->
 			dispatcher.register(Commands.literal("aiplayer")
 				.then(Commands.literal("create").then(Commands.argument("name", StringArgumentType.word())
@@ -149,41 +144,44 @@ public final class AiPlayerCommands {
 						.then(Commands.argument("value", DoubleArgumentType.doubleArg(0.1, 4.0))
 							.executes(c -> saveGameplay(c.getSource(), gameplay.get().withRushStrength(
 								DoubleArgumentType.getDouble(c, "value")), updateGameplay)))))
-				.then(Commands.literal("minigame")
-					.then(Commands.literal("reward")
-						.then(Commands.literal("tetris")
-							.then(Commands.argument("score", IntegerArgumentType.integer(0, 100000))
-								.then(Commands.argument("lines", IntegerArgumentType.integer(1, 200))
-									.executes(c -> rewardTetris(c.getSource(),
-										IntegerArgumentType.getInteger(c, "score"),
-										IntegerArgumentType.getInteger(c, "lines"))))))))));
+				.then(minigameCommands(minigameRewards))));
 		}
 
-	private static int rewardTetris(CommandSourceStack source, int score, int lines)
-			throws CommandSyntaxException {
-		var player = source.getPlayerOrException();
-		long now = System.currentTimeMillis();
-		long last = LAST_MINIGAME_REWARD_TIME.getOrDefault(player.getUUID(), 0L);
-		if (now - last < MINIGAME_REWARD_COOLDOWN_MILLIS) {
-			source.sendFailure(Component.literal("小游戏矿物奖励仍在冷却中"));
-			return 0;
-		}
-		int minimumPlausibleScore = lines * 100;
-		if (score < minimumPlausibleScore || score > 100000) {
-			source.sendFailure(Component.literal("俄罗斯方块结算数据无效"));
-			return 0;
-		}
-		LAST_MINIGAME_REWARD_TIME.put(player.getUUID(), now);
-		int count = Math.min(3, 1 + lines / 4);
-		int roll = source.getLevel().getRandom().nextInt(100);
-		int diamondChance = Math.min(20, 3 + lines);
-		Item reward = roll < diamondChance ? Items.DIAMOND
-			: roll < diamondChance + 27 ? Items.GOLD_INGOT : Items.IRON_INGOT;
-		ItemStack stack = new ItemStack(reward, count);
-		if (!player.addItem(stack)) player.drop(stack, false);
-		source.sendSuccess(() -> Component.literal("俄罗斯方块奖励：" + count + " × "
-			+ reward.getName(stack).getString()), false);
-		return count;
+	private static LiteralArgumentBuilder<CommandSourceStack> minigameCommands(
+			MinigameRewardManager minigameRewards) {
+		return Commands.literal("minigame")
+			.then(Commands.literal("start")
+				.then(Commands.literal("tetris")
+					.then(Commands.argument("session", StringArgumentType.word())
+						.executes(c -> startTetris(c.getSource(), minigameRewards,
+							StringArgumentType.getString(c, "session"))))))
+			.then(Commands.literal("finish")
+				.then(Commands.literal("tetris")
+					.then(Commands.argument("session", StringArgumentType.word())
+						.then(Commands.argument("score", IntegerArgumentType.integer(0, 2_000_000))
+							.then(Commands.argument("lines", IntegerArgumentType.integer(0, 200))
+								.executes(c -> finishTetris(c.getSource(), minigameRewards,
+									StringArgumentType.getString(c, "session"),
+									IntegerArgumentType.getInteger(c, "score"),
+									IntegerArgumentType.getInteger(c, "lines"))))))));
+	}
+
+	private static int startTetris(CommandSourceStack source, MinigameRewardManager rewards,
+			String sessionId) throws CommandSyntaxException {
+		MinigameRewardManager.Result result = rewards.startTetris(source.getPlayerOrException(), sessionId,
+			source.getServer().getTickCount());
+		if (result.accepted()) source.sendSuccess(result::message, false);
+		else source.sendFailure(result.message());
+		return result.accepted() ? 1 : 0;
+	}
+
+	private static int finishTetris(CommandSourceStack source, MinigameRewardManager rewards,
+			String sessionId, int score, int lines) throws CommandSyntaxException {
+		MinigameRewardManager.Result result = rewards.finishTetris(source.getPlayerOrException(), sessionId,
+			score, lines, source.getServer().getTickCount());
+		if (result.accepted()) source.sendSuccess(result::message, false);
+		else source.sendFailure(result.message());
+		return result.accepted() ? 1 : 0;
 	}
 
 	private static int createMany(CommandSourceStack source, AgentManager agents,

@@ -70,7 +70,7 @@ final class EclipseUiApiBridge {
 			.category(category -> category.name(Component.literal("小游戏中心"))
 				.icon(icon("target"))
 				.description(Component.literal("贪吃蛇与 Minecraft 俄罗斯方块"))
-				.label(Component.literal("保存或返回后，在完整管理器的小游戏中心开始游戏")))
+				.label(Component.literal("返回完整管理中心后可开始游戏")))
 			.category(category -> category.name(Component.literal("休闲系统"))
 				.icon(icon("music_disc_13")).label(Component.literal("后续功能版本开放")))
 			.category(category -> category.name(Component.literal("性能优化"))

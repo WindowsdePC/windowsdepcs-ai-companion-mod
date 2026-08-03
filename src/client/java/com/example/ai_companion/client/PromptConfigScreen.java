@@ -1,9 +1,9 @@
 package com.example.ai_companion.client;
 
 import com.example.ai_companion.agent.AgentMode;
-import com.example.ai_companion.client.minigame.MinigameScores;
-import com.example.ai_companion.client.minigame.SnakeGameScreen;
-import com.example.ai_companion.client.minigame.TetrisGameScreen;
+import com.example.ai_companion.client.minigame.MinigameProgress;
+import com.example.ai_companion.client.minigame.SnakeScreen;
+import com.example.ai_companion.client.minigame.TetrisScreen;
 import com.example.ai_companion.config.PromptStore;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -43,7 +43,7 @@ public final class PromptConfigScreen extends Screen {
 	private final PromptStore promptStore;
 	private final ClientSettings settings;
 	private final UiBackend backend;
-	private final MinigameScores minigameScores;
+	private final MinigameProgress minigameProgress;
 	private Tab tab = Tab.AI_SYSTEM;
 	private AiSection aiSection = AiSection.MANAGEMENT;
 	private String status = "修改服务器设置和分配 AI 需要管理员权限";
@@ -82,7 +82,7 @@ public final class PromptConfigScreen extends Screen {
 		this.promptStore = promptStore;
 		this.settings = settings;
 		this.backend = backend;
-		this.minigameScores = MinigameScores.load();
+		this.minigameProgress = MinigameProgress.load();
 		rushEnabled = settings.goldenSpearRushEnabled;
 		glowingHitboxesEnabled = settings.f3BGlowingHitboxesEnabled;
 		durabilityEvery = Integer.toString(settings.durabilityEvery);
@@ -134,17 +134,6 @@ public final class PromptConfigScreen extends Screen {
 			.bounds(left + fullWidth - 90, height - 25, 90, 20).build());
 	}
 
-	private void buildMinigamePanel(int left, int panelWidth) {
-		int cardWidth = Math.max(180, (panelWidth - 12) / 2);
-		addRenderableWidget(Button.builder(Component.literal("开始贪吃蛇"), button ->
-			minecraft.setScreenAndShow(new SnakeGameScreen(this, minigameScores)))
-			.bounds(left, 92, cardWidth, 24).build());
-		addRenderableWidget(Button.builder(Component.literal("开始 Minecraft 俄罗斯方块"), button ->
-			minecraft.setScreenAndShow(new TetrisGameScreen(this, minigameScores)))
-			.bounds(left + cardWidth + 12, 92, cardWidth, 24).build());
-		status = "0.5.2 已开放贪吃蛇与 Minecraft 俄罗斯方块";
-	}
-
 	private void buildAiSystemPanel(int left, int panelWidth) {
 		int sectionWidth = (panelWidth - 8) / 3;
 		addRenderableWidget(Button.builder(Component.literal("AI 管理"), b -> switchAiSection(AiSection.MANAGEMENT))
@@ -169,6 +158,17 @@ public final class PromptConfigScreen extends Screen {
 
 	private void buildPlaceholderPanel(String message) {
 		status = message;
+	}
+
+	private void buildMinigamePanel(int left, int panelWidth) {
+		int cardWidth = (panelWidth - 14) / 2;
+		addRenderableWidget(Button.builder(Component.literal("开始：贪吃蛇"), button -> {
+			if (minecraft != null) minecraft.setScreenAndShow(new SnakeScreen(this, minigameProgress));
+		}).bounds(left + 10, 105, cardWidth - 20, 24).build());
+		addRenderableWidget(Button.builder(Component.literal("开始：Minecraft 俄罗斯方块"), button -> {
+			if (minecraft != null) minecraft.setScreenAndShow(new TetrisScreen(this, minigameProgress));
+		}).bounds(left + cardWidth + 14, 105, cardWidth - 20, 24).build());
+		status = "0.5.2 已开放 2/5 个设计文档小游戏；记录保存在客户端配置目录";
 	}
 
 	private void buildApiPanel(int left, int panelWidth) {
@@ -666,16 +666,23 @@ public final class PromptConfigScreen extends Screen {
 				left, 55, 0xA0A0A0);
 			case COMPATIBILITY -> graphics.text(font, "UI 后端：" + backend.displayName(), left, 55, 0xA0A0A0);
 			case MINIGAMES -> {
-				graphics.text(font, "贪吃蛇", left, 56, 0xFF8AF06A);
-				graphics.text(font, "苹果、金苹果、钻石食物 · 最高分：" + minigameScores.snakeHighScore,
-					left, 72, 0xFFA8B4C4);
-				graphics.text(font, "Minecraft 俄罗斯方块", left + Math.max(180, (panelWidth - 12) / 2) + 12,
-					56, 0xFF62D8FF);
-				graphics.text(font, "消行积分与真实矿物奖励 · 最高分：" + minigameScores.tetrisHighScore,
-					left + Math.max(180, (panelWidth - 12) / 2) + 12, 72, 0xFFA8B4C4);
-				graphics.text(font, minigameScores.snakeMasterTitle
-					? "已解锁称号：贪吃蛇大师" : "贪吃蛇达到 500 分可解锁称号：贪吃蛇大师",
-					left, 138, minigameScores.snakeMasterTitle ? 0xFFFFD86B : 0xFFA8B4C4);
+				int cardWidth = (panelWidth - 14) / 2;
+				graphics.fill(left, 55, left + cardWidth, 180, 0x55344E41);
+				graphics.fill(left + cardWidth + 14, 55, left + panelWidth, 180, 0x553E4B63);
+				graphics.text(font, "贪吃蛇", left + 10, 66, 0xFFA5D6A7);
+				graphics.text(font, "像素蛇、三种食物、最高分", left + 10, 80, 0xFFCFD8DC);
+				graphics.text(font, "皮肤解锁与贪吃蛇大师称号", left + 10, 92, 0xFFCFD8DC);
+				graphics.text(font, "最高分：" + minigameProgress.snakeHighScore,
+					left + 10, 142, 0xFFFFD54F);
+				graphics.text(font, "称号：" + minigameProgress.snakeTitle(),
+					left + 10, 156, 0xFFB0BEC5);
+				graphics.text(font, "Minecraft 俄罗斯方块", left + cardWidth + 24, 66, 0xFF90CAF9);
+				graphics.text(font, "七种方块、旋转、消行与等级", left + cardWidth + 24, 80, 0xFFCFD8DC);
+				graphics.text(font, "有效成绩随机奖励铁、金或钻石", left + cardWidth + 24, 92, 0xFFCFD8DC);
+				graphics.text(font, "最高分：" + minigameProgress.tetrisHighScore,
+					left + cardWidth + 24, 142, 0xFFFFD54F);
+				graphics.text(font, "最佳消行：" + minigameProgress.tetrisBestLines,
+					left + cardWidth + 24, 156, 0xFFB0BEC5);
 			}
 			case LEISURE, PERFORMANCE, ADVANCED -> { }
 		}
