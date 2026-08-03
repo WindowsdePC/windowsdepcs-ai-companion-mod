@@ -212,7 +212,7 @@ public final class AiPlayerCommands {
 			MinigameRewardManager.Result result) throws CommandSyntaxException {
 		// These commands are an internal client/server transport. Keep command feedback out of chat;
 		// the short settlement result belongs in the action bar instead.
-		source.getPlayerOrException().displayClientMessage(result.message(), true);
+		source.getPlayerOrException().sendOverlayMessage(result.message());
 	}
 
 	private static int createMany(CommandSourceStack source, AgentManager agents,
