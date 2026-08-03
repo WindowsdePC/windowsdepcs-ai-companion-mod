@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：`0.5.5`
+当前版本：`0.5.6`
 
 ## 环境要求
 
@@ -53,7 +53,7 @@ EclipseUI 模式提供分类卡片、图标、开关、滑块、下拉菜单和�
 
 ### 小游戏中心
 
-`0.5.5` 已完成设计文档中的五个小游戏。打开完整管理中心并选择“小游戏中心”即可游玩。
+`0.5.6` 已完成设计文档中的五个小游戏。打开完整管理中心并选择“小游戏中心”即可游玩。
 
 #### 贪吃蛇
 
@@ -168,15 +168,15 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.5.5.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.5.5-sources.jar`：源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.5.5-javadoc.jar`：Java API 文档包。
+- `windowsdepcs-ai-companion-0.5.6.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.5.6-sources.jar`：源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.5.6-javadoc.jar`：Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 
 ## 当前边界
 
-0.5.5 保留现有 AI 决策与任务框架，但复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
+0.5.6 保留现有 AI 决策与任务框架，但复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
 多 AI 共识与领队选举、Simple Voice Chat 协议等仍在后续版本开发。设计路线见
 [`docs/My Mod Design Document.md`](docs/My%20Mod%20Design%20Document.md)。
 

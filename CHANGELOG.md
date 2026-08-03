@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.6
+
+- 修正 Fabric Loom 1.17 的可选模组依赖配置，使 EclipseUI 与 Cloth Config 可在 CI 中正确解析与重映射。
+- 加入标签触发的 GitHub Actions 完整构建、测试、SHA-256 清单与 Release 自动发布流程。
+
 ## 0.5.5
 
 - 扫雷加入初级 9×9/10、中级 16×16/40、专家 30×16/99 三档经典难度。
