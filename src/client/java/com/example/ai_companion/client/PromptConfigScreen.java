@@ -1,6 +1,9 @@
 package com.example.ai_companion.client;
 
 import com.example.ai_companion.agent.AgentMode;
+import com.example.ai_companion.client.minigame.MinigameScores;
+import com.example.ai_companion.client.minigame.SnakeGameScreen;
+import com.example.ai_companion.client.minigame.TetrisGameScreen;
 import com.example.ai_companion.config.PromptStore;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -40,6 +43,7 @@ public final class PromptConfigScreen extends Screen {
 	private final PromptStore promptStore;
 	private final ClientSettings settings;
 	private final UiBackend backend;
+	private final MinigameScores minigameScores;
 	private Tab tab = Tab.AI_SYSTEM;
 	private AiSection aiSection = AiSection.MANAGEMENT;
 	private String status = "修改服务器设置和分配 AI 需要管理员权限";
@@ -78,6 +82,7 @@ public final class PromptConfigScreen extends Screen {
 		this.promptStore = promptStore;
 		this.settings = settings;
 		this.backend = backend;
+		this.minigameScores = MinigameScores.load();
 		rushEnabled = settings.goldenSpearRushEnabled;
 		glowingHitboxesEnabled = settings.f3BGlowingHitboxesEnabled;
 		durabilityEvery = Integer.toString(settings.durabilityEvery);
@@ -118,7 +123,7 @@ public final class PromptConfigScreen extends Screen {
 			case SHORTCUTS -> buildShortcutPanel(panelLeft, panelWidth);
 			case GAMEPLAY -> buildGameplayPanel(panelLeft, panelWidth);
 			case CLIENT -> buildClientPanel(panelLeft, panelWidth);
-			case MINIGAMES -> buildPlaceholderPanel("小游戏中心将在后续独立功能版本中逐项开放");
+			case MINIGAMES -> buildMinigamePanel(panelLeft, panelWidth);
 			case LEISURE -> buildPlaceholderPanel("休闲系统将在后续独立功能版本中逐项开放");
 			case PERFORMANCE -> buildPlaceholderPanel("性能优化选项将在对应功能实现后加入");
 			case COMPATIBILITY -> buildPlaceholderPanel("当前 UI 后端：" + backend.displayName()
@@ -127,6 +132,17 @@ public final class PromptConfigScreen extends Screen {
 		}
 		addRenderableWidget(Button.builder(Component.literal("完成"), b -> onClose())
 			.bounds(left + fullWidth - 90, height - 25, 90, 20).build());
+	}
+
+	private void buildMinigamePanel(int left, int panelWidth) {
+		int cardWidth = Math.max(180, (panelWidth - 12) / 2);
+		addRenderableWidget(Button.builder(Component.literal("开始贪吃蛇"), button ->
+			minecraft.setScreenAndShow(new SnakeGameScreen(this, minigameScores)))
+			.bounds(left, 92, cardWidth, 24).build());
+		addRenderableWidget(Button.builder(Component.literal("开始 Minecraft 俄罗斯方块"), button ->
+			minecraft.setScreenAndShow(new TetrisGameScreen(this, minigameScores)))
+			.bounds(left + cardWidth + 12, 92, cardWidth, 24).build());
+		status = "0.5.2 已开放贪吃蛇与 Minecraft 俄罗斯方块";
 	}
 
 	private void buildAiSystemPanel(int left, int panelWidth) {
@@ -649,7 +665,19 @@ public final class PromptConfigScreen extends Screen {
 				"开启后，按 F3+B 时隐藏实体线框并调用原版发光轮廓；默认开启且仅本地生效",
 				left, 55, 0xA0A0A0);
 			case COMPATIBILITY -> graphics.text(font, "UI 后端：" + backend.displayName(), left, 55, 0xA0A0A0);
-			case MINIGAMES, LEISURE, PERFORMANCE, ADVANCED -> { }
+			case MINIGAMES -> {
+				graphics.text(font, "贪吃蛇", left, 56, 0xFF8AF06A);
+				graphics.text(font, "苹果、金苹果、钻石食物 · 最高分：" + minigameScores.snakeHighScore,
+					left, 72, 0xFFA8B4C4);
+				graphics.text(font, "Minecraft 俄罗斯方块", left + Math.max(180, (panelWidth - 12) / 2) + 12,
+					56, 0xFF62D8FF);
+				graphics.text(font, "消行积分与真实矿物奖励 · 最高分：" + minigameScores.tetrisHighScore,
+					left + Math.max(180, (panelWidth - 12) / 2) + 12, 72, 0xFFA8B4C4);
+				graphics.text(font, minigameScores.snakeMasterTitle
+					? "已解锁称号：贪吃蛇大师" : "贪吃蛇达到 500 分可解锁称号：贪吃蛇大师",
+					left, 138, minigameScores.snakeMasterTitle ? 0xFFFFD86B : 0xFFA8B4C4);
+			}
+			case LEISURE, PERFORMANCE, ADVANCED -> { }
 		}
 		graphics.text(font, status, 12, height - 22, status.contains("失败") ? 0xFF7777 : 0xA8E6A3);
 	}

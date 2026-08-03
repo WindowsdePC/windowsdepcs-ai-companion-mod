@@ -15,15 +15,23 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.permissions.Permissions;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /** Registers the /aiplayer command tree. */
 public final class AiPlayerCommands {
+	private static final Map<UUID, Long> LAST_MINIGAME_REWARD_TIME = new HashMap<>();
+	private static final long MINIGAME_REWARD_COOLDOWN_MILLIS = 60_000L;
 	private AiPlayerCommands() {}
 
 	public static void register(AgentManager agents, PromptStore prompts,
@@ -140,8 +148,43 @@ public final class AiPlayerCommands {
 					.then(Commands.literal("strength")
 						.then(Commands.argument("value", DoubleArgumentType.doubleArg(0.1, 4.0))
 							.executes(c -> saveGameplay(c.getSource(), gameplay.get().withRushStrength(
-								DoubleArgumentType.getDouble(c, "value")), updateGameplay)))))));
+								DoubleArgumentType.getDouble(c, "value")), updateGameplay)))))
+				.then(Commands.literal("minigame")
+					.then(Commands.literal("reward")
+						.then(Commands.literal("tetris")
+							.then(Commands.argument("score", IntegerArgumentType.integer(0, 100000))
+								.then(Commands.argument("lines", IntegerArgumentType.integer(1, 200))
+									.executes(c -> rewardTetris(c.getSource(),
+										IntegerArgumentType.getInteger(c, "score"),
+										IntegerArgumentType.getInteger(c, "lines"))))))))));
 		}
+
+	private static int rewardTetris(CommandSourceStack source, int score, int lines)
+			throws CommandSyntaxException {
+		var player = source.getPlayerOrException();
+		long now = System.currentTimeMillis();
+		long last = LAST_MINIGAME_REWARD_TIME.getOrDefault(player.getUUID(), 0L);
+		if (now - last < MINIGAME_REWARD_COOLDOWN_MILLIS) {
+			source.sendFailure(Component.literal("小游戏矿物奖励仍在冷却中"));
+			return 0;
+		}
+		int minimumPlausibleScore = lines * 100;
+		if (score < minimumPlausibleScore || score > 100000) {
+			source.sendFailure(Component.literal("俄罗斯方块结算数据无效"));
+			return 0;
+		}
+		LAST_MINIGAME_REWARD_TIME.put(player.getUUID(), now);
+		int count = Math.min(3, 1 + lines / 4);
+		int roll = source.getLevel().getRandom().nextInt(100);
+		int diamondChance = Math.min(20, 3 + lines);
+		Item reward = roll < diamondChance ? Items.DIAMOND
+			: roll < diamondChance + 27 ? Items.GOLD_INGOT : Items.IRON_INGOT;
+		ItemStack stack = new ItemStack(reward, count);
+		if (!player.addItem(stack)) player.drop(stack, false);
+		source.sendSuccess(() -> Component.literal("俄罗斯方块奖励：" + count + " × "
+			+ reward.getName(stack).getString()), false);
+		return count;
+	}
 
 	private static int createMany(CommandSourceStack source, AgentManager agents,
 							  String baseName, int count) throws CommandSyntaxException {

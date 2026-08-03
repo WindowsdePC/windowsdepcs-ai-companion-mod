@@ -64,7 +64,8 @@ final class ClothConfigApiBridge {
 			.setTooltip(Component.literal("替代实体碰撞箱线框；仅本地生效"))
 			.setSaveConsumer(value -> settings.f3BGlowingHitboxesEnabled = value).build());
 
-		category(builder, entries, "小游戏中心", "后续功能版本开放");
+		category(builder, entries, "小游戏中心",
+			"贪吃蛇与 Minecraft 俄罗斯方块已开放；保存或返回后在完整管理器中开始游戏");
 		category(builder, entries, "休闲系统", "后续功能版本开放");
 		category(builder, entries, "性能优化", "后续功能版本开放");
 		category(builder, entries, "兼容设置", "当前使用 Cloth Config；Simple Voice Chat 为可选兼容项");

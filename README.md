@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：`0.5.1`
+当前版本：`0.5.2`
 
 ## 环境要求
 
@@ -50,6 +50,19 @@ EclipseUI 模式提供分类卡片、图标、开关、滑块、下拉菜单和�
 “AI系统”可进入完整 AI 管理器，继续使用批量生成、在线玩家选择、模式分配、API 配置和
 多行提示词编辑等既有功能。小游戏、休闲和性能栏目是后续设计文档功能的固定入口，相关
 功能会按版本逐项启用。
+
+### 小游戏中心
+
+`0.5.2` 首批开放两个可直接游玩的客户端小游戏：
+
+- **贪吃蛇**：方向键或 WASD 控制像素蛇。红苹果、金苹果和钻石分别提供不同分数，
+  游戏会保存本地最高分；达到 500 分解锁“贪吃蛇大师”称号记录。
+- **Minecraft 俄罗斯方块**：包含七种标准方块、旋转墙踢、软降、硬降、消行、等级和
+  最高分记录。完成至少一行后结算铁锭、金锭或钻石奖励；服务器会检查分数范围，并对
+  矿物奖励设置 60 秒冷却。
+
+从模组完整管理器进入“小游戏中心”，点击对应按钮开始。小游戏不会暂停世界；按 Esc
+或“返回小游戏中心”可回到管理器。成绩保存在客户端配置目录，不会写入世界存档。
 
 ### F3+B 原版发光轮廓
 
@@ -120,15 +133,15 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.5.1.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.5.1-sources.jar`：源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.5.1-javadoc.jar`：Java API 文档包。
+- `windowsdepcs-ai-companion-0.5.2.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.5.2-sources.jar`：源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.5.2-javadoc.jar`：Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 
 ## 当前边界
 
-0.5.1 保留现有 AI 决策与任务框架，但复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
+0.5.2 保留现有 AI 决策与任务框架，但复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
 多 AI 共识与领队选举、Simple Voice Chat 协议等仍在后续版本开发。设计路线见
 [`docs/My Mod Design Document.md`](docs/My%20Mod%20Design%20Document.md)。
 

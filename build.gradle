@@ -37,6 +37,13 @@ dependencies {
 	// Alternative client UI backends. Neither is bundled; runtime routing prefers EclipseUI.
 	modCompileOnly "maven.modrinth:eclipseui:EW0sBZm4"
 	modCompileOnly "maven.modrinth:cloth-config:Nv3xnWXd"
+
+	testImplementation platform("org.junit:junit-bom:5.13.4")
+	testImplementation "org.junit.jupiter:junit-jupiter"
+}
+
+test {
+	useJUnitPlatform()
 }
 
 processResources {
