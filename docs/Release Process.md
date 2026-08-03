@@ -8,7 +8,7 @@
 2. `windowsdepcs-ai-companion-<版本>-sources.jar`
 3. `windowsdepcs-ai-companion-<版本>-javadoc.jar`
 
-另附校验清单 `SHA-256_SUMS-<版本>.txt`。不再手动上传完整工程 ZIP；源码使用 GitHub
+另附校验清单 `SHA-256_SUMS-<版本>.txt`。不再上传完整工程 ZIP；源码使用 GitHub
 自动生成的 `Source code (zip)` 与 `Source code (tar.gz)`。
 
 推送 `v*` 标签后，`.github/workflows/release.yml` 会使用 Java 25 运行完整 Gradle 构建与测试，
