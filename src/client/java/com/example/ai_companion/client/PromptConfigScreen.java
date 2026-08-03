@@ -4,6 +4,7 @@ import com.example.ai_companion.agent.AgentMode;
 import com.example.ai_companion.client.minigame.Game2048Screen;
 import com.example.ai_companion.client.minigame.MinigameProgress;
 import com.example.ai_companion.client.minigame.MinesweeperScreen;
+import com.example.ai_companion.client.minigame.RockPaperScissorsScreen;
 import com.example.ai_companion.client.minigame.SnakeScreen;
 import com.example.ai_companion.client.minigame.TetrisScreen;
 import com.example.ai_companion.config.PromptStore;
@@ -166,17 +167,21 @@ public final class PromptConfigScreen extends Screen {
 		int cardWidth = (panelWidth - 14) / 2;
 		addRenderableWidget(Button.builder(Component.literal("开始：贪吃蛇"), button -> {
 			if (minecraft != null) minecraft.setScreenAndShow(new SnakeScreen(this, minigameProgress));
-		}).bounds(left + 10, 101, cardWidth - 20, 20).build());
+		}).bounds(left, 56, cardWidth, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("开始：Minecraft 俄罗斯方块"), button -> {
 			if (minecraft != null) minecraft.setScreenAndShow(new TetrisScreen(this, minigameProgress));
-		}).bounds(left + cardWidth + 14, 101, cardWidth - 20, 20).build());
+		}).bounds(left + cardWidth + 14, 56, cardWidth, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("开始：Minecraft 方块扫雷"), button -> {
 			if (minecraft != null) minecraft.setScreenAndShow(new MinesweeperScreen(this, minigameProgress));
-		}).bounds(left + 10, 175, cardWidth - 20, 20).build());
+		}).bounds(left, 84, cardWidth, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("开始：2048"), button -> {
 			if (minecraft != null) minecraft.setScreenAndShow(new Game2048Screen(this, minigameProgress));
-		}).bounds(left + cardWidth + 14, 175, cardWidth - 20, 20).build());
-		status = "0.5.3 已开放 4/5 个设计文档小游戏；记录保存在客户端配置目录";
+		}).bounds(left + cardWidth + 14, 84, cardWidth, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("开始：AI 猜拳"), button -> {
+			if (minecraft != null) minecraft.setScreenAndShow(new RockPaperScissorsScreen(this,
+				minigameProgress));
+		}).bounds(left + panelWidth / 4, 112, panelWidth / 2, 20).build());
+		status = "0.5.4 已完成设计文档小游戏中心 5/5；记录保存在客户端配置目录";
 	}
 
 	private void buildApiPanel(int left, int panelWidth) {
@@ -674,26 +679,18 @@ public final class PromptConfigScreen extends Screen {
 				left, 55, 0xA0A0A0);
 			case COMPATIBILITY -> graphics.text(font, "UI 后端：" + backend.displayName(), left, 55, 0xA0A0A0);
 			case MINIGAMES -> {
-				int cardWidth = (panelWidth - 14) / 2;
-				graphics.fill(left, 55, left + cardWidth, 128, 0x55344E41);
-				graphics.fill(left + cardWidth + 14, 55, left + panelWidth, 128, 0x553E4B63);
-				graphics.text(font, "贪吃蛇", left + 10, 66, 0xFFA5D6A7);
-				graphics.text(font, "三种食物 · 最高 " + minigameProgress.snakeHighScore
-					+ " · " + minigameProgress.snakeTitle(), left + 10, 81, 0xFFCFD8DC);
-				graphics.text(font, "Minecraft 俄罗斯方块", left + cardWidth + 24, 66, 0xFF90CAF9);
-				graphics.text(font, "七种方块 · 最高 " + minigameProgress.tetrisHighScore
-					+ " · 最佳消行 " + minigameProgress.tetrisBestLines,
-					left + cardWidth + 24, 81, 0xFFCFD8DC);
-
-				graphics.fill(left, 134, left + cardWidth, 202, 0x554E4434);
-				graphics.fill(left + cardWidth + 14, 134, left + panelWidth, 202, 0x55514363);
-				graphics.text(font, "Minecraft 方块扫雷", left + 10, 143, 0xFFFFCC80);
-				graphics.text(font, "最佳 " + minigameProgress.minesweeperBestTime() + " · 胜场 "
-					+ minigameProgress.minesweeperWins + " · 连胜 "
-					+ minigameProgress.minesweeperBestStreak, left + 10, 158, 0xFFCFD8DC);
-				graphics.text(font, "Minecraft 2048", left + cardWidth + 24, 143, 0xFFCE93D8);
-				graphics.text(font, "最高 " + minigameProgress.game2048HighScore + " · 最大方块 "
-					+ minigameProgress.game2048BestTile, left + cardWidth + 24, 158, 0xFFCFD8DC);
+				graphics.text(font, "贪吃蛇：最高 " + minigameProgress.snakeHighScore + " · "
+					+ minigameProgress.snakeTitle() + "    俄罗斯方块：最高 "
+					+ minigameProgress.tetrisHighScore + " · 最佳消行 "
+					+ minigameProgress.tetrisBestLines, left, 143, 0xFFCFD8DC);
+				graphics.text(font, "扫雷：最佳 " + minigameProgress.minesweeperBestTime() + " · 胜场 "
+					+ minigameProgress.minesweeperWins + "    2048：最高 "
+					+ minigameProgress.game2048HighScore + " · 最大 "
+					+ minigameProgress.game2048BestTile, left, 159, 0xFFCFD8DC);
+				graphics.text(font, "AI 猜拳：胜 " + minigameProgress.rpsWins + " / 负 "
+					+ minigameProgress.rpsLosses + " / 平 " + minigameProgress.rpsDraws
+					+ " · 最佳连胜 " + minigameProgress.rpsBestStreak,
+					left, 175, 0xFFFFD54F);
 			}
 			case LEISURE, PERFORMANCE, ADVANCED -> { }
 		}

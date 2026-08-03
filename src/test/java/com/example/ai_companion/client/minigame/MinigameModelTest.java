@@ -6,6 +6,7 @@ import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class MinigameModelTest {
@@ -117,5 +118,34 @@ final class MinigameModelTest {
 		assertFalse(result.changed());
 		assertTrue(result.gameOver());
 		assertEquals(Game2048.State.GAME_OVER, game.state());
+	}
+
+	@Test
+	void rockPaperScissorsResolvesAllOutcomeTypes() {
+		assertEquals(RockPaperScissorsGame.Outcome.PLAYER_WIN,
+			RockPaperScissorsGame.determineWinner(RockPaperScissorsGame.Choice.ROCK,
+				RockPaperScissorsGame.Choice.SCISSORS));
+		assertEquals(RockPaperScissorsGame.Outcome.AI_WIN,
+			RockPaperScissorsGame.determineWinner(RockPaperScissorsGame.Choice.PAPER,
+				RockPaperScissorsGame.Choice.SCISSORS));
+		assertEquals(RockPaperScissorsGame.Outcome.DRAW,
+			RockPaperScissorsGame.determineWinner(RockPaperScissorsGame.Choice.ROCK,
+				RockPaperScissorsGame.Choice.ROCK));
+	}
+
+	@Test
+	void rockPaperScissorsPersonalitiesAlwaysProduceValidRounds() {
+		RockPaperScissorsGame game = new RockPaperScissorsGame(new Random(26L));
+		for (int personality = 0; personality < RockPaperScissorsGame.Personality.values().length;
+				personality++) {
+			for (int round = 0; round < 20; round++) {
+				RockPaperScissorsGame.Round result = game.play(RockPaperScissorsGame.Choice.values()[round % 3]);
+				assertNotNull(result.aiChoice());
+				assertNotNull(result.outcome());
+				assertFalse(result.aiMessage().isBlank());
+			}
+			game.cyclePersonality();
+		}
+		assertEquals(60, game.rounds().size());
 	}
 }

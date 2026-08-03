@@ -63,6 +63,11 @@ public final class MinigameProgress {
 	public int game2048HighScore;
 	public int game2048BestTile;
 	public int game2048Wins;
+	public int rpsWins;
+	public int rpsLosses;
+	public int rpsDraws;
+	public int rpsCurrentStreak;
+	public int rpsBestStreak;
 
 	public static MinigameProgress load() {
 		try {
@@ -105,6 +110,11 @@ public final class MinigameProgress {
 		game2048HighScore = Math.max(0, game2048HighScore);
 		game2048BestTile = Math.max(0, game2048BestTile);
 		game2048Wins = Math.max(0, game2048Wins);
+		rpsWins = Math.max(0, rpsWins);
+		rpsLosses = Math.max(0, rpsLosses);
+		rpsDraws = Math.max(0, rpsDraws);
+		rpsCurrentStreak = Math.max(0, rpsCurrentStreak);
+		rpsBestStreak = Math.max(0, rpsBestStreak);
 		if (snakeHighScore >= 10) goldenSnakeSkinUnlocked = true;
 		if (snakeHighScore >= 25) diamondSnakeSkinUnlocked = true;
 		if (snakeHighScore >= 30) snakeMasterTitleUnlocked = true;
@@ -159,6 +169,22 @@ public final class MinigameProgress {
 		game2048HighScore = Math.max(game2048HighScore, Math.max(0, score));
 		game2048BestTile = Math.max(game2048BestTile, Math.max(0, bestTile));
 		if (reached2048) game2048Wins++;
+		saveSafely();
+	}
+
+	public void recordRpsRound(RockPaperScissorsGame.Outcome outcome) {
+		switch (outcome) {
+			case PLAYER_WIN -> {
+				rpsWins++;
+				rpsCurrentStreak++;
+				rpsBestStreak = Math.max(rpsBestStreak, rpsCurrentStreak);
+			}
+			case AI_WIN -> {
+				rpsLosses++;
+				rpsCurrentStreak = 0;
+			}
+			case DRAW -> rpsDraws++;
+		}
 		saveSafely();
 	}
 

@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：`0.5.3`
+当前版本：`0.5.4`
 
 ## 环境要求
 
@@ -49,11 +49,11 @@ EclipseUI 模式提供分类卡片、图标、开关、滑块、下拉菜单和�
 
 “AI系统”可进入完整 AI 管理器，继续使用批量生成、在线玩家选择、模式分配、API 配置和
 多行提示词编辑等既有功能。“小游戏中心”已开放贪吃蛇、Minecraft 俄罗斯方块、Minecraft
-方块扫雷与 2048；休闲和性能栏目是后续设计文档功能的固定入口，相关功能会按版本逐项启用。
+方块扫雷、2048 与 AI 猜拳；休闲和性能栏目是后续设计文档功能的固定入口，相关功能会按版本逐项启用。
 
 ### 小游戏中心
 
-`0.5.3` 已按设计文档顺序开放前四个小游戏。打开完整管理中心并选择“小游戏中心”即可游玩。
+`0.5.4` 已完成设计文档中的五个小游戏。打开完整管理中心并选择“小游戏中心”即可游玩。
 
 #### 贪吃蛇
 
@@ -85,6 +85,13 @@ EclipseUI 模式提供分类卡片、图标、开关、滑块、下拉菜单和�
 - 相同数字每次移动只合并一次；每次有效移动后随机生成 2 或 4。
 - 自动保存最高分、历史最大方块与成功合成 2048 的次数。
 - 达到 2048 后可按 `C` 继续挑战 4096 与更高数字；`P` 暂停，`R` 重开。
+
+#### AI 猜拳
+
+- 玩家可选择石头、剪刀或布，与本地 AI 进行不限轮数的猜拳。
+- AI 提供冷静、好胜、淘气三种人格；不同人格使用不同的加权随机与玩家历史策略。
+- 自动保存胜、负、平、当前连胜与最佳连胜。
+- AI 获胜时会说“看来今天我的运气不错。”；失败时会说“下一次我一定赢回来。”。
 
 ### F3+B 原版发光轮廓
 
@@ -160,15 +167,15 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.5.3.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.5.3-sources.jar`：源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.5.3-javadoc.jar`：Java API 文档包。
+- `windowsdepcs-ai-companion-0.5.4.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.5.4-sources.jar`：源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.5.4-javadoc.jar`：Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 
 ## 当前边界
 
-0.5.3 保留现有 AI 决策与任务框架，但复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
+0.5.4 保留现有 AI 决策与任务框架，但复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
 多 AI 共识与领队选举、Simple Voice Chat 协议等仍在后续版本开发。设计路线见
 [`docs/My Mod Design Document.md`](docs/My%20Mod%20Design%20Document.md)。
 
