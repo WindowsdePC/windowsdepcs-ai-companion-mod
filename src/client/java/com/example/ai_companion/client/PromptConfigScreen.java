@@ -1,7 +1,9 @@
 package com.example.ai_companion.client;
 
 import com.example.ai_companion.agent.AgentMode;
+import com.example.ai_companion.client.minigame.Game2048Screen;
 import com.example.ai_companion.client.minigame.MinigameProgress;
+import com.example.ai_companion.client.minigame.MinesweeperScreen;
 import com.example.ai_companion.client.minigame.SnakeScreen;
 import com.example.ai_companion.client.minigame.TetrisScreen;
 import com.example.ai_companion.config.PromptStore;
@@ -164,11 +166,17 @@ public final class PromptConfigScreen extends Screen {
 		int cardWidth = (panelWidth - 14) / 2;
 		addRenderableWidget(Button.builder(Component.literal("开始：贪吃蛇"), button -> {
 			if (minecraft != null) minecraft.setScreenAndShow(new SnakeScreen(this, minigameProgress));
-		}).bounds(left + 10, 105, cardWidth - 20, 24).build());
+		}).bounds(left + 10, 101, cardWidth - 20, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("开始：Minecraft 俄罗斯方块"), button -> {
 			if (minecraft != null) minecraft.setScreenAndShow(new TetrisScreen(this, minigameProgress));
-		}).bounds(left + cardWidth + 14, 105, cardWidth - 20, 24).build());
-		status = "0.5.2 已开放 2/5 个设计文档小游戏；记录保存在客户端配置目录";
+		}).bounds(left + cardWidth + 14, 101, cardWidth - 20, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("开始：Minecraft 方块扫雷"), button -> {
+			if (minecraft != null) minecraft.setScreenAndShow(new MinesweeperScreen(this, minigameProgress));
+		}).bounds(left + 10, 175, cardWidth - 20, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("开始：2048"), button -> {
+			if (minecraft != null) minecraft.setScreenAndShow(new Game2048Screen(this, minigameProgress));
+		}).bounds(left + cardWidth + 14, 175, cardWidth - 20, 20).build());
+		status = "0.5.3 已开放 4/5 个设计文档小游戏；记录保存在客户端配置目录";
 	}
 
 	private void buildApiPanel(int left, int panelWidth) {
@@ -667,22 +675,25 @@ public final class PromptConfigScreen extends Screen {
 			case COMPATIBILITY -> graphics.text(font, "UI 后端：" + backend.displayName(), left, 55, 0xA0A0A0);
 			case MINIGAMES -> {
 				int cardWidth = (panelWidth - 14) / 2;
-				graphics.fill(left, 55, left + cardWidth, 180, 0x55344E41);
-				graphics.fill(left + cardWidth + 14, 55, left + panelWidth, 180, 0x553E4B63);
+				graphics.fill(left, 55, left + cardWidth, 128, 0x55344E41);
+				graphics.fill(left + cardWidth + 14, 55, left + panelWidth, 128, 0x553E4B63);
 				graphics.text(font, "贪吃蛇", left + 10, 66, 0xFFA5D6A7);
-				graphics.text(font, "像素蛇、三种食物、最高分", left + 10, 80, 0xFFCFD8DC);
-				graphics.text(font, "皮肤解锁与贪吃蛇大师称号", left + 10, 92, 0xFFCFD8DC);
-				graphics.text(font, "最高分：" + minigameProgress.snakeHighScore,
-					left + 10, 142, 0xFFFFD54F);
-				graphics.text(font, "称号：" + minigameProgress.snakeTitle(),
-					left + 10, 156, 0xFFB0BEC5);
+				graphics.text(font, "三种食物 · 最高 " + minigameProgress.snakeHighScore
+					+ " · " + minigameProgress.snakeTitle(), left + 10, 81, 0xFFCFD8DC);
 				graphics.text(font, "Minecraft 俄罗斯方块", left + cardWidth + 24, 66, 0xFF90CAF9);
-				graphics.text(font, "七种方块、旋转、消行与等级", left + cardWidth + 24, 80, 0xFFCFD8DC);
-				graphics.text(font, "有效成绩随机奖励铁、金或钻石", left + cardWidth + 24, 92, 0xFFCFD8DC);
-				graphics.text(font, "最高分：" + minigameProgress.tetrisHighScore,
-					left + cardWidth + 24, 142, 0xFFFFD54F);
-				graphics.text(font, "最佳消行：" + minigameProgress.tetrisBestLines,
-					left + cardWidth + 24, 156, 0xFFB0BEC5);
+				graphics.text(font, "七种方块 · 最高 " + minigameProgress.tetrisHighScore
+					+ " · 最佳消行 " + minigameProgress.tetrisBestLines,
+					left + cardWidth + 24, 81, 0xFFCFD8DC);
+
+				graphics.fill(left, 134, left + cardWidth, 202, 0x554E4434);
+				graphics.fill(left + cardWidth + 14, 134, left + panelWidth, 202, 0x55514363);
+				graphics.text(font, "Minecraft 方块扫雷", left + 10, 143, 0xFFFFCC80);
+				graphics.text(font, "最佳 " + minigameProgress.minesweeperBestTime() + " · 胜场 "
+					+ minigameProgress.minesweeperWins + " · 连胜 "
+					+ minigameProgress.minesweeperBestStreak, left + 10, 158, 0xFFCFD8DC);
+				graphics.text(font, "Minecraft 2048", left + cardWidth + 24, 143, 0xFFCE93D8);
+				graphics.text(font, "最高 " + minigameProgress.game2048HighScore + " · 最大方块 "
+					+ minigameProgress.game2048BestTile, left + cardWidth + 24, 158, 0xFFCFD8DC);
 			}
 			case LEISURE, PERFORMANCE, ADVANCED -> { }
 		}

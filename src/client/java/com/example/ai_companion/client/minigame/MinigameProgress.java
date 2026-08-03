@@ -56,6 +56,13 @@ public final class MinigameProgress {
 	public int tetrisHighScore;
 	public int tetrisBestLines;
 	public int tetrisTotalLines;
+	public int minesweeperBestTimeTicks;
+	public int minesweeperWins;
+	public int minesweeperBestStreak;
+	public int minesweeperCurrentStreak;
+	public int game2048HighScore;
+	public int game2048BestTile;
+	public int game2048Wins;
 
 	public static MinigameProgress load() {
 		try {
@@ -91,6 +98,13 @@ public final class MinigameProgress {
 		tetrisHighScore = Math.max(0, tetrisHighScore);
 		tetrisBestLines = Math.max(0, tetrisBestLines);
 		tetrisTotalLines = Math.max(0, tetrisTotalLines);
+		minesweeperBestTimeTicks = Math.max(0, minesweeperBestTimeTicks);
+		minesweeperWins = Math.max(0, minesweeperWins);
+		minesweeperBestStreak = Math.max(0, minesweeperBestStreak);
+		minesweeperCurrentStreak = Math.max(0, minesweeperCurrentStreak);
+		game2048HighScore = Math.max(0, game2048HighScore);
+		game2048BestTile = Math.max(0, game2048BestTile);
+		game2048Wins = Math.max(0, game2048Wins);
 		if (snakeHighScore >= 10) goldenSnakeSkinUnlocked = true;
 		if (snakeHighScore >= 25) diamondSnakeSkinUnlocked = true;
 		if (snakeHighScore >= 30) snakeMasterTitleUnlocked = true;
@@ -124,6 +138,34 @@ public final class MinigameProgress {
 		tetrisBestLines = Math.max(tetrisBestLines, Math.max(0, lines));
 		tetrisTotalLines += Math.max(0, lines);
 		saveSafely();
+	}
+
+	public void recordMinesweeperResult(boolean won, int elapsedTicks) {
+		if (won) {
+			int safeTicks = Math.max(1, elapsedTicks);
+			if (minesweeperBestTimeTicks == 0 || safeTicks < minesweeperBestTimeTicks) {
+				minesweeperBestTimeTicks = safeTicks;
+			}
+			minesweeperWins++;
+			minesweeperCurrentStreak++;
+			minesweeperBestStreak = Math.max(minesweeperBestStreak, minesweeperCurrentStreak);
+		} else {
+			minesweeperCurrentStreak = 0;
+		}
+		saveSafely();
+	}
+
+	public void record2048Result(int score, int bestTile, boolean reached2048) {
+		game2048HighScore = Math.max(game2048HighScore, Math.max(0, score));
+		game2048BestTile = Math.max(game2048BestTile, Math.max(0, bestTile));
+		if (reached2048) game2048Wins++;
+		saveSafely();
+	}
+
+	public String minesweeperBestTime() {
+		if (minesweeperBestTimeTicks <= 0) return "--:--";
+		int seconds = minesweeperBestTimeTicks / 20;
+		return "%02d:%02d".formatted(seconds / 60, seconds % 60);
 	}
 
 	public SnakeSkin cycleSnakeSkin() {

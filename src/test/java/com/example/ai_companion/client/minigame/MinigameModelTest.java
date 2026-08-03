@@ -56,4 +56,66 @@ final class MinigameModelTest {
 		assertFalse(game.state() == TetrisGame.State.GAME_OVER);
 		assertEquals(4, game.ghostCells().size());
 	}
+
+	@Test
+	void minesweeperFirstRevealHasSafeNeighborhoodAndCorrectMineCount() {
+		MinesweeperGame game = new MinesweeperGame(new Random(2026L));
+		game.reveal(7, 5);
+		int mines = 0;
+		for (int y = 0; y < MinesweeperGame.HEIGHT; y++) {
+			for (int x = 0; x < MinesweeperGame.WIDTH; x++) {
+				if (game.cell(x, y).mine()) mines++;
+			}
+		}
+		assertEquals(MinesweeperGame.MINE_COUNT, mines);
+		for (int y = 4; y <= 6; y++) {
+			for (int x = 6; x <= 8; x++) assertFalse(game.cell(x, y).mine());
+		}
+		assertTrue(game.cell(7, 5).revealed());
+	}
+
+	@Test
+	void minesweeperWinsAfterAllSafeCellsAreRevealed() {
+		MinesweeperGame game = new MinesweeperGame(new Random(77L));
+		game.reveal(0, 0);
+		for (int y = 0; y < MinesweeperGame.HEIGHT; y++) {
+			for (int x = 0; x < MinesweeperGame.WIDTH; x++) {
+				if (!game.cell(x, y).mine()) game.reveal(x, y);
+			}
+		}
+		assertEquals(MinesweeperGame.State.WON, game.state());
+		assertEquals(MinesweeperGame.WIDTH * MinesweeperGame.HEIGHT - MinesweeperGame.MINE_COUNT,
+			game.revealedCount());
+	}
+
+	@Test
+	void game2048MergesEachTileOnlyOncePerMove() {
+		Game2048 game = new Game2048(new Random(15L));
+		game.setBoardForTesting(new int[][]{
+			{2, 2, 2, 2},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0}
+		});
+		Game2048.MoveResult result = game.move(Game2048.Direction.LEFT);
+		assertTrue(result.changed());
+		assertEquals(8, result.scoreGained());
+		assertEquals(4, game.valueAt(0, 0));
+		assertEquals(4, game.valueAt(1, 0));
+	}
+
+	@Test
+	void game2048DetectsBoardWithNoAvailableMoves() {
+		Game2048 game = new Game2048(new Random(4L));
+		game.setBoardForTesting(new int[][]{
+			{2, 4, 2, 4},
+			{4, 2, 4, 2},
+			{2, 4, 2, 4},
+			{4, 2, 4, 2}
+		});
+		Game2048.MoveResult result = game.move(Game2048.Direction.LEFT);
+		assertFalse(result.changed());
+		assertTrue(result.gameOver());
+		assertEquals(Game2048.State.GAME_OVER, game.state());
+	}
 }

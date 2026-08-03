@@ -69,7 +69,7 @@ final class EclipseUiApiBridge {
 						value -> settings.f3BGlowingHitboxesEnabled = value).defaultValue(true)))
 			.category(category -> category.name(Component.literal("小游戏中心"))
 				.icon(icon("target"))
-				.description(Component.literal("贪吃蛇与 Minecraft 俄罗斯方块"))
+				.description(Component.literal("贪吃蛇、俄罗斯方块、扫雷与 2048"))
 				.label(Component.literal("返回完整管理中心后可开始游戏")))
 			.category(category -> category.name(Component.literal("休闲系统"))
 				.icon(icon("music_disc_13")).label(Component.literal("后续功能版本开放")))

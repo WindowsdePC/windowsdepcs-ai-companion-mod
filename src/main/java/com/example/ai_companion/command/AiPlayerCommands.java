@@ -154,6 +154,10 @@ public final class AiPlayerCommands {
 				.then(Commands.literal("tetris")
 					.then(Commands.argument("session", StringArgumentType.word())
 						.executes(c -> startTetris(c.getSource(), minigameRewards,
+							StringArgumentType.getString(c, "session")))))
+				.then(Commands.literal("minesweeper")
+					.then(Commands.argument("session", StringArgumentType.word())
+						.executes(c -> startMinesweeper(c.getSource(), minigameRewards,
 							StringArgumentType.getString(c, "session"))))))
 			.then(Commands.literal("finish")
 				.then(Commands.literal("tetris")
@@ -163,7 +167,13 @@ public final class AiPlayerCommands {
 								.executes(c -> finishTetris(c.getSource(), minigameRewards,
 									StringArgumentType.getString(c, "session"),
 									IntegerArgumentType.getInteger(c, "score"),
-									IntegerArgumentType.getInteger(c, "lines"))))))));
+									IntegerArgumentType.getInteger(c, "lines")))))))
+				.then(Commands.literal("minesweeper")
+					.then(Commands.argument("session", StringArgumentType.word())
+						.then(Commands.argument("elapsedTicks", IntegerArgumentType.integer(1, 24_000))
+							.executes(c -> finishMinesweeper(c.getSource(), minigameRewards,
+								StringArgumentType.getString(c, "session"),
+								IntegerArgumentType.getInteger(c, "elapsedTicks")))))));
 	}
 
 	private static int startTetris(CommandSourceStack source, MinigameRewardManager rewards,
@@ -179,6 +189,24 @@ public final class AiPlayerCommands {
 			String sessionId, int score, int lines) throws CommandSyntaxException {
 		MinigameRewardManager.Result result = rewards.finishTetris(source.getPlayerOrException(), sessionId,
 			score, lines, source.getServer().getTickCount());
+		if (result.accepted()) source.sendSuccess(result::message, false);
+		else source.sendFailure(result.message());
+		return result.accepted() ? 1 : 0;
+	}
+
+	private static int startMinesweeper(CommandSourceStack source, MinigameRewardManager rewards,
+			String sessionId) throws CommandSyntaxException {
+		MinigameRewardManager.Result result = rewards.startMinesweeper(source.getPlayerOrException(),
+			sessionId, source.getServer().getTickCount());
+		if (result.accepted()) source.sendSuccess(result::message, false);
+		else source.sendFailure(result.message());
+		return result.accepted() ? 1 : 0;
+	}
+
+	private static int finishMinesweeper(CommandSourceStack source, MinigameRewardManager rewards,
+			String sessionId, int elapsedTicks) throws CommandSyntaxException {
+		MinigameRewardManager.Result result = rewards.finishMinesweeper(source.getPlayerOrException(),
+			sessionId, elapsedTicks, source.getServer().getTickCount());
 		if (result.accepted()) source.sendSuccess(result::message, false);
 		else source.sendFailure(result.message());
 		return result.accepted() ? 1 : 0;
