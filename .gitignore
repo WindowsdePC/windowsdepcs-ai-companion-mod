@@ -5,4 +5,8 @@ run/
 .idea/
 .vscode/
 .tooling/
+.toolchain/
+.check/
+.gradle-local/
+.tmp/
 config/mc-ai-players.json

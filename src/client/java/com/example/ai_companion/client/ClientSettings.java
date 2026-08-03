@@ -29,6 +29,7 @@ public final class ClientSettings {
 	public int hungerEvery = 30;
 	public int hungerCost = 2;
 	public double rushStrength = 0.916;
+	public boolean flexibleEquipmentEnabled = false;
 	public boolean f3BGlowingHitboxesEnabled = true;
 
 	public static ClientSettings load() {

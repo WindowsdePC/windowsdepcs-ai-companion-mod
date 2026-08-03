@@ -6,6 +6,7 @@ import com.example.ai_companion.config.GameplayConfig;
 import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
 import com.example.ai_companion.gameplay.GoldenSpearRush;
+import com.example.ai_companion.gameplay.FlexibleEquipmentMode;
 import com.example.ai_companion.gameplay.MinigameRewardManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -29,6 +30,7 @@ public final class AiCompanionMod implements ModInitializer {
 	public void onInitialize() {
 		config = ModConfig.load();
 		gameplay = GameplayConfig.load();
+		FlexibleEquipmentMode.configureServer(() -> gameplay.flexibleEquipmentEnabled());
 		prompts = PromptStore.loadServer();
 		agents = new AgentManager(() -> config, prompts);
 		goldenSpearRush = new GoldenSpearRush(() -> gameplay);

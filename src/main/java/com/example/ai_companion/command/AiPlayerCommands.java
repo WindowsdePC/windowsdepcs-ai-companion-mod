@@ -12,6 +12,7 @@ import com.example.ai_companion.config.GameplayConfig;
 import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
 import com.example.ai_companion.gameplay.MinigameRewardManager;
+import com.example.ai_companion.gameplay.InventoryShuffleManager;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -143,9 +144,34 @@ public final class AiPlayerCommands {
 					.then(Commands.literal("strength")
 						.then(Commands.argument("value", DoubleArgumentType.doubleArg(0.1, 4.0))
 							.executes(c -> saveGameplay(c.getSource(), gameplay.get().withRushStrength(
-								DoubleArgumentType.getDouble(c, "value")), updateGameplay)))))
+								DoubleArgumentType.getDouble(c, "value")), updateGameplay))))
+					.then(Commands.literal("flexible-equipment")
+						.then(Commands.argument("value", BoolArgumentType.bool())
+							.executes(c -> saveGameplay(c.getSource(),
+								gameplay.get().withFlexibleEquipmentEnabled(
+									BoolArgumentType.getBool(c, "value")), updateGameplay)))))
+				.then(Commands.literal("shuffle-inventory")
+					.executes(c -> shuffleInventory(c.getSource(), gameplay.get())))
 				.then(minigameCommands(minigameRewards))));
 		}
+
+	private static int shuffleInventory(CommandSourceStack source, GameplayConfig gameplay)
+			throws CommandSyntaxException {
+		if (!gameplay.flexibleEquipmentEnabled()) {
+			source.getPlayerOrException().sendOverlayMessage(Component.literal("请先开启任意物品装备模式"));
+			return 0;
+		}
+		try {
+			int moved = InventoryShuffleManager.shuffle(source.getPlayerOrException());
+			source.getPlayerOrException().sendOverlayMessage(Component.literal(
+				"已打乱背包栏、装备栏和副手，共移动 " + moved + " 组物品；快捷栏保持不变"));
+			return 1;
+		} catch (RuntimeException error) {
+			source.getPlayerOrException().sendOverlayMessage(Component.literal(
+				"物品栏打乱失败：" + error.getMessage()));
+			return 0;
+		}
+	}
 
 	private static LiteralArgumentBuilder<CommandSourceStack> minigameCommands(
 			MinigameRewardManager minigameRewards) {
@@ -391,7 +417,8 @@ public final class AiPlayerCommands {
 			+ ", 耐久间隔=" + config.durabilityEvery()
 			+ ", 饥饿间隔=" + config.hungerEvery()
 			+ ", 饥饿消耗=" + config.hungerCost()
-			+ ", 强度=" + config.rushStrength()), false);
+			+ ", 强度=" + config.rushStrength()
+			+ ", 任意物品装备=" + config.flexibleEquipmentEnabled()), false);
 		return 1;
 	}
 

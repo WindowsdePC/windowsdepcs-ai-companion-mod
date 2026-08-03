@@ -3,6 +3,8 @@
 	"package": "com.example.ai_companion.client.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
+		"AvatarRendererMixin",
+		"AvatarRenderStateMixin",
 		"EntityHitboxDebugRendererMixin",
 		"MinecraftGlowMixin"
 	],

@@ -12,6 +12,7 @@
 		"client": ["com.example.ai_companion.client.AiCompanionClient"]
 	},
 	"mixins": [
+		"ai_companion.mixins.json",
 		{
 			"config": "ai_companion.client.mixins.json",
 			"environment": "client"

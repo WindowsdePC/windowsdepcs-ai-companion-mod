@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "package": "com.example.ai_companion.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "ArmorSlotMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

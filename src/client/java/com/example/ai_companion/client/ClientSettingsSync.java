@@ -28,5 +28,7 @@ final class ClientSettingsSync {
 		minecraft.getConnection().sendCommand("aiplayer feature hunger-every " + settings.hungerEvery);
 		minecraft.getConnection().sendCommand("aiplayer feature hunger-cost " + settings.hungerCost);
 		minecraft.getConnection().sendCommand("aiplayer feature strength " + settings.rushStrength);
+		minecraft.getConnection().sendCommand("aiplayer feature flexible-equipment "
+			+ settings.flexibleEquipmentEnabled);
 	}
 }

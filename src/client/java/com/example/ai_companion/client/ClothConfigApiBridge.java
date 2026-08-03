@@ -45,6 +45,10 @@ final class ClothConfigApiBridge {
 		gameplay.addEntry(entries.startBooleanToggle(Component.literal("金矛二级突进"),
 			settings.goldenSpearRushEnabled).setDefaultValue(true)
 			.setSaveConsumer(value -> settings.goldenSpearRushEnabled = value).build());
+		gameplay.addEntry(entries.startBooleanToggle(Component.literal("任意物品装备"),
+			settings.flexibleEquipmentEnabled).setDefaultValue(false)
+			.setTooltip(Component.literal("允许所有物品进入四个装备槽；默认关闭"))
+			.setSaveConsumer(value -> settings.flexibleEquipmentEnabled = value).build());
 		gameplay.addEntry(entries.startIntSlider(Component.literal("耐久消耗间隔"),
 			settings.durabilityEvery, 1, 1000).setDefaultValue(15)
 			.setSaveConsumer(value -> settings.durabilityEvery = value).build());

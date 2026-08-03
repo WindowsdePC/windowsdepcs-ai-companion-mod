@@ -65,6 +65,7 @@ public final class PromptConfigScreen extends Screen {
 	private String promptText = "";
 
 	private boolean rushEnabled;
+	private boolean flexibleEquipmentEnabled;
 	private boolean glowingHitboxesEnabled;
 	private String durabilityEvery;
 	private String hungerEvery;
@@ -87,6 +88,7 @@ public final class PromptConfigScreen extends Screen {
 		this.backend = backend;
 		this.minigameProgress = MinigameProgress.load();
 		rushEnabled = settings.goldenSpearRushEnabled;
+		flexibleEquipmentEnabled = settings.flexibleEquipmentEnabled;
 		glowingHitboxesEnabled = settings.f3BGlowingHitboxesEnabled;
 		durabilityEvery = Integer.toString(settings.durabilityEvery);
 		hungerEvery = Integer.toString(settings.hungerEvery);
@@ -181,7 +183,7 @@ public final class PromptConfigScreen extends Screen {
 			if (minecraft != null) minecraft.setScreenAndShow(new RockPaperScissorsScreen(this,
 				minigameProgress));
 		}).bounds(left + panelWidth / 4, 112, panelWidth / 2, 20).build());
-		status = "0.5.8 已完成小游戏中心 5/5，奖励静默结算为真实物品；记录保存在客户端配置目录";
+		status = "0.5.9 已完成小游戏中心 5/5，分级奖励为真实物品；记录保存在客户端配置目录";
 	}
 
 	private void buildApiPanel(int left, int panelWidth) {
@@ -318,10 +320,18 @@ public final class PromptConfigScreen extends Screen {
 				rebuildPanel();
 			}).bounds(left, 70, 220, 20).build());
 
-		EditBox durability = numberBox(left, 120, durabilityEvery, 4, value -> durabilityEvery = value);
-		EditBox hungerInterval = numberBox(left + 200, 120, hungerEvery, 4, value -> hungerEvery = value);
-		EditBox hungerAmount = numberBox(left + 400, 120, hungerCost, 2, value -> hungerCost = value);
-		EditBox strength = numberBox(left + 600, 120, rushStrength, 5, value -> rushStrength = value);
+		addRenderableWidget(Button.builder(Component.literal("任意物品装备："
+			+ (flexibleEquipmentEnabled ? "开启" : "关闭")), b -> {
+			flexibleEquipmentEnabled = !flexibleEquipmentEnabled;
+			rebuildPanel();
+		}).bounds(left + 230, 70, 220, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("打乱非快捷栏物品"), b -> shuffleInventory())
+			.bounds(left + 460, 70, 180, 20).build());
+
+		EditBox durability = numberBox(left, 130, durabilityEvery, 4, value -> durabilityEvery = value);
+		EditBox hungerInterval = numberBox(left + 200, 130, hungerEvery, 4, value -> hungerEvery = value);
+		EditBox hungerAmount = numberBox(left + 400, 130, hungerCost, 2, value -> hungerCost = value);
+		EditBox strength = numberBox(left + 600, 130, rushStrength, 5, value -> rushStrength = value);
 		strength.setWidth(Math.max(80, panelWidth - 600));
 
 		addRenderableWidget(Button.builder(Component.literal("保存游戏增强设置"), b -> saveGameplay())
@@ -574,15 +584,30 @@ public final class PromptConfigScreen extends Screen {
 			settings.hungerEvery = parseInt(hungerEvery, 1, 1000, "饥饿间隔");
 			settings.hungerCost = parseInt(hungerCost, 0, 20, "饥饿消耗");
 			settings.rushStrength = parseDouble(rushStrength, 0.1, 4.0, "突进强度");
+			settings.flexibleEquipmentEnabled = flexibleEquipmentEnabled;
 			settings.save();
 			sendCommand("aiplayer feature enabled " + rushEnabled);
 			sendCommand("aiplayer feature durability-every " + settings.durabilityEvery);
 			sendCommand("aiplayer feature hunger-every " + settings.hungerEvery);
 			sendCommand("aiplayer feature hunger-cost " + settings.hungerCost);
 			sendCommand("aiplayer feature strength " + settings.rushStrength);
-			status = "已保存金矛突进设置";
+			sendCommand("aiplayer feature flexible-equipment " + flexibleEquipmentEnabled);
+			status = "已保存金矛突进与任意物品装备设置";
 		} catch (RuntimeException | IOException error) {
 			status = "保存失败: " + error.getMessage();
+		}
+	}
+
+	private void shuffleInventory() {
+		try {
+			if (!flexibleEquipmentEnabled) throw new IllegalStateException("请先开启任意物品装备模式");
+			settings.flexibleEquipmentEnabled = true;
+			settings.save();
+			sendCommand("aiplayer feature flexible-equipment true");
+			sendCommand("aiplayer shuffle-inventory");
+			status = "已请求打乱背包栏、装备栏和副手；快捷栏不会变化";
+		} catch (RuntimeException | IOException error) {
+			status = "打乱失败: " + error.getMessage();
 		}
 	}
 

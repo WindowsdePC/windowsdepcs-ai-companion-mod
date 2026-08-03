@@ -48,6 +48,10 @@ final class EclipseUiApiBridge {
 				.toggle(toggle -> toggle.name(Component.literal("金矛二级突进"))
 					.binding(() -> settings.goldenSpearRushEnabled,
 						value -> settings.goldenSpearRushEnabled = value).defaultValue(true))
+				.toggle(toggle -> toggle.name(Component.literal("任意物品装备"))
+					.description(Component.literal("允许所有物品进入四个装备槽；默认关闭"))
+					.binding(() -> settings.flexibleEquipmentEnabled,
+						value -> settings.flexibleEquipmentEnabled = value).defaultValue(false))
 				.slider(slider -> slider.name(Component.literal("耐久消耗间隔"))
 					.range(1, 1000, 1).bindingInt(() -> settings.durabilityEvery,
 					value -> settings.durabilityEvery = value).defaultValue(15))
