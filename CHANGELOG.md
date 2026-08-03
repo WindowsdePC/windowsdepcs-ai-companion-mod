@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.7
+
+- 修正 Minecraft 26.2 非混淆 Loom 与拆分客户端源码集的可选 UI 编译依赖配置。
+- 发布工作流支持先在主分支手动验证完整构建，再由版本标签创建正式 Release。
+
 ## 0.5.6
 
 - 修正 Fabric Loom 1.17 的可选模组依赖配置，使 EclipseUI 与 Cloth Config 可在 CI 中正确解析与重映射。

@@ -35,8 +35,8 @@ dependencies {
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
 	// Alternative client UI backends. Neither is bundled; runtime routing prefers EclipseUI.
-	modImplementation "maven.modrinth:eclipseui:EW0sBZm4"
-	modImplementation "maven.modrinth:cloth-config:Nv3xnWXd"
+	clientCompileOnly "maven.modrinth:eclipseui:EW0sBZm4"
+	clientCompileOnly "maven.modrinth:cloth-config:Nv3xnWXd"
 
 	testImplementation platform("org.junit:junit-bom:5.13.4")
 	testImplementation "org.junit.jupiter:junit-jupiter"
