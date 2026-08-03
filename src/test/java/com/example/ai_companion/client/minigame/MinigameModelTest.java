@@ -60,32 +60,41 @@ final class MinigameModelTest {
 
 	@Test
 	void minesweeperFirstRevealHasSafeNeighborhoodAndCorrectMineCount() {
-		MinesweeperGame game = new MinesweeperGame(new Random(2026L));
-		game.reveal(7, 5);
+		MinesweeperGame game = new MinesweeperGame(MinesweeperGame.Difficulty.INTERMEDIATE,
+			new Random(2026L));
+		game.reveal(7, 7);
 		int mines = 0;
-		for (int y = 0; y < MinesweeperGame.HEIGHT; y++) {
-			for (int x = 0; x < MinesweeperGame.WIDTH; x++) {
+		for (int y = 0; y < game.height(); y++) {
+			for (int x = 0; x < game.width(); x++) {
 				if (game.cell(x, y).mine()) mines++;
 			}
 		}
-		assertEquals(MinesweeperGame.MINE_COUNT, mines);
-		for (int y = 4; y <= 6; y++) {
+		assertEquals(game.mineCount(), mines);
+		for (int y = 6; y <= 8; y++) {
 			for (int x = 6; x <= 8; x++) assertFalse(game.cell(x, y).mine());
 		}
-		assertTrue(game.cell(7, 5).revealed());
+		assertTrue(game.cell(7, 7).revealed());
+	}
+
+	@Test
+	void minesweeperProvidesClassicDifficultyBoards() {
+		assertEquals(10, new MinesweeperGame(MinesweeperGame.Difficulty.BEGINNER).mineCount());
+		assertEquals(16, new MinesweeperGame(MinesweeperGame.Difficulty.INTERMEDIATE).width());
+		assertEquals(99, new MinesweeperGame(MinesweeperGame.Difficulty.EXPERT).mineCount());
 	}
 
 	@Test
 	void minesweeperWinsAfterAllSafeCellsAreRevealed() {
-		MinesweeperGame game = new MinesweeperGame(new Random(77L));
+		MinesweeperGame game = new MinesweeperGame(MinesweeperGame.Difficulty.BEGINNER,
+			new Random(77L));
 		game.reveal(0, 0);
-		for (int y = 0; y < MinesweeperGame.HEIGHT; y++) {
-			for (int x = 0; x < MinesweeperGame.WIDTH; x++) {
+		for (int y = 0; y < game.height(); y++) {
+			for (int x = 0; x < game.width(); x++) {
 				if (!game.cell(x, y).mine()) game.reveal(x, y);
 			}
 		}
 		assertEquals(MinesweeperGame.State.WON, game.state());
-		assertEquals(MinesweeperGame.WIDTH * MinesweeperGame.HEIGHT - MinesweeperGame.MINE_COUNT,
+		assertEquals(game.width() * game.height() - game.mineCount(),
 			game.revealedCount());
 	}
 
@@ -118,6 +127,24 @@ final class MinigameModelTest {
 		assertFalse(result.changed());
 		assertTrue(result.gameOver());
 		assertEquals(Game2048.State.GAME_OVER, game.state());
+	}
+
+	@Test
+	void game2048UndoRestoresBoardAndScoreOnce() {
+		Game2048 game = new Game2048(new Random(15L));
+		game.setBoardForTesting(new int[][]{
+			{2, 2, 0, 0},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0}
+		});
+		game.move(Game2048.Direction.LEFT);
+		assertTrue(game.canUndo());
+		assertTrue(game.undo());
+		assertEquals(2, game.valueAt(0, 0));
+		assertEquals(2, game.valueAt(1, 0));
+		assertEquals(0, game.score());
+		assertFalse(game.undo());
 	}
 
 	@Test

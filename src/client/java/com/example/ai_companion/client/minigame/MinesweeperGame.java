@@ -10,9 +10,28 @@ import java.util.Random;
 
 /** Pure game-state implementation for the Minecraft-block Minesweeper minigame. */
 public final class MinesweeperGame {
-	public static final int WIDTH = 14;
-	public static final int HEIGHT = 10;
-	public static final int MINE_COUNT = 24;
+	public enum Difficulty {
+		BEGINNER("初级", 9, 9, 10),
+		INTERMEDIATE("中级", 16, 16, 40),
+		EXPERT("专家", 30, 16, 99);
+
+		private final String displayName;
+		private final int width;
+		private final int height;
+		private final int mines;
+
+		Difficulty(String displayName, int width, int height, int mines) {
+			this.displayName = displayName;
+			this.width = width;
+			this.height = height;
+			this.mines = mines;
+		}
+
+		public String displayName() { return displayName; }
+		public int width() { return width; }
+		public int height() { return height; }
+		public int mines() { return mines; }
+	}
 
 	public enum State { READY, RUNNING, WON, LOST }
 
@@ -22,30 +41,38 @@ public final class MinesweeperGame {
 			int adjacentMines) { }
 
 	private final Random random;
-	private final boolean[][] mines = new boolean[HEIGHT][WIDTH];
-	private final boolean[][] revealed = new boolean[HEIGHT][WIDTH];
-	private final boolean[][] flagged = new boolean[HEIGHT][WIDTH];
+	private Difficulty difficulty;
+	private boolean[][] mines;
+	private boolean[][] revealed;
+	private boolean[][] flagged;
 	private State state;
 	private int revealedCount;
 	private int flaggedCount;
 	private int elapsedTicks;
 
 	public MinesweeperGame() {
-		this(new Random());
+		this(Difficulty.BEGINNER, new Random());
+	}
+
+	public MinesweeperGame(Difficulty difficulty) {
+		this(difficulty, new Random());
 	}
 
 	/** Allows deterministic seeds in logic verification without changing normal gameplay. */
-	public MinesweeperGame(Random random) {
+	public MinesweeperGame(Difficulty difficulty, Random random) {
 		this.random = Objects.requireNonNull(random, "random");
-		reset();
+		reset(difficulty);
 	}
 
 	public void reset() {
-		for (int y = 0; y < HEIGHT; y++) {
-			java.util.Arrays.fill(mines[y], false);
-			java.util.Arrays.fill(revealed[y], false);
-			java.util.Arrays.fill(flagged[y], false);
-		}
+		reset(difficulty);
+	}
+
+	public void reset(Difficulty nextDifficulty) {
+		difficulty = Objects.requireNonNull(nextDifficulty, "difficulty");
+		mines = new boolean[height()][width()];
+		revealed = new boolean[height()][width()];
+		flagged = new boolean[height()][width()];
 		state = State.READY;
 		revealedCount = 0;
 		flaggedCount = 0;
@@ -101,41 +128,41 @@ public final class MinesweeperGame {
 	}
 
 	private void placeMines(int safeX, int safeY) {
-		List<Integer> candidates = new ArrayList<>(WIDTH * HEIGHT);
-		for (int y = 0; y < HEIGHT; y++) {
-			for (int x = 0; x < WIDTH; x++) {
+		List<Integer> candidates = new ArrayList<>(width() * height());
+		for (int y = 0; y < height(); y++) {
+			for (int x = 0; x < width(); x++) {
 				if (Math.abs(x - safeX) <= 1 && Math.abs(y - safeY) <= 1) continue;
-				candidates.add(y * WIDTH + x);
+				candidates.add(y * width() + x);
 			}
 		}
 		Collections.shuffle(candidates, random);
-		for (int index = 0; index < MINE_COUNT; index++) {
+		for (int index = 0; index < mineCount(); index++) {
 			int packed = candidates.get(index);
-			mines[packed / WIDTH][packed % WIDTH] = true;
+			mines[packed / width()][packed % width()] = true;
 		}
 	}
 
 	private void revealSafeArea(int startX, int startY) {
 		Queue<Integer> queue = new ArrayDeque<>();
-		queue.add(startY * WIDTH + startX);
+		queue.add(startY * width() + startX);
 		while (!queue.isEmpty()) {
 			int packed = queue.remove();
-			int x = packed % WIDTH;
-			int y = packed / WIDTH;
+			int x = packed % width();
+			int y = packed / width();
 			if (!inside(x, y) || revealed[y][x] || flagged[y][x] || mines[y][x]) continue;
 			revealed[y][x] = true;
 			revealedCount++;
 			if (adjacentMineCount(x, y) != 0) continue;
 			for (int ny = y - 1; ny <= y + 1; ny++) {
 				for (int nx = x - 1; nx <= x + 1; nx++) {
-					if (inside(nx, ny) && !revealed[ny][nx]) queue.add(ny * WIDTH + nx);
+					if (inside(nx, ny) && !revealed[ny][nx]) queue.add(ny * width() + nx);
 				}
 			}
 		}
 	}
 
 	private ActionResult checkWin() {
-		if (revealedCount == WIDTH * HEIGHT - MINE_COUNT) {
+		if (revealedCount == width() * height() - mineCount()) {
 			state = State.WON;
 			return ActionResult.WON;
 		}
@@ -162,8 +189,8 @@ public final class MinesweeperGame {
 		return count;
 	}
 
-	private static boolean inside(int x, int y) {
-		return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT;
+	private boolean inside(int x, int y) {
+		return x >= 0 && x < width() && y >= 0 && y < height();
 	}
 
 	public Cell cell(int x, int y) {
@@ -172,23 +199,13 @@ public final class MinesweeperGame {
 			adjacentMineCount(x, y));
 	}
 
-	public State state() {
-		return state;
-	}
-
-	public int revealedCount() {
-		return revealedCount;
-	}
-
-	public int flaggedCount() {
-		return flaggedCount;
-	}
-
-	public int remainingMineEstimate() {
-		return MINE_COUNT - flaggedCount;
-	}
-
-	public int elapsedTicks() {
-		return elapsedTicks;
-	}
+	public Difficulty difficulty() { return difficulty; }
+	public int width() { return difficulty.width(); }
+	public int height() { return difficulty.height(); }
+	public int mineCount() { return difficulty.mines(); }
+	public State state() { return state; }
+	public int revealedCount() { return revealedCount; }
+	public int flaggedCount() { return flaggedCount; }
+	public int remainingMineEstimate() { return mineCount() - flaggedCount; }
+	public int elapsedTicks() { return elapsedTicks; }
 }

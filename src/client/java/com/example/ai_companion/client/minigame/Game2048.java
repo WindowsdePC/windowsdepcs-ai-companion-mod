@@ -22,6 +22,11 @@ public final class Game2048 {
 
 	private final Random random;
 	private final int[][] board = new int[SIZE][SIZE];
+	private int[][] undoBoard;
+	private int undoScore;
+	private State undoState;
+	private boolean undoReached2048;
+	private boolean undoAvailable;
 	private State state;
 	private int score;
 	private boolean reached2048;
@@ -40,6 +45,8 @@ public final class Game2048 {
 		for (int[] row : board) java.util.Arrays.fill(row, 0);
 		score = 0;
 		reached2048 = false;
+		undoBoard = null;
+		undoAvailable = false;
 		state = State.RUNNING;
 		spawnTile();
 		spawnTile();
@@ -48,6 +55,10 @@ public final class Game2048 {
 	public MoveResult move(Direction direction) {
 		Objects.requireNonNull(direction, "direction");
 		if (state != State.RUNNING) return MoveResult.unchanged(state == State.GAME_OVER);
+		int[][] boardBeforeMove = copyBoard();
+		int beforeScore = score;
+		State beforeState = state;
+		boolean beforeReached2048 = reached2048;
 		boolean changed = false;
 		int gained = 0;
 		int largestMerge = 0;
@@ -66,6 +77,11 @@ public final class Game2048 {
 			if (gameOver) state = State.GAME_OVER;
 			return MoveResult.unchanged(gameOver);
 		}
+		undoBoard = boardBeforeMove;
+		undoScore = beforeScore;
+		undoState = beforeState;
+		undoReached2048 = beforeReached2048;
+		undoAvailable = true;
 		score += gained;
 		spawnTile();
 		boolean newlyReached = !reached2048 && bestTile() >= 2048;
@@ -76,6 +92,18 @@ public final class Game2048 {
 			state = State.GAME_OVER;
 		}
 		return new MoveResult(true, gained, largestMerge, newlyReached, state == State.GAME_OVER);
+	}
+
+	/** Restores the board and score from the last effective move. */
+	public boolean undo() {
+		if (!undoAvailable || undoBoard == null) return false;
+		for (int y = 0; y < SIZE; y++) System.arraycopy(undoBoard[y], 0, board[y], 0, SIZE);
+		score = undoScore;
+		state = undoState;
+		reached2048 = undoReached2048;
+		undoBoard = null;
+		undoAvailable = false;
+		return true;
 	}
 
 	public void togglePause() {
@@ -190,6 +218,10 @@ public final class Game2048 {
 		return reached2048;
 	}
 
+	public boolean canUndo() {
+		return undoAvailable;
+	}
+
 	void setBoardForTesting(int[][] values) {
 		if (values.length != SIZE) throw new IllegalArgumentException("board height");
 		for (int y = 0; y < SIZE; y++) {
@@ -198,6 +230,14 @@ public final class Game2048 {
 		}
 		state = State.RUNNING;
 		reached2048 = bestTile() >= 2048;
+		undoBoard = null;
+		undoAvailable = false;
+	}
+
+	private int[][] copyBoard() {
+		int[][] copy = new int[SIZE][SIZE];
+		for (int y = 0; y < SIZE; y++) System.arraycopy(board[y], 0, copy[y], 0, SIZE);
+		return copy;
 	}
 
 	private record Merge(int[] values, int score, int largest) { }

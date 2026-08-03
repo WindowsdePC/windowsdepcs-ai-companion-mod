@@ -1,0 +1,47 @@
+name: Build and publish release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build and test
+        run: ./gradlew build
+
+      - name: Create SHA-256 checksum file
+        shell: bash
+        run: |
+          release_version="${GITHUB_REF_NAME#v}"
+          cd build/libs
+          sha256sum \
+            "windowsdepcs-ai-companion-${release_version}.jar" \
+            "windowsdepcs-ai-companion-${release_version}-sources.jar" \
+            "windowsdepcs-ai-companion-${release_version}-javadoc.jar" \
+            > "SHA-256_SUMS-${release_version}.txt"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            build/libs/windowsdepcs-ai-companion-*.jar
+            build/libs/SHA-256_SUMS-*.txt

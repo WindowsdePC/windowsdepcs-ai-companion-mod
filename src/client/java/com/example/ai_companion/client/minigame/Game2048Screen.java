@@ -27,10 +27,12 @@ public final class Game2048Screen extends Screen {
 		int buttonY = height - 25;
 		addRenderableWidget(Button.builder(Component.literal("返回小游戏中心"), button -> onClose())
 			.bounds(10, buttonY, 130, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("撤销一步"), button -> undo())
+			.bounds(width / 2 - 160, buttonY, 100, 20).build());
 		pauseButton = addRenderableWidget(Button.builder(pauseLabel(), button -> togglePause())
-			.bounds(width / 2 - 105, buttonY, 100, 20).build());
+			.bounds(width / 2 - 50, buttonY, 100, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("重新开始"), button -> restart())
-			.bounds(width / 2 + 5, buttonY, 100, 20).build());
+			.bounds(width / 2 + 60, buttonY, 100, 20).build());
 		if (game.state() == Game2048.State.WON) {
 			addRenderableWidget(Button.builder(Component.literal("达到 2048，继续挑战"), button -> continueGame())
 				.bounds(width - 180, buttonY, 170, 20).build());
@@ -50,6 +52,10 @@ public final class Game2048Screen extends Screen {
 		}
 		if (key == InputConstants.KEY_R) {
 			restart();
+			return true;
+		}
+		if (key == InputConstants.KEY_U) {
+			undo();
 			return true;
 		}
 		if (key == InputConstants.KEY_C && game.state() == Game2048.State.WON) {
@@ -74,6 +80,16 @@ public final class Game2048Screen extends Screen {
 	private void togglePause() {
 		game.togglePause();
 		if (pauseButton != null) pauseButton.setMessage(pauseLabel());
+	}
+
+	private void undo() {
+		if (game.undo()) {
+			resultRecorded = false;
+			status = "已撤销上一步；每次移动只能撤销一次";
+			rebuildWidgets();
+		} else {
+			status = "当前没有可撤销的步骤";
+		}
 	}
 
 	private Component pauseLabel() {

@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：`0.5.4`
+当前版本：`0.5.5`
 
 ## 环境要求
 
@@ -53,7 +53,7 @@ EclipseUI 模式提供分类卡片、图标、开关、滑块、下拉菜单和�
 
 ### 小游戏中心
 
-`0.5.4` 已完成设计文档中的五个小游戏。打开完整管理中心并选择“小游戏中心”即可游玩。
+`0.5.5` 已完成设计文档中的五个小游戏。打开完整管理中心并选择“小游戏中心”即可游玩。
 
 #### 贪吃蛇
 
@@ -73,16 +73,17 @@ EclipseUI 模式提供分类卡片、图标、开关、滑块、下拉菜单和�
 
 #### Minecraft 方块扫雷
 
-- 14×10 Minecraft 方块棋盘，包含 24 个 TNT；第一次翻开的 3×3 区域不会生成 TNT。
+- 初级 9×9/10、中级 16×16/40、专家 30×16/99 三档经典棋盘；第一次翻开的 3×3 区域不会生成 TNT。
 - 左键翻开、右键插旗；也可用 `F` 或界面按钮切换翻开/插旗操作。
 - 空白区域会自动展开；已翻开的数字在周围旗帜数量正确时支持连开。
-- 自动保存最佳时间、胜场、当前连胜与最佳连胜。
+- 按难度分别保存最佳时间，并自动保存总胜场、当前连胜与最佳连胜。
 - 正常获胜后由服务器随机发放粗铁、粗金或钻石，带会话、用时、重复提交和 60 秒冷却校验。
 
 #### Minecraft 2048
 
 - 标准 4×4 棋盘，使用方向键或 `WASD` 滑动数字方块。
 - 相同数字每次移动只合并一次；每次有效移动后随机生成 2 或 4。
+- 可点击“撤销一步”或按 `U` 恢复最近一次有效移动前的棋盘与分数。
 - 自动保存最高分、历史最大方块与成功合成 2048 的次数。
 - 达到 2048 后可按 `C` 继续挑战 4096 与更高数字；`P` 暂停，`R` 重开。
 
@@ -167,15 +168,15 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.5.4.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.5.4-sources.jar`：源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.5.4-javadoc.jar`：Java API 文档包。
+- `windowsdepcs-ai-companion-0.5.5.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.5.5-sources.jar`：源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.5.5-javadoc.jar`：Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 
 ## 当前边界
 
-0.5.4 保留现有 AI 决策与任务框架，但复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
+0.5.5 保留现有 AI 决策与任务框架，但复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
 多 AI 共识与领队选举、Simple Voice Chat 协议等仍在后续版本开发。设计路线见
 [`docs/My Mod Design Document.md`](docs/My%20Mod%20Design%20Document.md)。
 

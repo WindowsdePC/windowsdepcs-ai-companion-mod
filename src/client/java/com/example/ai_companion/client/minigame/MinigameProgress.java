@@ -57,6 +57,9 @@ public final class MinigameProgress {
 	public int tetrisBestLines;
 	public int tetrisTotalLines;
 	public int minesweeperBestTimeTicks;
+	public int minesweeperBeginnerBestTimeTicks;
+	public int minesweeperIntermediateBestTimeTicks;
+	public int minesweeperExpertBestTimeTicks;
 	public int minesweeperWins;
 	public int minesweeperBestStreak;
 	public int minesweeperCurrentStreak;
@@ -104,6 +107,9 @@ public final class MinigameProgress {
 		tetrisBestLines = Math.max(0, tetrisBestLines);
 		tetrisTotalLines = Math.max(0, tetrisTotalLines);
 		minesweeperBestTimeTicks = Math.max(0, minesweeperBestTimeTicks);
+		minesweeperBeginnerBestTimeTicks = Math.max(0, minesweeperBeginnerBestTimeTicks);
+		minesweeperIntermediateBestTimeTicks = Math.max(0, minesweeperIntermediateBestTimeTicks);
+		minesweeperExpertBestTimeTicks = Math.max(0, minesweeperExpertBestTimeTicks);
 		minesweeperWins = Math.max(0, minesweeperWins);
 		minesweeperBestStreak = Math.max(0, minesweeperBestStreak);
 		minesweeperCurrentStreak = Math.max(0, minesweeperCurrentStreak);
@@ -151,6 +157,11 @@ public final class MinigameProgress {
 	}
 
 	public void recordMinesweeperResult(boolean won, int elapsedTicks) {
+		recordMinesweeperResult(won, elapsedTicks, null);
+	}
+
+	public void recordMinesweeperResult(boolean won, int elapsedTicks,
+			MinesweeperGame.Difficulty difficulty) {
 		if (won) {
 			int safeTicks = Math.max(1, elapsedTicks);
 			if (minesweeperBestTimeTicks == 0 || safeTicks < minesweeperBestTimeTicks) {
@@ -159,10 +170,23 @@ public final class MinigameProgress {
 			minesweeperWins++;
 			minesweeperCurrentStreak++;
 			minesweeperBestStreak = Math.max(minesweeperBestStreak, minesweeperCurrentStreak);
+			if (difficulty != null) updateMinesweeperDifficultyBest(difficulty, safeTicks);
 		} else {
 			minesweeperCurrentStreak = 0;
 		}
 		saveSafely();
+	}
+
+	private void updateMinesweeperDifficultyBest(MinesweeperGame.Difficulty difficulty, int ticks) {
+		switch (difficulty) {
+			case BEGINNER -> minesweeperBeginnerBestTimeTicks = betterTime(minesweeperBeginnerBestTimeTicks, ticks);
+			case INTERMEDIATE -> minesweeperIntermediateBestTimeTicks = betterTime(minesweeperIntermediateBestTimeTicks, ticks);
+			case EXPERT -> minesweeperExpertBestTimeTicks = betterTime(minesweeperExpertBestTimeTicks, ticks);
+		}
+	}
+
+	private static int betterTime(int previous, int candidate) {
+		return previous == 0 || candidate < previous ? candidate : previous;
 	}
 
 	public void record2048Result(int score, int bestTile, boolean reached2048) {
@@ -189,8 +213,21 @@ public final class MinigameProgress {
 	}
 
 	public String minesweeperBestTime() {
-		if (minesweeperBestTimeTicks <= 0) return "--:--";
-		int seconds = minesweeperBestTimeTicks / 20;
+		return formatMinesweeperTime(minesweeperBestTimeTicks);
+	}
+
+	public String minesweeperBestTime(MinesweeperGame.Difficulty difficulty) {
+		int ticks = switch (difficulty) {
+			case BEGINNER -> minesweeperBeginnerBestTimeTicks;
+			case INTERMEDIATE -> minesweeperIntermediateBestTimeTicks;
+			case EXPERT -> minesweeperExpertBestTimeTicks;
+		};
+		return formatMinesweeperTime(ticks);
+	}
+
+	private static String formatMinesweeperTime(int ticks) {
+		if (ticks <= 0) return "--:--";
+		int seconds = ticks / 20;
 		return "%02d:%02d".formatted(seconds / 60, seconds % 60);
 	}
 

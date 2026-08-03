@@ -19,7 +19,8 @@ public final class MinesweeperScreen extends Screen {
 
 	private final Screen parent;
 	private final MinigameProgress progress;
-	private final MinesweeperGame game = new MinesweeperGame();
+	private MinesweeperGame.Difficulty difficulty = MinesweeperGame.Difficulty.BEGINNER;
+	private MinesweeperGame game = new MinesweeperGame(difficulty);
 	private boolean flagMode;
 	private boolean resultRecorded;
 	private boolean rewardSessionStarted;
@@ -41,12 +42,14 @@ public final class MinesweeperScreen extends Screen {
 		int buttonY = height - 25;
 		addRenderableWidget(Button.builder(Component.literal("返回小游戏中心"), button -> onClose())
 			.bounds(10, buttonY, 130, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("难度：" + difficulty.displayName()),
+			button -> cycleDifficulty()).bounds(width / 2 - 175, buttonY, 110, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("切换翻开/插旗"), button -> {
 			flagMode = !flagMode;
 			status = flagMode ? "当前操作：插旗（也可直接右键格子）" : "当前操作：翻开";
-		}).bounds(width / 2 - 105, buttonY, 130, 20).build());
+		}).bounds(width / 2 - 55, buttonY, 130, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("重新开始"), button -> restart())
-			.bounds(width / 2 + 35, buttonY, 100, 20).build());
+			.bounds(width / 2 + 85, buttonY, 100, 20).build());
 	}
 
 	@Override
@@ -59,8 +62,8 @@ public final class MinesweeperScreen extends Screen {
 		if (super.mouseClicked(event, doubleClick)) return true;
 		int x = (int) ((event.x() - boardX) / cellSize);
 		int y = (int) ((event.y() - boardY) / cellSize);
-		if (event.x() < boardX || event.y() < boardY || x < 0 || x >= MinesweeperGame.WIDTH
-				|| y < 0 || y >= MinesweeperGame.HEIGHT) return false;
+		if (event.x() < boardX || event.y() < boardY || x < 0 || x >= game.width()
+				|| y < 0 || y >= game.height()) return false;
 		if (event.button() == 1 || flagMode) {
 			game.toggleFlag(x, y);
 			return true;
@@ -98,7 +101,7 @@ public final class MinesweeperScreen extends Screen {
 	private void recordResult(boolean won) {
 		if (resultRecorded) return;
 		resultRecorded = true;
-		progress.recordMinesweeperResult(won, game.elapsedTicks());
+		progress.recordMinesweeperResult(won, game.elapsedTicks(), difficulty);
 		if (!won || !rewardSessionStarted || minecraft == null || minecraft.getConnection() == null) return;
 		minecraft.getConnection().sendCommand("aiplayer minigame finish minesweeper " + sessionId + " "
 			+ game.elapsedTicks());
@@ -113,12 +116,20 @@ public final class MinesweeperScreen extends Screen {
 	}
 
 	private void restart() {
-		game.reset();
+		game = new MinesweeperGame(difficulty);
 		flagMode = false;
 		resultRecorded = false;
 		rewardSessionStarted = false;
 		sessionId = newSessionId();
 		status = "左键翻开 · 右键插旗 · 第一次翻开必定安全";
+		calculateBoardGeometry();
+	}
+
+	private void cycleDifficulty() {
+		MinesweeperGame.Difficulty[] difficulties = MinesweeperGame.Difficulty.values();
+		difficulty = difficulties[(difficulty.ordinal() + 1) % difficulties.length];
+		restart();
+		rebuildWidgets();
 	}
 
 	private static String newSessionId() {
@@ -126,9 +137,9 @@ public final class MinesweeperScreen extends Screen {
 	}
 
 	private void calculateBoardGeometry() {
-		cellSize = Math.max(10, Math.min(22, Math.min((width - 30) / MinesweeperGame.WIDTH,
-			(height - 105) / MinesweeperGame.HEIGHT)));
-		boardX = (width - cellSize * MinesweeperGame.WIDTH) / 2;
+		cellSize = Math.max(8, Math.min(22, Math.min((width - 30) / game.width(),
+			(height - 105) / game.height())));
+		boardX = (width - cellSize * game.width()) / 2;
 		boardY = 42;
 	}
 
@@ -136,21 +147,22 @@ public final class MinesweeperScreen extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
 		calculateBoardGeometry();
 		graphics.fill(0, 0, width, height, 0xE612171B);
-		int boardWidth = cellSize * MinesweeperGame.WIDTH;
-		int boardHeight = cellSize * MinesweeperGame.HEIGHT;
+		int boardWidth = cellSize * game.width();
+		int boardHeight = cellSize * game.height();
 		graphics.fill(boardX - 3, boardY - 3, boardX + boardWidth + 3, boardY + boardHeight + 3,
 			0xFF263238);
-		for (int y = 0; y < MinesweeperGame.HEIGHT; y++) {
-			for (int x = 0; x < MinesweeperGame.WIDTH; x++) drawCell(graphics, x, y);
+		for (int y = 0; y < game.height(); y++) {
+			for (int x = 0; x < game.width(); x++) drawCell(graphics, x, y);
 		}
 		super.extractRenderState(graphics, mouseX, mouseY, delta);
-		graphics.centeredText(font, "Minecraft 方块扫雷 · 14×10 · 24 个 TNT", width / 2, 10,
+		graphics.centeredText(font, "Minecraft 方块扫雷 · " + difficulty.displayName() + " · "
+			+ game.width() + "×" + game.height() + " · " + game.mineCount() + " 个 TNT", width / 2, 10,
 			0xFFFFFFFF);
 		graphics.text(font, "剩余 TNT 估计：" + game.remainingMineEstimate(), boardX, 27, 0xFFFFD54F);
 		graphics.text(font, "用时：" + formatTicks(game.elapsedTicks()), boardX + boardWidth - 80, 27,
 			0xFFB0BEC5);
 		graphics.centeredText(font, status, width / 2, height - 43, 0xFFA5D6A7);
-		graphics.text(font, "最佳 " + progress.minesweeperBestTime() + " · 胜场 "
+		graphics.text(font, "本难度最佳 " + progress.minesweeperBestTime(difficulty) + " · 胜场 "
 			+ progress.minesweeperWins + " · 最佳连胜 " + progress.minesweeperBestStreak,
 			10, height - 56, 0xFFB0BEC5);
 	}
