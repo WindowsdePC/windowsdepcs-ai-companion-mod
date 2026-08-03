@@ -180,8 +180,7 @@ public final class AiPlayerCommands {
 			String sessionId) throws CommandSyntaxException {
 		MinigameRewardManager.Result result = rewards.startTetris(source.getPlayerOrException(), sessionId,
 			source.getServer().getTickCount());
-		if (result.accepted()) source.sendSuccess(result::message, false);
-		else source.sendFailure(result.message());
+		if (!result.accepted()) showMinigameResult(source, result);
 		return result.accepted() ? 1 : 0;
 	}
 
@@ -189,8 +188,7 @@ public final class AiPlayerCommands {
 			String sessionId, int score, int lines) throws CommandSyntaxException {
 		MinigameRewardManager.Result result = rewards.finishTetris(source.getPlayerOrException(), sessionId,
 			score, lines, source.getServer().getTickCount());
-		if (result.accepted()) source.sendSuccess(result::message, false);
-		else source.sendFailure(result.message());
+		showMinigameResult(source, result);
 		return result.accepted() ? 1 : 0;
 	}
 
@@ -198,8 +196,7 @@ public final class AiPlayerCommands {
 			String sessionId) throws CommandSyntaxException {
 		MinigameRewardManager.Result result = rewards.startMinesweeper(source.getPlayerOrException(),
 			sessionId, source.getServer().getTickCount());
-		if (result.accepted()) source.sendSuccess(result::message, false);
-		else source.sendFailure(result.message());
+		if (!result.accepted()) showMinigameResult(source, result);
 		return result.accepted() ? 1 : 0;
 	}
 
@@ -207,9 +204,15 @@ public final class AiPlayerCommands {
 			String sessionId, int elapsedTicks) throws CommandSyntaxException {
 		MinigameRewardManager.Result result = rewards.finishMinesweeper(source.getPlayerOrException(),
 			sessionId, elapsedTicks, source.getServer().getTickCount());
-		if (result.accepted()) source.sendSuccess(result::message, false);
-		else source.sendFailure(result.message());
+		showMinigameResult(source, result);
 		return result.accepted() ? 1 : 0;
+	}
+
+	private static void showMinigameResult(CommandSourceStack source,
+			MinigameRewardManager.Result result) throws CommandSyntaxException {
+		// These commands are an internal client/server transport. Keep command feedback out of chat;
+		// the short settlement result belongs in the action bar instead.
+		source.getPlayerOrException().displayClientMessage(result.message(), true);
 	}
 
 	private static int createMany(CommandSourceStack source, AgentManager agents,

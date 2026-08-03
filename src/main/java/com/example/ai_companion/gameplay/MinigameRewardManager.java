@@ -12,9 +12,10 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Issues bounded Tetris rewards on the server and rejects duplicate, implausibly fast or replayed
- * client submissions. Minigames remain playable without a server connection, but physical items
- * are never created client-side.
+ * Issues bounded minigame rewards directly into the player's inventory on the server and rejects
+ * duplicate, implausibly fast or replayed client submissions. Minigames remain playable without a
+ * server connection, but physical items are never created client-side. If the inventory is full,
+ * the remaining stack is dropped beside the player.
  */
 public final class MinigameRewardManager {
 	private static final int MINIMUM_SESSION_TICKS = 200;

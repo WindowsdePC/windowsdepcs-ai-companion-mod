@@ -94,7 +94,7 @@ public final class MinesweeperScreen extends Screen {
 			status = "踩到 TNT！按 R 或点击重新开始";
 		} else if (result == MinesweeperGame.ActionResult.WON) {
 			recordResult(true);
-			status = "扫雷成功！矿物奖励结果会显示在聊天栏";
+			status = "扫雷成功！矿物奖励结果会显示在物品栏上方";
 		}
 	}
 

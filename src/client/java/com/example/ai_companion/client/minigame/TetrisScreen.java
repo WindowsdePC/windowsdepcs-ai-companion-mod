@@ -117,7 +117,7 @@ public final class TetrisScreen extends Screen {
 		}
 		minecraft.getConnection().sendCommand("aiplayer minigame finish tetris " + sessionId + " "
 			+ game.score() + " " + game.lines());
-		rewardStatus = game.lines() > 0 ? "已提交成绩；矿物奖励结果会显示在聊天栏"
+		rewardStatus = game.lines() > 0 ? "已提交成绩；矿物奖励结果会显示在物品栏上方"
 			: "未消除方块行，本局没有矿物奖励";
 	}
 

@@ -181,7 +181,7 @@ public final class PromptConfigScreen extends Screen {
 			if (minecraft != null) minecraft.setScreenAndShow(new RockPaperScissorsScreen(this,
 				minigameProgress));
 		}).bounds(left + panelWidth / 4, 112, panelWidth / 2, 20).build());
-		status = "0.5.7 已完成小游戏中心 5/5，并增强扫雷难度与 2048 撤销；记录保存在客户端配置目录";
+		status = "0.5.8 已完成小游戏中心 5/5，奖励静默结算为真实物品；记录保存在客户端配置目录";
 	}
 
 	private void buildApiPanel(int left, int panelWidth) {
