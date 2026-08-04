@@ -63,7 +63,8 @@ public final class AssistantOrbCommands {
 
 	private static int explore(CommandSourceStack source, AssistantOrbManager orb)
 			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-		source.sendSuccess(() -> Component.literal(orb.explorationSummary(source.getPlayerOrException())), false);
+		String summary = orb.explorationSummary(source.getPlayerOrException());
+		source.sendSuccess(() -> Component.literal(summary), false);
 		return 1;
 	}
 
