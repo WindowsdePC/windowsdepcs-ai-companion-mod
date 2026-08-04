@@ -19,6 +19,25 @@ public final class OpenAiCompatibleClient {
 		.followRedirects(HttpClient.Redirect.NORMAL).build();
 
 	public CompletableFuture<AiDecision> decide(ModConfig config, String system, String observation) {
+		return request(config, system, observation).thenApply(text -> {
+			if (text.startsWith("```")) {
+				text = text.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "");
+			}
+			AiDecision parsed = GSON.fromJson(text, AiDecision.class);
+			return parsed == null ? new AiDecision("wait", "", 0, 0) : parsed.sanitized();
+		});
+	}
+
+	/** Sends a constrained plain-text request for non-entity assistants such as the assistant orb. */
+	public CompletableFuture<String> chat(ModConfig config, String system, String observation) {
+		return request(config, system, observation).thenApply(text -> {
+			String normalized = text.strip();
+			if (normalized.length() > 800) normalized = normalized.substring(0, 800).stripTrailing() + "…";
+			return normalized.isBlank() ? "我暂时没有可补充的内容。" : normalized;
+		});
+	}
+
+	private CompletableFuture<String> request(ModConfig config, String system, String observation) {
 		if (!config.hasApiKey()) {
 			return CompletableFuture.failedFuture(new IllegalStateException("没有 API 令牌"));
 		}
@@ -42,13 +61,8 @@ public final class OpenAiCompatibleClient {
 				throw new IllegalStateException("AI API HTTP " + response.statusCode() + ": " + safe);
 			}
 			JsonObject root = GSON.fromJson(response.body(), JsonObject.class);
-			String text = root.getAsJsonArray("choices").get(0).getAsJsonObject()
+			return root.getAsJsonArray("choices").get(0).getAsJsonObject()
 				.getAsJsonObject("message").get("content").getAsString().strip();
-			if (text.startsWith("```")) {
-				text = text.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "");
-			}
-			AiDecision parsed = GSON.fromJson(text, AiDecision.class);
-			return parsed == null ? new AiDecision("wait", "", 0, 0) : parsed.sanitized();
 		});
 	}
 

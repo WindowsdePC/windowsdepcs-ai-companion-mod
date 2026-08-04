@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.6.2](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.2)
+当前版本：[v0.6.3](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.3)
 
 ## 环境要求
 
@@ -40,6 +40,15 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 - 每名 AI 有两次有限治疗机会；低生命值时可搭建最多两格高的临时圆石掩体。
 - 比赛自动判断淘汰、队伍胜利和 10 分钟超时平局，可随时查询状态或由管理员安全停止。
 - 开始前会保存参赛 AI 的位置、生命值、主副手和无敌状态；结束时全部恢复，临时掩体也会还原为原方块。
+
+### AI 助手球
+
+- `/aiplayer orb chat <消息>` 使用现有 OpenAI 兼容 API 与玩家私聊，不控制世界实体，也不会执行命令。
+- `/aiplayer orb remind <分钟> <内容>` 创建 1 分钟至 7 天的提醒；支持查看与按编号取消。
+- 每名玩家可保存最多 128 个命名坐标，并可覆盖同名坐标、列出或删除。
+- `/aiplayer orb explore` 显示当前维度和位置，以及同维度最近的三个已保存坐标与距离。
+- 坐标和待触发提醒按玩家 UUID 持久化；离线期间到期的提醒会保留到玩家再次在线。
+- API 回复、坐标名称、提醒数量和文本长度均有上限，客户端不会获得服务器 API 令牌。
 
 ### 双 UI 配置
 
@@ -181,6 +190,14 @@ UI 是主要入口，管理员也可以使用命令：
 /ai battle free-for-all <AI一> <AI二> <AI三> [更多AI]
 /ai battle status
 /ai battle stop
+/aiplayer orb chat <消息>
+/aiplayer orb explore
+/aiplayer orb waypoint save <名称>
+/aiplayer orb waypoint list
+/aiplayer orb waypoint remove <名称>
+/aiplayer orb remind <1-10080分钟> <内容>
+/aiplayer orb reminders list
+/aiplayer orb reminders cancel <编号>
 ```
 
 修改服务器 API、全局提示词、AI 分配和玩法数值需要管理员权限。
@@ -204,14 +221,15 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.6.2.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.6.2-sources.jar`：源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.6.2-javadoc.jar`：Java API 文档包。
+- `windowsdepcs-ai-companion-0.6.3.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.6.3-sources.jar`：源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.6.3-javadoc.jar`：Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 
 ## 当前边界
 
+0.6.3 的助手球完成文字聊天、提醒、坐标与探索辅助；“拍照”将在 0.6.4 的相机/相册中实现。
 0.6.2 的竞技场战术是独立、可恢复的服务器玩法，不会把竞技场动作写回普通任务模式。
 普通世界中的复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
 多 AI 共识与领队选举、Simple Voice Chat 协议等仍在后续版本开发。设计路线见
