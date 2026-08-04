@@ -29,6 +29,7 @@ public final class PhotographyManager implements AutoCloseable {
 	private final OpenAiCompatibleClient client = new OpenAiCompatibleClient();
 	private final Set<UUID> reviewing = new HashSet<>();
 	private final java.util.Map<UUID, Long> lastCaptureTick = new java.util.HashMap<>();
+	private long currentServerTick;
 
 	public PhotographyManager(Supplier<ModConfig> config) {
 		this(config, PhotoAlbumStore.load());
@@ -40,21 +41,24 @@ public final class PhotographyManager implements AutoCloseable {
 	}
 
 	public PhotoEntry capture(ServerPlayer player) throws IOException {
-		long nowTick = player.getServer().getTickCount();
+		long nowTick = currentServerTick;
 		Long previous = lastCaptureTick.get(player.getUUID());
 		if (previous != null && nowTick - previous < CAPTURE_COOLDOWN_TICKS) {
 			throw new IllegalStateException("相机冷却中，请稍后再拍");
 		}
 		String weather = player.level().isThundering() ? "雷暴"
 			: player.level().isRaining() ? "下雨" : "晴朗";
-		long dayTime = Math.floorMod(player.level().getDayTime(), 24_000L);
-		String scene = "天气=" + weather + "，世界时间=" + dayTime + "，脚下方块="
+		String scene = "天气=" + weather + "，服务器tick=" + nowTick + "，脚下方块="
 			+ player.level().getBlockState(player.blockPosition().below()).getBlock().getName().getString();
 		PhotoEntry photo = albums.add(player.getUUID(),
 			player.level().dimension().identifier().toString(), player.getX(), player.getY(), player.getZ(),
 			player.getYRot(), player.getXRot(), System.currentTimeMillis(), scene);
 		lastCaptureTick.put(player.getUUID(), nowTick);
 		return photo;
+	}
+
+	public void tick(MinecraftServer server) {
+		currentServerTick = server.getTickCount();
 	}
 
 	public List<PhotoEntry> photos(ServerPlayer player) {
