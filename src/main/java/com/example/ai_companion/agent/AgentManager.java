@@ -40,6 +40,7 @@ public final class AgentManager implements AutoCloseable {
 		EyeSnapshot eyeSnapshot;
 		double remainingX;
 		double remainingZ;
+		boolean arenaLocked;
 
 		Agent(String name, FakePlayer player) {
 			this.name = name;
@@ -114,6 +115,19 @@ public final class AgentManager implements AutoCloseable {
 		)).toList();
 	}
 
+	/** Returns one managed fake player for server-side feature integrations such as the arena. */
+	public synchronized FakePlayer managedPlayer(String name) {
+		return requireAgent(name).player;
+	}
+
+	/** Prevents normal prompt movement from fighting with the server-authoritative arena controller. */
+	public synchronized void setArenaLocked(String name, boolean locked) {
+		Agent agent = requireAgent(name);
+		agent.arenaLocked = locked;
+		agent.remainingX = 0;
+		agent.remainingZ = 0;
+	}
+
 	public synchronized void setPrompt(String name, String promptId) {
 		Agent agent = requireAgent(name);
 		if (!prompts.contains(promptId)) throw new IllegalArgumentException("找不到提示词预设: " + promptId);
@@ -149,6 +163,7 @@ public final class AgentManager implements AutoCloseable {
 			agent = agents.get(name.toLowerCase());
 		}
 		if (agent == null) throw new IllegalArgumentException("找不到 AI: " + name);
+		if (agent.arenaLocked) throw new IllegalStateException("该 AI 正在参加竞技场比赛");
 		if (!agent.thinking.compareAndSet(false, true)) throw new IllegalStateException("该 AI 正在思考");
 
 		long now = server.getTickCount();
@@ -176,6 +191,7 @@ public final class AgentManager implements AutoCloseable {
 			if (agent.mode != AgentMode.IDLE && now >= agent.nextEyeTick) {
 				captureEye(server, agent, now);
 			}
+			if (agent.arenaLocked) continue;
 			double distance = Math.hypot(agent.remainingX, agent.remainingZ);
 			if (distance < 0.01) continue;
 			double step = Math.min(0.18, distance);

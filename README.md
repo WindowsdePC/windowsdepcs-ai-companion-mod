@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.6.1](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.1)
+当前版本：[v0.6.2](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.2)
 
 ## 环境要求
 
@@ -31,6 +31,15 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 - `/aiplayer positions` 从服务器查询所有已登记 AI 当前所在维度与 XYZ 坐标。
 - 按住 `F8` 显示 AI 位置 HUD；每次重新按下都会向服务器刷新一次，松开立即关闭。
 - 支持 Mojang 纹理值与签名形式的自定义皮肤数据。
+
+### AI 竞技场
+
+- 通过 `/ai battle` 运行只包含已登记 AI 玩家的服务器竞技比赛。
+- 支持 `1v1`、`2v2` 和 3～8 名 AI 的混战；2v2 的前两名与后两名分别组成一队。
+- 参赛 AI 会使用铁剑和盾牌，根据距离与生命值选择追击、后撤、格挡、普通攻击或重击。
+- 每名 AI 有两次有限治疗机会；低生命值时可搭建最多两格高的临时圆石掩体。
+- 比赛自动判断淘汰、队伍胜利和 10 分钟超时平局，可随时查询状态或由管理员安全停止。
+- 开始前会保存参赛 AI 的位置、生命值、主副手和无敌状态；结束时全部恢复，临时掩体也会还原为原方块。
 
 ### 双 UI 配置
 
@@ -166,6 +175,12 @@ UI 是主要入口，管理员也可以使用命令：
 /aiplayer minigame finish tetris <会话ID> <分数> <消行数>
 /aiplayer minigame start minesweeper <会话ID>
 /aiplayer minigame finish minesweeper <会话ID> <用时Tick>
+/ai battle
+/ai battle 1v1 <AI一> <AI二>
+/ai battle 2v2 <队伍一AI一> <队伍一AI二> <队伍二AI一> <队伍二AI二>
+/ai battle free-for-all <AI一> <AI二> <AI三> [更多AI]
+/ai battle status
+/ai battle stop
 ```
 
 修改服务器 API、全局提示词、AI 分配和玩法数值需要管理员权限。
@@ -189,15 +204,16 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.6.1.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.6.1-sources.jar`：源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.6.1-javadoc.jar`：Java API 文档包。
+- `windowsdepcs-ai-companion-0.6.2.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.6.2-sources.jar`：源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.6.2-javadoc.jar`：Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 
 ## 当前边界
 
-0.6.1 保留现有 AI 决策与任务框架，但复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
+0.6.2 的竞技场战术是独立、可恢复的服务器玩法，不会把竞技场动作写回普通任务模式。
+普通世界中的复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
 多 AI 共识与领队选举、Simple Voice Chat 协议等仍在后续版本开发。设计路线见
 [`docs/My Mod Design Document.md`](docs/My%20Mod%20Design%20Document.md)。
 

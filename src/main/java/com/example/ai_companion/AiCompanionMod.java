@@ -1,6 +1,8 @@
 package com.example.ai_companion;
 
 import com.example.ai_companion.agent.AgentManager;
+import com.example.ai_companion.arena.AiArenaManager;
+import com.example.ai_companion.command.AiBattleCommands;
 import com.example.ai_companion.command.AiPlayerCommands;
 import com.example.ai_companion.config.GameplayConfig;
 import com.example.ai_companion.config.ModConfig;
@@ -26,6 +28,7 @@ public final class AiCompanionMod implements ModInitializer {
 	private GameplayConfig gameplay;
 	private GoldenSpearRush goldenSpearRush;
 	private MinigameRewardManager minigameRewards;
+	private AiArenaManager arena;
 
 	@Override
 	public void onInitialize() {
@@ -34,14 +37,18 @@ public final class AiCompanionMod implements ModInitializer {
 		FlexibleEquipmentMode.configureServer(() -> gameplay.flexibleEquipmentEnabled());
 		prompts = PromptStore.loadServer();
 		agents = new AgentManager(() -> config, prompts);
+		arena = new AiArenaManager(agents);
 		AgentPositionNetworking.registerServer(agents);
 		goldenSpearRush = new GoldenSpearRush(() -> gameplay);
 		minigameRewards = new MinigameRewardManager();
 		goldenSpearRush.register();
 		AiPlayerCommands.register(agents, prompts, () -> config, updated -> config = updated,
 			() -> gameplay, updated -> gameplay = updated, minigameRewards);
+		AiBattleCommands.register(arena);
 		ServerTickEvents.END_SERVER_TICK.register(agents::tick);
+		ServerTickEvents.END_SERVER_TICK.register(arena::tick);
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+			arena.close();
 			agents.close();
 			goldenSpearRush.clearCounters();
 			minigameRewards.clear();
