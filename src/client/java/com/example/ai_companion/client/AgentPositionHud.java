@@ -9,6 +9,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
@@ -50,7 +51,8 @@ public final class AgentPositionHud {
 			}
 			keyHeld = pressed;
 		});
-		HudElementRegistry.addLast(HUD_ID, AgentPositionHud::extractRenderState);
+		HudElementRegistry.attachElementBefore(
+			VanillaHudElements.CHAT, HUD_ID, AgentPositionHud::extractRenderState);
 	}
 
 	private static void requestRefresh(Minecraft client) {
@@ -69,7 +71,6 @@ public final class AgentPositionHud {
 			net.minecraft.client.DeltaTracker deltaTracker) {
 		if (!visible) return;
 		Minecraft client = Minecraft.getInstance();
-		if (client.options.hideGui) return;
 
 		int rows = waiting || !error.isBlank() || positions.isEmpty()
 			? 1 : Math.min(positions.size(), MAX_VISIBLE_ROWS);
