@@ -1,6 +1,7 @@
 package com.example.ai_companion.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.example.ai_companion.arena.AiArenaManager;
 import com.example.ai_companion.arena.ArenaMode;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -17,38 +18,51 @@ public final class AiBattleCommands {
 	private AiBattleCommands() { }
 
 	public static void register(AiArenaManager arena) {
-		CommandRegistrationCallback.EVENT.register((dispatcher, access, environment) ->
-			dispatcher.register(Commands.literal("ai")
-				.then(Commands.literal("battle")
-					.executes(context -> status(context.getSource(), arena))
-					.then(Commands.literal("status")
-						.executes(context -> status(context.getSource(), arena)))
-					.then(Commands.literal("stop")
-						.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
-						.executes(context -> stop(context.getSource(), arena)))
-					.then(Commands.literal("1v1")
-						.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
-						.then(Commands.argument("first", StringArgumentType.word())
-							.then(Commands.argument("second", StringArgumentType.word())
-								.executes(context -> start(context.getSource(), arena, ArenaMode.ONE_V_ONE,
-									List.of(StringArgumentType.getString(context, "first"),
-										StringArgumentType.getString(context, "second")))))))
-					.then(Commands.literal("2v2")
-						.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
-						.then(Commands.argument("team1a", StringArgumentType.word())
-							.then(Commands.argument("team1b", StringArgumentType.word())
-								.then(Commands.argument("team2a", StringArgumentType.word())
-									.then(Commands.argument("team2b", StringArgumentType.word())
-										.executes(context -> start(context.getSource(), arena, ArenaMode.TWO_V_TWO,
-											List.of(StringArgumentType.getString(context, "team1a"),
-												StringArgumentType.getString(context, "team1b"),
-												StringArgumentType.getString(context, "team2a"),
-												StringArgumentType.getString(context, "team2b"))))))))
-					.then(Commands.literal("free-for-all")
-						.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
-						.then(Commands.argument("participants", StringArgumentType.greedyString())
-							.executes(context -> start(context.getSource(), arena, ArenaMode.FREE_FOR_ALL,
-								parseNames(StringArgumentType.getString(context, "participants")))))))));
+		CommandRegistrationCallback.EVENT.register((dispatcher, access, environment) -> {
+			LiteralArgumentBuilder<CommandSourceStack> battle = Commands.literal("battle");
+			battle.executes(context -> status(context.getSource(), arena));
+			battle.then(Commands.literal("status")
+				.executes(context -> status(context.getSource(), arena)));
+			battle.then(Commands.literal("stop")
+				.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
+				.executes(context -> stop(context.getSource(), arena)));
+			battle.then(oneVersusOne(arena));
+			battle.then(twoVersusTwo(arena));
+			battle.then(freeForAll(arena));
+			dispatcher.register(Commands.literal("ai").then(battle));
+		});
+	}
+
+	private static LiteralArgumentBuilder<CommandSourceStack> oneVersusOne(AiArenaManager arena) {
+		return Commands.literal("1v1")
+			.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
+			.then(Commands.argument("first", StringArgumentType.word())
+				.then(Commands.argument("second", StringArgumentType.word())
+					.executes(context -> start(context.getSource(), arena, ArenaMode.ONE_V_ONE,
+						List.of(StringArgumentType.getString(context, "first"),
+							StringArgumentType.getString(context, "second"))))));
+	}
+
+	private static LiteralArgumentBuilder<CommandSourceStack> twoVersusTwo(AiArenaManager arena) {
+		return Commands.literal("2v2")
+			.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
+			.then(Commands.argument("team1a", StringArgumentType.word())
+				.then(Commands.argument("team1b", StringArgumentType.word())
+					.then(Commands.argument("team2a", StringArgumentType.word())
+						.then(Commands.argument("team2b", StringArgumentType.word())
+							.executes(context -> start(context.getSource(), arena, ArenaMode.TWO_V_TWO,
+								List.of(StringArgumentType.getString(context, "team1a"),
+									StringArgumentType.getString(context, "team1b"),
+									StringArgumentType.getString(context, "team2a"),
+									StringArgumentType.getString(context, "team2b"))))))));
+	}
+
+	private static LiteralArgumentBuilder<CommandSourceStack> freeForAll(AiArenaManager arena) {
+		return Commands.literal("free-for-all")
+			.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
+			.then(Commands.argument("participants", StringArgumentType.greedyString())
+				.executes(context -> start(context.getSource(), arena, ArenaMode.FREE_FOR_ALL,
+					parseNames(StringArgumentType.getString(context, "participants")))));
 	}
 
 	private static List<String> parseNames(String input) {
