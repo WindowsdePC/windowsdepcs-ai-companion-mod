@@ -8,6 +8,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.example.ai_companion.agent.AgentManager;
 import com.example.ai_companion.agent.AgentMode;
+import com.example.ai_companion.agent.AgentPosition;
 import com.example.ai_companion.config.GameplayConfig;
 import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
@@ -52,6 +53,7 @@ public final class AiPlayerCommands {
 				.then(Commands.literal("remove").then(Commands.argument("name", StringArgumentType.word())
 					.executes(c -> remove(c.getSource(), agents, StringArgumentType.getString(c, "name")))))
 				.then(Commands.literal("list").executes(c -> list(c.getSource(), agents)))
+				.then(Commands.literal("positions").executes(c -> positions(c.getSource(), agents)))
 				.then(Commands.literal("idle").then(Commands.argument("name", StringArgumentType.word())
 					.executes(c -> mode(c.getSource(), agents, StringArgumentType.getString(c, "name"),
 						AgentMode.IDLE, ""))))
@@ -368,6 +370,19 @@ public final class AiPlayerCommands {
 			.map(Object::toString).toList());
 		source.sendSuccess(() -> Component.literal(names.isEmpty() ? "当前没有 AI 玩家" : "AI 玩家: " + names), false);
 		return 1;
+	}
+
+	private static int positions(CommandSourceStack source, AgentManager agents) {
+		var positions = agents.positions();
+		if (positions.isEmpty()) {
+			source.sendSuccess(() -> Component.literal("当前没有可查询位置的 AI 玩家"), false);
+			return 0;
+		}
+		source.sendSuccess(() -> Component.literal("AI 位置（共 " + positions.size() + " 个）："), false);
+		for (AgentPosition position : positions) {
+			source.sendSuccess(() -> Component.literal(position.displayText()), false);
+		}
+		return positions.size();
 	}
 
 	private static int mode(CommandSourceStack source, AgentManager agents, String name,

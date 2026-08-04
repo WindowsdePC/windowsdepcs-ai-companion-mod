@@ -103,6 +103,17 @@ public final class AgentManager implements AutoCloseable {
 		)).toList();
 	}
 
+	/** Captures the current server-authoritative location of every managed AI player. */
+	public synchronized Collection<AgentPosition> positions() {
+		return agents.values().stream().map(agent -> new AgentPosition(
+			agent.name,
+			agent.player.level().dimension().identifier().toString(),
+			agent.player.getX(),
+			agent.player.getY(),
+			agent.player.getZ()
+		)).toList();
+	}
+
 	public synchronized void setPrompt(String name, String promptId) {
 		Agent agent = requireAgent(name);
 		if (!prompts.contains(promptId)) throw new IllegalArgumentException("找不到提示词预设: " + promptId);

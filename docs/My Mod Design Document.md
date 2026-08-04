@@ -13,7 +13,7 @@ WindowsdePC's AI Companion Mod
 
 当前版本：
 
-0.5.9
+0.6.0
 
 
 目标版本：
@@ -273,6 +273,19 @@ X:120
 Y:64
 
 Z:-300
+
+
+命令查询示例：
+
+```text
+/aiplayer positions
+
+AI 位置（共 2 个）：
+Builder_AI · minecraft:overworld · X 12.3, Y 64.0, Z -8.8
+Hunter_AI · minecraft:the_nether · X 3.0, Y 71.0, Z 20.5
+```
+
+0.6.0 已完成服务端位置快照与命令查询；F8 按住显示 HUD 和网络同步安排在后续版本。
 
 
 
