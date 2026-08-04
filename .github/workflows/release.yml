@@ -40,11 +40,18 @@ jobs:
             "windowsdepcs-ai-companion-${release_version}-javadoc.jar" \
             > "SHA-256_SUMS-${release_version}.txt"
 
+      - name: Validate release notes
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          notes_file=".github/release-notes/${GITHUB_REF_NAME}.md"
+          test -s "$notes_file"
+
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          body_path: .github/release-notes/${{ github.ref_name }}.md
           files: |
             build/libs/windowsdepcs-ai-companion-*.jar
             build/libs/SHA-256_SUMS-*.txt

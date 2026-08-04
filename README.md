@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：`0.5.9`
+当前版本：[v0.5.9](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.5.9)
 
 ## 环境要求
 
