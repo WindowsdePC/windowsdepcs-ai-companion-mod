@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.6.3](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.3)
+当前版本：[v0.6.4](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.4)
 
 ## 环境要求
 
@@ -49,6 +49,15 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 - `/aiplayer orb explore` 显示当前维度和位置，以及同维度最近的三个已保存坐标与距离。
 - 坐标和待触发提醒按玩家 UUID 持久化；离线期间到期的提醒会保留到玩家再次在线。
 - API 回复、坐标名称、提醒数量和文本长度均有上限，客户端不会获得服务器 API 令牌。
+
+### AI 摄影与相册
+
+- 新增正式注册物品 `ai_companion:camera`（AI 相机），可在工具与实用物品标签取得，也可合成。
+- 手持相机右键会在服务器端创建照片条目，记录维度、XYZ、视角、时间、天气、世界时间和脚下方块。
+- 每位玩家拥有按 UUID 隔离的持久化相册，最多保存 256 张；支持分页列表、详情、说明和删除。
+- `/aiplayer album review <编号>` 将照片元数据、场景摘要和玩家说明交给 AI 评价。
+- AI 被明确禁止声称看见没有提供的像素细节；同时每位玩家最多只有一个并发评价请求。
+- 相机拍摄有 1 秒服务端冷却。照片条目不会存储客户端屏幕像素或自动写出 PNG 文件。
 
 ### 双 UI 配置
 
@@ -198,6 +207,11 @@ UI 是主要入口，管理员也可以使用命令：
 /aiplayer orb remind <1-10080分钟> <内容>
 /aiplayer orb reminders list
 /aiplayer orb reminders cancel <编号>
+/aiplayer album list [页码]
+/aiplayer album show <照片编号>
+/aiplayer album caption <照片编号> <说明>
+/aiplayer album review <照片编号>
+/aiplayer album delete <照片编号>
 ```
 
 修改服务器 API、全局提示词、AI 分配和玩法数值需要管理员权限。
@@ -221,15 +235,16 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.6.3.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.6.3-sources.jar`：源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.6.3-javadoc.jar`：Java API 文档包。
+- `windowsdepcs-ai-companion-0.6.4.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.6.4-sources.jar`：源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.6.4-javadoc.jar`：Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 
 ## 当前边界
 
-0.6.3 的助手球完成文字聊天、提醒、坐标与探索辅助；“拍照”将在 0.6.4 的相机/相册中实现。
+0.6.4 的照片是服务器权威的相册条目，包含场景元数据与玩家说明；它不会读取或保存客户端帧缓冲像素。
+后续若加入真正的 PNG 截图，会使用明确的客户端许可、网络大小上限和专用相册界面。
 0.6.2 的竞技场战术是独立、可恢复的服务器玩法，不会把竞技场动作写回普通任务模式。
 普通世界中的复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
 多 AI 共识与领队选举、Simple Voice Chat 协议等仍在后续版本开发。设计路线见

@@ -1,4 +1,5 @@
 {
+	"item.ai_companion.camera": "AI 相机",
 	"mod.ai_companion.name": "WindowsdePC's AI Companion Mod",
 	"hud.ai_companion.positions.title": "AI 位置 · 松开 F8 关闭",
 	"hud.ai_companion.positions.loading": "正在从服务器刷新……",
