@@ -1,3 +1,8 @@
 {
-	"mod.ai_companion.name": "WindowsdePC's AI Companion Mod"
+	"mod.ai_companion.name": "WindowsdePC's AI Companion Mod",
+	"hud.ai_companion.positions.title": "AI positions · Release F8 to close",
+	"hud.ai_companion.positions.loading": "Refreshing from server…",
+	"hud.ai_companion.positions.empty": "There are no managed AI players to locate",
+	"hud.ai_companion.positions.unsupported": "The server does not support AI position sync",
+	"hud.ai_companion.positions.more": "%s more AI players; use /aiplayer positions to list all"
 }

@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.6.0](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.0)
+当前版本：[v0.6.1](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.1)
 
 ## 环境要求
 
@@ -29,6 +29,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 - 通过异步 OpenAI 兼容 API 请求取得 `say`、`move`、`wait` 白名单动作。
 - 天眼快照记录目标当时的维度、坐标与采集时间，不传送 AI。
 - `/aiplayer positions` 从服务器查询所有已登记 AI 当前所在维度与 XYZ 坐标。
+- 按住 `F8` 显示 AI 位置 HUD；每次重新按下都会向服务器刷新一次，松开立即关闭。
 - 支持 Mojang 纹理值与签名形式的自定义皮肤数据。
 
 ### 双 UI 配置
@@ -188,15 +189,15 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.6.0.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.6.0-sources.jar`：源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.6.0-javadoc.jar`：Java API 文档包。
+- `windowsdepcs-ai-companion-0.6.1.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.6.1-sources.jar`：源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.6.1-javadoc.jar`：Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 
 ## 当前边界
 
-0.6.0 保留现有 AI 决策与任务框架，但复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
+0.6.1 保留现有 AI 决策与任务框架，但复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
 多 AI 共识与领队选举、Simple Voice Chat 协议等仍在后续版本开发。设计路线见
 [`docs/My Mod Design Document.md`](docs/My%20Mod%20Design%20Document.md)。
 

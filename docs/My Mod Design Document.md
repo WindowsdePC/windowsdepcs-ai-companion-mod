@@ -13,7 +13,7 @@ WindowsdePC's AI Companion Mod
 
 当前版本：
 
-0.6.0
+0.6.1
 
 
 目标版本：
@@ -285,7 +285,12 @@ Builder_AI · minecraft:overworld · X 12.3, Y 64.0, Z -8.8
 Hunter_AI · minecraft:the_nether · X 3.0, Y 71.0, Z 20.5
 ```
 
-0.6.0 已完成服务端位置快照与命令查询；F8 按住显示 HUD 和网络同步安排在后续版本。
+实现状态（0.6.1）：
+
+- 0.6.0 已完成服务端位置快照与 `/aiplayer positions` 命令查询
+- 已完成按住 F8 显示、松开关闭的位置 HUD
+- 每次重新按下 F8 会向服务器刷新一次
+- 已完成受数量和字段长度限制的客户端/服务端位置网络同步
 
 
 

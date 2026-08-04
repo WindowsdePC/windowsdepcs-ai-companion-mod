@@ -9,6 +9,9 @@ public record AgentPosition(String name, String dimension, double x, double y, d
 		if (dimension == null || dimension.isBlank()) {
 			throw new IllegalArgumentException("Dimension cannot be blank");
 		}
+		if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)) {
+			throw new IllegalArgumentException("AI coordinates must be finite");
+		}
 	}
 
 	/** Returns a stable, chat-friendly representation independent of the server locale. */

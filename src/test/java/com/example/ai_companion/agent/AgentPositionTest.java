@@ -28,5 +28,7 @@ final class AgentPositionTest {
 			() -> new AgentPosition("", "minecraft:overworld", 0, 0, 0));
 		assertThrows(IllegalArgumentException.class,
 			() -> new AgentPosition("AI_1", " ", 0, 0, 0));
+		assertThrows(IllegalArgumentException.class,
+			() -> new AgentPosition("AI_1", "minecraft:overworld", Double.NaN, 0, 0));
 	}
 }
