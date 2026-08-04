@@ -248,14 +248,25 @@ public final class AiArenaManager implements AutoCloseable {
 	private void finish(MinecraftServer server, String result) {
 		Battle finished = battle;
 		battle = null;
+		restoreBattle(finished);
+		broadcast(server, "AI 竞技场结束：" + result);
+	}
+
+	private void restoreBattle(Battle finished) {
 		for (Map.Entry<BlockPos, BlockState> cover : finished.coverBlocks.entrySet()) {
-			finished.level.setBlockAndUpdate(cover.getKey(), cover.getValue());
+			// Preserve a block another player deliberately placed during the match.
+			if (finished.level.getBlockState(cover.getKey()).is(Blocks.COBBLESTONE)) {
+				finished.level.setBlockAndUpdate(cover.getKey(), cover.getValue());
+			}
 		}
 		for (Participant participant : finished.participants) {
 			participant.snapshot.restore(participant.player);
-			agents.setArenaLocked(participant.name(), false);
+			try {
+				agents.setArenaLocked(participant.name(), false);
+			} catch (IllegalArgumentException ignored) {
+				// The AI may have been removed while the match was running.
+			}
 		}
-		broadcast(server, "AI 竞技场结束：" + result);
 	}
 
 	private static void advance(FakePlayer player, FakePlayer enemy, double step) {
@@ -289,17 +300,7 @@ public final class AiArenaManager implements AutoCloseable {
 		if (battle == null) return;
 		Battle abandoned = battle;
 		battle = null;
-		for (Map.Entry<BlockPos, BlockState> cover : abandoned.coverBlocks.entrySet()) {
-			abandoned.level.setBlockAndUpdate(cover.getKey(), cover.getValue());
-		}
-		for (Participant participant : abandoned.participants) {
-			participant.snapshot.restore(participant.player);
-			try {
-				agents.setArenaLocked(participant.name(), false);
-			} catch (IllegalArgumentException ignored) {
-				// The AI may have been removed while the server was stopping.
-			}
-		}
+		restoreBattle(abandoned);
 	}
 
 	private static final class Battle {
