@@ -1,0 +1,5 @@
+{
+  "type": "minecraft:crafting_shaped", "category": "building", "pattern": ["W W", "WWW", "P P"],
+  "key": { "W": "minecraft:red_wool", "P": "minecraft:oak_planks" },
+  "result": { "id": "ai_companion:sofa", "count": 1 }
+}

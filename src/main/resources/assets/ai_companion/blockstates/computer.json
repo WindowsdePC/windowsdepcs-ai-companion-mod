@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "ai_companion:block/computer" }
+  }
+}

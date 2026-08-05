@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.7.3](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.7.3)
+当前版本：[v0.7.4](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.7.4)
 
 ## 环境要求
 
@@ -91,6 +91,13 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 - `/aiplayer news today` 可生成或刷新今日版，`list` 与 `show` 可浏览最近 64 期存档。
 - `/aiplayer news ai <日报编号>` 使用现有 OpenAI 兼容 API 对已记录事实进行编辑，并把 AI 版保存到同一期日报。
 - AI 只能使用服务器提供的事件材料；没有材料的栏目会明确显示“暂无记录”，不会虚构玩家或世界事件。
+
+### 家具与 AI 休闲互动
+
+- 新增可合成、可放置的沙发、电视、电脑和台灯，全部加入“功能方块”创造模式标签。
+- 四种家具使用独立方块模型；台灯提供 12 级照明，关闭模组后不会改写原版方块。
+- `/aiplayer furniture sit <AI名>` 会让同维度 AI 坐到命令玩家附近 8 格内最近的沙发；竞技场中的 AI 不可入座。
+- 入座时清除剩余移动并保持蹲坐姿态；`stand` 起身，`chat` 在家具区进行一次受白名单执行器保护的 AI 对话。
 
 ### 双 UI 配置
 
@@ -287,6 +294,9 @@ UI 是主要入口，管理员也可以使用命令：
 /aiplayer live status
 /aiplayer live interval <10-600秒>
 /aiplayer live stop
+/aiplayer furniture sit <AI名>
+/aiplayer furniture stand <AI名>
+/aiplayer furniture chat <AI名> <消息>
 ```
 
 修改服务器 API、全局提示词、AI 分配和玩法数值需要管理员权限。
@@ -310,15 +320,16 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.7.3.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.7.3-sources.jar`：本地构建的源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.7.3-javadoc.jar`：本地构建的 Java API 文档包。
+- `windowsdepcs-ai-companion-0.7.4.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.7.4-sources.jar`：本地构建的源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.7.4-javadoc.jar`：本地构建的 Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 从 v0.6.7 起，GitHub Release 也只附加第一个正式模组 JAR，不再上传另外两个 JAR或校验文件。
 
 ## 当前边界
 
+0.7.4 的沙发使用玩家蹲坐姿态表现 AI 入座，不创建不可见坐骑实体；家具区聊天仍使用既有安全动作白名单。
 0.7.3 的直播只向主动开启会话的玩家显示 AI 弹幕；AI 仅能使用服务器明确提供的事实，离线或未配置 API 时不发起请求。
 0.6.8 的日报只总结服务器实际采集的玩家、世界和 AI 事件；AI 编辑器不能补写未提供的事实。
 0.6.7 的旅行日志保存服务器能确认的地点、结构和相册编号，不生成或伪造客户端照片像素。

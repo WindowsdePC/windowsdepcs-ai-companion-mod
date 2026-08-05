@@ -10,6 +10,7 @@ import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
 import net.fabricmc.fabric.api.entity.FakePlayer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -53,6 +54,7 @@ public final class AgentManager implements AutoCloseable {
 		double remainingZ;
 		boolean arenaLocked;
 		boolean automaticEnabled;
+		boolean furnitureSeated;
 		int automaticIntervalTicks = DEFAULT_AUTOMATIC_INTERVAL_TICKS;
 		long nextAutomaticTick;
 
@@ -248,6 +250,10 @@ public final class AgentManager implements AutoCloseable {
 	public synchronized void setArenaLocked(String name, boolean locked) {
 		Agent agent = requireAgent(name);
 		agent.arenaLocked = locked;
+		if (locked) {
+			agent.furnitureSeated = false;
+			agent.player.setShiftKeyDown(false);
+		}
 		agent.remainingX = 0;
 		agent.remainingZ = 0;
 	}
@@ -266,11 +272,37 @@ public final class AgentManager implements AutoCloseable {
 
 	public synchronized void setMode(String name, AgentMode mode, String targetName, long currentTick) {
 		Agent agent = requireAgent(name);
+		agent.furnitureSeated = false;
+		agent.player.setShiftKeyDown(false);
 		agent.mode = mode;
 		agent.targetName = mode == AgentMode.IDLE ? "" : targetName;
 		agent.eyeSnapshot = null;
 		agent.nextEyeTick = currentTick + EYE_COOLDOWN_TICKS;
 		saveIdentities();
+	}
+
+	public synchronized void seatAtFurniture(String name, ServerLevel level, BlockPos position) {
+		Agent agent = requireAgent(name);
+		if (agent.arenaLocked) throw new IllegalStateException("该 AI 正在参加竞技场比赛");
+		if (agent.player.level() != level) throw new IllegalStateException("AI 与沙发不在同一维度");
+		agent.remainingX = 0;
+		agent.remainingZ = 0;
+		agent.player.setPos(position.getX() + 0.5, position.getY() + 1.0, position.getZ() + 0.5);
+		agent.player.setShiftKeyDown(true);
+		agent.furnitureSeated = true;
+	}
+
+	public synchronized void standFromFurniture(String name) {
+		Agent agent = requireAgent(name);
+		if (!agent.furnitureSeated) throw new IllegalStateException("该 AI 尚未坐在家具上");
+		agent.furnitureSeated = false;
+		agent.player.setShiftKeyDown(false);
+		agent.remainingX = 0;
+		agent.remainingZ = 0;
+	}
+
+	public synchronized boolean isSeatedAtFurniture(String name) {
+		return requireAgent(name).furnitureSeated;
 	}
 
 	public synchronized String useEyeNow(MinecraftServer server, String name) {
@@ -338,6 +370,7 @@ public final class AgentManager implements AutoCloseable {
 				agent.nextAutomaticTick = now + agent.automaticIntervalTicks;
 				startAutomaticDecision(server, agent);
 			}
+			if (agent.furnitureSeated) continue;
 			double distance = Math.hypot(agent.remainingX, agent.remainingZ);
 			if (distance < 0.01) continue;
 			double step = Math.min(0.18, distance);
@@ -407,7 +440,7 @@ public final class AgentManager implements AutoCloseable {
 			server.getPlayerList().broadcastSystemMessage(
 				Component.literal("<" + agent.name + "> " + decision.say()), false);
 		}
-		if (decision.action().equals("move")) {
+		if (decision.action().equals("move") && !agent.furnitureSeated) {
 			agent.remainingX = decision.dx();
 			agent.remainingZ = decision.dz();
 		}

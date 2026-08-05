@@ -1,5 +1,9 @@
 {
 	"item.ai_companion.camera": "AI 相机",
+	"block.ai_companion.sofa": "沙发",
+	"block.ai_companion.television": "电视",
+	"block.ai_companion.computer": "电脑",
+	"block.ai_companion.table_lamp": "台灯",
 	"mod.ai_companion.name": "WindowsdePC's AI Companion Mod",
 	"hud.ai_companion.positions.title": "AI 位置 · 松开 F8 关闭",
 	"hud.ai_companion.positions.loading": "正在从服务器刷新……",

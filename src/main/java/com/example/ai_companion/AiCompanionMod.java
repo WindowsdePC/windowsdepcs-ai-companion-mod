@@ -10,6 +10,7 @@ import com.example.ai_companion.command.PhotographyCommands;
 import com.example.ai_companion.command.TravelLogCommands;
 import com.example.ai_companion.command.MinecraftDailyNewsCommands;
 import com.example.ai_companion.command.LivestreamCommands;
+import com.example.ai_companion.command.FurnitureCommands;
 import com.example.ai_companion.config.GameplayConfig;
 import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
@@ -25,6 +26,8 @@ import com.example.ai_companion.travel.TravelLogManager;
 import com.example.ai_companion.news.MinecraftDailyNewsManager;
 import com.example.ai_companion.navigation.NavigationNetworking;
 import com.example.ai_companion.livestream.LivestreamManager;
+import com.example.ai_companion.furniture.FurnitureBlocks;
+import com.example.ai_companion.furniture.FurnitureManager;
 import com.example.ai_companion.world.WorldFeatureCommands;
 import com.example.ai_companion.world.WorldFeatureConfig;
 import com.example.ai_companion.world.WorldFeatureManager;
@@ -52,6 +55,7 @@ public final class AiCompanionMod implements ModInitializer {
 	private MinecraftDailyNewsManager dailyNews;
 	private CollaborationManager collaboration;
 	private LivestreamManager livestreams;
+	private FurnitureManager furniture;
 	private WorldFeatureConfig worldFeatures;
 	private WorldFeatureManager worldFeatureManager;
 
@@ -70,6 +74,7 @@ public final class AiCompanionMod implements ModInitializer {
 		travelLog = new TravelLogManager();
 		dailyNews = new MinecraftDailyNewsManager(() -> config, agents, arena);
 		livestreams = new LivestreamManager(() -> config, agents);
+		furniture = new FurnitureManager(agents);
 		worldFeatures = WorldFeatureConfig.load();
 		worldFeatureManager = new WorldFeatureManager(() -> worldFeatures);
 		AgentPositionNetworking.registerServer(agents);
@@ -87,6 +92,8 @@ public final class AiCompanionMod implements ModInitializer {
 		TravelLogCommands.register(travelLog, photography);
 		MinecraftDailyNewsCommands.register(dailyNews);
 		LivestreamCommands.register(livestreams);
+		FurnitureBlocks.register();
+		FurnitureCommands.register(furniture);
 		WorldFeatureCommands.register(() -> worldFeatures, updated -> worldFeatures = updated);
 		ServerTickEvents.END_SERVER_TICK.register(agents::tick);
 		ServerTickEvents.END_SERVER_TICK.register(arena::tick);
