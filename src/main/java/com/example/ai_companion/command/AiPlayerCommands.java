@@ -54,6 +54,12 @@ public final class AiPlayerCommands {
 					.executes(c -> remove(c.getSource(), agents, StringArgumentType.getString(c, "name")))))
 				.then(Commands.literal("list").executes(c -> list(c.getSource(), agents)))
 				.then(Commands.literal("positions").executes(c -> positions(c.getSource(), agents)))
+				.then(Commands.literal("identity").then(Commands.argument("name", StringArgumentType.word())
+					.executes(c -> identity(c.getSource(), agents,
+						StringArgumentType.getString(c, "name")))))
+				.then(Commands.literal("advancements").then(Commands.argument("name", StringArgumentType.word())
+					.executes(c -> advancements(c.getSource(), agents,
+						StringArgumentType.getString(c, "name")))))
 				.then(Commands.literal("idle").then(Commands.argument("name", StringArgumentType.word())
 					.executes(c -> mode(c.getSource(), agents, StringArgumentType.getString(c, "name"),
 						AgentMode.IDLE, ""))))
@@ -263,6 +269,34 @@ public final class AiPlayerCommands {
 		int result = created;
 		source.sendSuccess(() -> Component.literal("已批量创建 " + result + " 个 AI"), true);
 		return created;
+	}
+
+	private static int identity(CommandSourceStack source, AgentManager agents, String name) {
+		try {
+			AgentManager.AgentIdentity identity = agents.identity(name, source.getServer());
+			source.sendSuccess(() -> Component.literal(identity.displayText()), false);
+			return 1;
+		} catch (RuntimeException error) {
+			source.sendFailure(Component.literal("查询 AI 身份失败：" + error.getMessage()));
+			return 0;
+		}
+	}
+
+	private static int advancements(CommandSourceStack source, AgentManager agents, String name) {
+		try {
+			java.util.List<String> completed = agents.completedAdvancements(name, source.getServer());
+			source.sendSuccess(() -> Component.literal(name + " 已完成 " + completed.size() + " 项原版/模组进度"),
+				false);
+			completed.stream().limit(20).forEach(id ->
+				source.sendSuccess(() -> Component.literal("- " + id), false));
+			if (completed.size() > 20) {
+				source.sendSuccess(() -> Component.literal("另有 " + (completed.size() - 20) + " 项未显示"), false);
+			}
+			return completed.size();
+		} catch (RuntimeException error) {
+			source.sendFailure(Component.literal("查询 AI 进度失败：" + error.getMessage()));
+			return 0;
+		}
 	}
 
 	private static int promptList(CommandSourceStack source, PromptStore prompts) {

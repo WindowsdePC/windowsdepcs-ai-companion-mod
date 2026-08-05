@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.6.9](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.9)
+当前版本：[v0.7.0](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.7.0)
 
 ## 环境要求
 
@@ -39,6 +39,9 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 - `/aiplayer positions` 从服务器查询所有已登记 AI 当前所在维度与 XYZ 坐标。
 - 按住 `F8` 显示 AI 位置 HUD；每次重新按下都会向服务器刷新一次，松开立即关闭。
 - 支持 Mojang 纹理值与签名形式的自定义皮肤数据。
+- AI 身份会按稳定 UUID 持久化；服务器重启后恢复名称、位置、模式、目标、提示词与皮肤。
+- AI 使用独立的原版 `PlayerAdvancements` 进度存档；可用 `/aiplayer identity <名称>` 和
+  `/aiplayer advancements <名称>` 查询身份与已完成进度。
 
 ### AI 竞技场
 

@@ -10,11 +10,15 @@ import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
 import net.fabricmc.fabric.api.entity.FakePlayer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.Level;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -32,6 +36,9 @@ public final class AgentManager implements AutoCloseable {
 	private static final class Agent {
 		final String name;
 		final FakePlayer player;
+		final String textureValue;
+		final String textureSignature;
+		final long createdAtEpochMillis;
 		final AtomicBoolean thinking = new AtomicBoolean();
 		AgentMode mode = AgentMode.IDLE;
 		String targetName = "";
@@ -42,9 +49,13 @@ public final class AgentManager implements AutoCloseable {
 		double remainingZ;
 		boolean arenaLocked;
 
-		Agent(String name, FakePlayer player) {
+		Agent(String name, FakePlayer player, String textureValue, String textureSignature,
+				long createdAtEpochMillis) {
 			this.name = name;
 			this.player = player;
+			this.textureValue = textureValue == null ? "" : textureValue;
+			this.textureSignature = textureSignature == null ? "" : textureSignature;
+			this.createdAtEpochMillis = Math.max(0, createdAtEpochMillis);
 		}
 	}
 
@@ -52,6 +63,8 @@ public final class AgentManager implements AutoCloseable {
 	private final OpenAiCompatibleClient client = new OpenAiCompatibleClient();
 	private final Supplier<ModConfig> config;
 	private final PromptStore prompts;
+	private final AgentIdentityStore identityStore = AgentIdentityStore.load();
+	private long nextIdentitySaveTick;
 
 	public record AgentView(String name, AgentMode mode, String targetName, boolean thinking,
 							String promptId, String eyeSummary) {
@@ -61,6 +74,14 @@ public final class AgentManager implements AutoCloseable {
 			String state = thinking ? ", thinking" : "";
 			String prompt = promptId.isBlank() ? "" : ", prompt=" + promptId;
 			return name + " [" + mode.name().toLowerCase() + target + prompt + state + ", " + eyeSummary + "]";
+		}
+	}
+
+	public record AgentIdentity(String name, UUID uuid, String dimension, double x, double y, double z,
+			AgentMode mode, int completedAdvancements, long createdAtEpochMillis) {
+		public String displayText() {
+			return "%s · %s · %s (%.1f, %.1f, %.1f) · 进度 %d".formatted(name, uuid, dimension,
+				x, y, z, completedAdvancements);
 		}
 	}
 
@@ -84,14 +105,49 @@ public final class AgentManager implements AutoCloseable {
 		bot.setCustomName(Component.literal(name));
 		bot.setCustomNameVisible(true);
 		level.addNewPlayer(bot);
-		agents.put(key, new Agent(name, bot));
+		agents.put(key, new Agent(name, bot, textureValue, textureSignature, System.currentTimeMillis()));
+		saveIdentities();
 		return bot;
+	}
+
+	/** Restores durable AI identities after all server levels and advancement data are available. */
+	public synchronized void restore(MinecraftServer server) {
+		for (AgentIdentityStore.StoredAgent stored : identityStore.entries()) {
+			if (agents.containsKey(stored.name().toLowerCase())) continue;
+			try {
+				ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION,
+					Identifier.parse(stored.dimension()));
+				ServerLevel level = server.getLevel(dimension);
+				if (level == null) level = server.overworld();
+				GameProfile profile = new GameProfile(UUID.fromString(stored.uuid()), stored.name());
+				if (!stored.textureValue().isBlank()) {
+					profile.properties().put("textures", new Property("textures", stored.textureValue(),
+						stored.textureSignature()));
+				}
+				FakePlayer bot = FakePlayer.get(level, profile);
+				bot.setPos(stored.x(), stored.y(), stored.z());
+				bot.setCustomName(Component.literal(stored.name()));
+				bot.setCustomNameVisible(true);
+				level.addNewPlayer(bot);
+				Agent agent = new Agent(stored.name(), bot, stored.textureValue(), stored.textureSignature(),
+					stored.createdAtEpochMillis());
+				agent.mode = AgentMode.valueOf(stored.mode());
+				agent.targetName = stored.targetName();
+				agent.promptId = stored.promptId();
+				agents.put(stored.name().toLowerCase(), agent);
+			} catch (RuntimeException error) {
+				AiCompanionMod.LOGGER.error("Cannot restore AI identity {}", stored.name(), error);
+			}
+		}
+		AiCompanionMod.LOGGER.info("Restored {} persistent AI player identities", agents.size());
 	}
 
 	public synchronized boolean remove(String name) {
 		Agent agent = agents.remove(name.toLowerCase());
 		if (agent == null) return false;
+		agent.player.getAdvancements().save();
 		agent.player.discard();
+		saveIdentities();
 		return true;
 	}
 
@@ -120,6 +176,23 @@ public final class AgentManager implements AutoCloseable {
 		return requireAgent(name).player;
 	}
 
+	public synchronized AgentIdentity identity(String name, MinecraftServer server) {
+		Agent agent = requireAgent(name);
+		int completed = (int) server.getAdvancements().getAllAdvancements().stream()
+			.filter(advancement -> agent.player.getAdvancements().getOrStartProgress(advancement).isDone())
+			.count();
+		return new AgentIdentity(agent.name, agent.player.getUUID(),
+			agent.player.level().dimension().identifier().toString(), agent.player.getX(), agent.player.getY(),
+			agent.player.getZ(), agent.mode, completed, agent.createdAtEpochMillis);
+	}
+
+	public synchronized java.util.List<String> completedAdvancements(String name, MinecraftServer server) {
+		Agent agent = requireAgent(name);
+		return server.getAdvancements().getAllAdvancements().stream()
+			.filter(advancement -> agent.player.getAdvancements().getOrStartProgress(advancement).isDone())
+			.map(advancement -> advancement.id().toString()).sorted().toList();
+	}
+
 	/** Prevents normal prompt movement from fighting with the server-authoritative arena controller. */
 	public synchronized void setArenaLocked(String name, boolean locked) {
 		Agent agent = requireAgent(name);
@@ -132,10 +205,12 @@ public final class AgentManager implements AutoCloseable {
 		Agent agent = requireAgent(name);
 		if (!prompts.contains(promptId)) throw new IllegalArgumentException("找不到提示词预设: " + promptId);
 		agent.promptId = PromptStore.validateId(promptId);
+		saveIdentities();
 	}
 
 	public synchronized void clearPrompt(String name) {
 		requireAgent(name).promptId = "";
+		saveIdentities();
 	}
 
 	public synchronized void setMode(String name, AgentMode mode, String targetName, long currentTick) {
@@ -144,6 +219,7 @@ public final class AgentManager implements AutoCloseable {
 		agent.targetName = mode == AgentMode.IDLE ? "" : targetName;
 		agent.eyeSnapshot = null;
 		agent.nextEyeTick = currentTick + EYE_COOLDOWN_TICKS;
+		saveIdentities();
 	}
 
 	public synchronized String useEyeNow(MinecraftServer server, String name) {
@@ -187,6 +263,10 @@ public final class AgentManager implements AutoCloseable {
 
 	public synchronized void tick(MinecraftServer server) {
 		long now = server.getTickCount();
+		if (now >= nextIdentitySaveTick) {
+			nextIdentitySaveTick = now + 200;
+			saveIdentities();
+		}
 		for (Agent agent : agents.values()) {
 			if (agent.mode != AgentMode.IDLE && now >= agent.nextEyeTick) {
 				captureEye(server, agent, now);
@@ -252,8 +332,22 @@ public final class AgentManager implements AutoCloseable {
 		return current.getMessage() == null ? current.getClass().getSimpleName() : current.getMessage();
 	}
 
+	private synchronized void saveIdentities() {
+		try {
+			identityStore.replace(agents.values().stream().map(agent -> new AgentIdentityStore.StoredAgent(
+				agent.name, agent.player.getUUID().toString(),
+				agent.player.level().dimension().identifier().toString(), agent.player.getX(), agent.player.getY(),
+				agent.player.getZ(), agent.mode.name(), agent.targetName, agent.promptId,
+				agent.textureValue, agent.textureSignature, agent.createdAtEpochMillis)).toList());
+		} catch (Exception error) {
+			AiCompanionMod.LOGGER.error("Cannot save persistent AI identities", error);
+		}
+	}
+
 	@Override
 	public synchronized void close() {
+		saveIdentities();
+		agents.values().forEach(agent -> agent.player.getAdvancements().save());
 		agents.values().forEach(agent -> agent.player.discard());
 		agents.clear();
 	}

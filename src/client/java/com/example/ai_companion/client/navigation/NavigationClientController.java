@@ -17,6 +17,7 @@ public final class NavigationClientController {
 	private static boolean enabled;
 	private static boolean waiting;
 	private static String message = "";
+	private static int revision;
 
 	private NavigationClientController() {
 	}
@@ -27,6 +28,7 @@ public final class NavigationClientController {
 			enabled = payload.enabled();
 			waiting = false;
 			message = payload.message();
+			revision++;
 		});
 		ClientPlayNetworking.registerGlobalReceiver(NavigationTargetPayload.TYPE, (payload, context) -> {
 			waiting = false;
@@ -57,6 +59,7 @@ public final class NavigationClientController {
 	public static boolean enabled() { return enabled; }
 	public static boolean waiting() { return waiting; }
 	public static String message() { return message; }
+	public static int revision() { return revision; }
 
 	public static void open(Minecraft client, net.minecraft.client.gui.screens.Screen parent) {
 		requestCatalog();
@@ -64,7 +67,7 @@ public final class NavigationClientController {
 	}
 
 	private static void clear() {
-		entries = List.of(); enabled = false; waiting = false; message = "";
+		entries = List.of(); enabled = false; waiting = false; message = ""; revision++;
 		NavigationHud.clear();
 	}
 }

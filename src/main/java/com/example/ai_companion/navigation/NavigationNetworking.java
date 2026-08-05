@@ -25,9 +25,13 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /** Server-authoritative catalogue, locate and permission-checked teleport service. */
 public final class NavigationNetworking {
+	private static final Map<UUID, Integer> NEXT_SEARCH_TICK = new ConcurrentHashMap<>();
 	private NavigationNetworking() {
 	}
 
@@ -69,6 +73,10 @@ public final class NavigationNetworking {
 	private static NavigationTargetPayload locate(ServerPlayer player, NavigationLocateRequestPayload request,
 			WorldFeatureConfig config) {
 		if (!config.navigatorEnabled()) return failure(request, "服务器尚未开启结构与群系导航");
+		int now = player.level().getServer().getTickCount();
+		Integer next = NEXT_SEARCH_TICK.get(player.getUUID());
+		if (next != null && now < next) return failure(request, "导航搜索冷却中，请稍后再试");
+		NEXT_SEARCH_TICK.put(player.getUUID(), now + 100);
 		try {
 			ServerLevel level = player.level();
 			Identifier id = Identifier.parse(request.id());

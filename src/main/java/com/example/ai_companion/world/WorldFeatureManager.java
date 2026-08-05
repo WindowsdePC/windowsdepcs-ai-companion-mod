@@ -75,7 +75,6 @@ public final class WorldFeatureManager implements AutoCloseable {
 		player.setDeltaMovement(0, 0, 0);
 		player.fallDistance = 0;
 		player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 20 * 45, 0, false, true));
-		player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 20 * 50, 4, false, false));
 		rescued.add(player.getUUID());
 		player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
 			"message.ai_companion.merciful_void"));

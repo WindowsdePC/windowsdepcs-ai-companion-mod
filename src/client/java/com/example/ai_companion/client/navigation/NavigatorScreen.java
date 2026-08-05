@@ -16,13 +16,25 @@ public final class NavigatorScreen extends Screen {
 	private String query = "";
 	private String type = "all";
 	private boolean teleport;
+	private int observedRevision;
 
 	public NavigatorScreen(Screen parent) {
 		super(Component.translatable("screen.ai_companion.navigator.title"));
 		this.parent = parent;
 	}
 
-	@Override protected void init() { rebuild(); }
+	@Override protected void init() {
+		observedRevision = NavigationClientController.revision();
+		rebuild();
+	}
+
+	@Override public void tick() {
+		super.tick();
+		if (observedRevision != NavigationClientController.revision()) {
+			observedRevision = NavigationClientController.revision();
+			rebuild();
+		}
+	}
 
 	private void rebuild() {
 		clearWidgets();

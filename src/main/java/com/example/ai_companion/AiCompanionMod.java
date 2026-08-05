@@ -84,6 +84,7 @@ public final class AiCompanionMod implements ModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(travelLog::tick);
 		ServerTickEvents.END_SERVER_TICK.register(dailyNews::tick);
 		ServerTickEvents.END_SERVER_TICK.register(worldFeatureManager::tick);
+		ServerLifecycleEvents.SERVER_STARTED.register(agents::restore);
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			arena.close();
 			agents.close();

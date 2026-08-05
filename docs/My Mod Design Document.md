@@ -13,7 +13,7 @@ WindowsdePC's AI Companion Mod
 
 当前版本：
 
-0.6.9
+0.7.0
 
 
 目标版本：
@@ -238,6 +238,14 @@ AI不是普通NPC。
 AI可以：
 
 获得原版进度。
+
+
+实现状态（0.7.0）：
+
+- 已完成稳定独立 UUID、玩家名称、维度位置、模式、目标、提示词和皮肤数据持久化
+- 服务器启动后会恢复 AI FakePlayer 身份，关闭或移除前主动保存独立 PlayerAdvancements
+- AI 可获得原版与模组数据包进度，并可通过 identity/advancements 命令查询
+- 身份文件对名称、UUID、坐标和文本长度进行校验，单条损坏不会伪造成有效身份
 
 
 示例：
