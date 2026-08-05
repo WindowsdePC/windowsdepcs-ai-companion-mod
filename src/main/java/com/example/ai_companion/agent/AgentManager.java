@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /** Owns fake-player lifecycles and applies allow-listed AI actions. */
@@ -70,6 +71,7 @@ public final class AgentManager implements AutoCloseable {
 	private final Supplier<ModConfig> config;
 	private final PromptStore prompts;
 	private final AgentIdentityStore identityStore = AgentIdentityStore.load();
+	private Function<String, String> collaborationContext = ignored -> "";
 	private long nextIdentitySaveTick;
 
 	public record AgentView(String name, AgentMode mode, String targetName, boolean thinking,
@@ -194,6 +196,18 @@ public final class AgentManager implements AutoCloseable {
 		return requireAgent(name).player;
 	}
 
+	public synchronized boolean hasAgent(String name) {
+		return name != null && agents.containsKey(name.toLowerCase());
+	}
+
+	public synchronized String canonicalName(String name) {
+		return requireAgent(name).name;
+	}
+
+	public synchronized void setCollaborationContext(Function<String, String> provider) {
+		collaborationContext = provider == null ? ignored -> "" : provider;
+	}
+
 	public synchronized AgentIdentity identity(String name, MinecraftServer server) {
 		Agent agent = requireAgent(name);
 		int completed = (int) server.getAdvancements().getAllAdvancements().stream()
@@ -289,6 +303,8 @@ public final class AgentManager implements AutoCloseable {
 		String observation = "名字=%s，模式=%s，维度=%s，位置=(%.1f,%.1f,%.1f)，任务=%s，%s".formatted(
 			agent.name, agent.mode, agent.player.level().dimension().identifier(), agent.player.getX(),
 			agent.player.getY(), agent.player.getZ(), instruction, eye);
+		String cooperation = collaborationContext.apply(agent.name);
+		if (!cooperation.isBlank()) observation += "，" + cooperation;
 		try {
 			client.decide(config.get(), promptFor(agent), observation).whenComplete((decision, error) ->
 				server.execute(() -> {

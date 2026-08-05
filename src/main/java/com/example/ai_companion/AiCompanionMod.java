@@ -5,12 +5,14 @@ import com.example.ai_companion.arena.AiArenaManager;
 import com.example.ai_companion.command.AiBattleCommands;
 import com.example.ai_companion.command.AiPlayerCommands;
 import com.example.ai_companion.command.AssistantOrbCommands;
+import com.example.ai_companion.command.CollaborationCommands;
 import com.example.ai_companion.command.PhotographyCommands;
 import com.example.ai_companion.command.TravelLogCommands;
 import com.example.ai_companion.command.MinecraftDailyNewsCommands;
 import com.example.ai_companion.config.GameplayConfig;
 import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
+import com.example.ai_companion.cooperation.CollaborationManager;
 import com.example.ai_companion.gameplay.GoldenSpearRush;
 import com.example.ai_companion.gameplay.FlexibleEquipmentMode;
 import com.example.ai_companion.gameplay.MinigameRewardManager;
@@ -46,6 +48,7 @@ public final class AiCompanionMod implements ModInitializer {
 	private PhotographyManager photography;
 	private TravelLogManager travelLog;
 	private MinecraftDailyNewsManager dailyNews;
+	private CollaborationManager collaboration;
 	private WorldFeatureConfig worldFeatures;
 	private WorldFeatureManager worldFeatureManager;
 
@@ -56,6 +59,8 @@ public final class AiCompanionMod implements ModInitializer {
 		FlexibleEquipmentMode.configureServer(() -> gameplay.flexibleEquipmentEnabled());
 		prompts = PromptStore.loadServer();
 		agents = new AgentManager(() -> config, prompts);
+		collaboration = new CollaborationManager(agents);
+		agents.setCollaborationContext(collaboration::promptContext);
 		arena = new AiArenaManager(agents);
 		assistantOrb = new AssistantOrbManager(() -> config);
 		photography = new PhotographyManager(() -> config);
@@ -71,6 +76,7 @@ public final class AiCompanionMod implements ModInitializer {
 		AiPlayerCommands.register(agents, prompts, () -> config, updated -> config = updated,
 			() -> gameplay, updated -> gameplay = updated, minigameRewards);
 		AiBattleCommands.register(arena);
+		CollaborationCommands.register(collaboration);
 		AssistantOrbCommands.register(assistantOrb);
 		PhotographyCommands.register(photography);
 		PhotographyItems.register(photography);
@@ -88,6 +94,7 @@ public final class AiCompanionMod implements ModInitializer {
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			arena.close();
 			agents.close();
+			collaboration.close();
 			goldenSpearRush.clearCounters();
 			minigameRewards.clear();
 			assistantOrb.close();

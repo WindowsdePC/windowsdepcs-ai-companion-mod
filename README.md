@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.7.1](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.7.1)
+当前版本：[v0.7.2](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.7.2)
 
 ## 环境要求
 
@@ -44,6 +44,8 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
   `/aiplayer advancements <名称>` 查询身份与已完成进度。
 - 每个 AI 可独立开启自动连续决策，间隔可设为 5 秒至 1 小时；设置随身份存档恢复。
 - 自动决策沿用模式提示词、天眼快照和 `say`、`move`、`wait` 白名单，不执行任意命令。
+- 可创建持久化多 AI 协作组；成员共享任务、提案、严格多数票共识和领队选举。
+- 协作组的领队、任务与最近通过的共识会加入成员的后续手动或自动决策观察信息。
 
 ### AI 竞技场
 
@@ -236,6 +238,13 @@ UI 是主要入口，管理员也可以使用命令：
 /aiplayer automatic status [AI名]
 /aiplayer automatic enable <AI名> [间隔秒]
 /aiplayer automatic disable <AI名>
+/aicoop status [协作组ID]
+/aicoop create <协作组ID> <AI一,AI二[,更多AI]>
+/aicoop task <协作组ID> <共享任务>
+/aicoop propose <协作组ID> <AI名> <提案>
+/aicoop vote <协作组ID> <提案编号> <AI名> <true|false>
+/aicoop leader-vote <协作组ID> <投票AI> <候选AI>
+/aicoop remove <协作组ID>
 /aiplayer prompt list
 /aiplayer prompt assign <AI名> <预设ID>
 /aiplayer feature status
@@ -295,9 +304,9 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.7.1.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.7.1-sources.jar`：本地构建的源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.7.1-javadoc.jar`：本地构建的 Java API 文档包。
+- `windowsdepcs-ai-companion-0.7.2.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.7.2-sources.jar`：本地构建的源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.7.2-javadoc.jar`：本地构建的 Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 从 v0.6.7 起，GitHub Release 也只附加第一个正式模组 JAR，不再上传另外两个 JAR或校验文件。
@@ -311,8 +320,8 @@ Windows PowerShell：
 0.6.4 的照片是服务器权威的相册条目，包含场景元数据与玩家说明；它不会读取或保存客户端帧缓冲像素。
 后续若加入真正的 PNG 截图，会使用明确的客户端许可、网络大小上限和专用相册界面。
 0.6.2 的竞技场战术是独立、可恢复的服务器玩法，不会把竞技场动作写回普通任务模式。
-自动连续决策仍只使用现有安全动作执行器；复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
-多 AI 共识与领队选举、Simple Voice Chat 协议等仍在后续版本开发。设计路线见
+自动连续决策与协作上下文仍只使用现有安全动作执行器；复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
+Simple Voice Chat 协议等仍在后续版本开发。设计路线见
 [`docs/My Mod Design Document.md`](docs/My%20Mod%20Design%20Document.md)。
 
 ## 许可证
