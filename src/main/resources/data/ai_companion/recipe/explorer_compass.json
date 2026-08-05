@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    " E ",
+    "ECE",
+    " M "
+  ],
+  "key": {
+    "E": "minecraft:ender_eye",
+    "C": "minecraft:compass",
+    "M": "minecraft:map"
+  },
+  "result": {
+    "id": "ai_companion:explorer_compass",
+    "count": 1
+  }
+}

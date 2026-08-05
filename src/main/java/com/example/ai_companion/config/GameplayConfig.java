@@ -13,14 +13,16 @@ import java.nio.file.Path;
 /** Persistent server-side configuration for optional gameplay features. */
 public record GameplayConfig(boolean goldenSpearRushEnabled, int durabilityEvery,
 							 int hungerEvery, int hungerCost, double rushStrength,
-							 boolean flexibleEquipmentEnabled) {
+							 boolean flexibleEquipmentEnabled, boolean explorerNavigatorEnabled,
+							 boolean worldLimitsRemoved, boolean mercifulVoidEnabled) {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Path PATH = FabricLoader.getInstance().getConfigDir()
 		.resolve("windowsdepcs-ai-companion-gameplay.json");
 
 	public static GameplayConfig defaults() {
 		// Vanilla Lunge II uses 0.458 * 2 = 0.916 horizontal impulse.
-		return new GameplayConfig(true, 15, 30, 2, 0.916, false);
+		return new GameplayConfig(true, 15, 30, 2, 0.916, false,
+			false, false, false);
 	}
 
 	public static GameplayConfig load() {
@@ -44,37 +46,62 @@ public record GameplayConfig(boolean goldenSpearRushEnabled, int durabilityEvery
 			Math.clamp(durabilityEvery, 1, 1000),
 			Math.clamp(hungerEvery, 1, 1000),
 			Math.clamp(hungerCost, 0, 20),
-			Math.clamp(rushStrength, 0.1, 4.0), flexibleEquipmentEnabled);
+			Math.clamp(rushStrength, 0.1, 4.0), flexibleEquipmentEnabled,
+			explorerNavigatorEnabled, worldLimitsRemoved, mercifulVoidEnabled);
 	}
 
 	public GameplayConfig withEnabled(boolean value) {
 		return new GameplayConfig(value, durabilityEvery, hungerEvery, hungerCost, rushStrength,
-			flexibleEquipmentEnabled).normalized();
+			flexibleEquipmentEnabled, explorerNavigatorEnabled, worldLimitsRemoved,
+			mercifulVoidEnabled).normalized();
 	}
 
 	public GameplayConfig withDurabilityEvery(int value) {
 		return new GameplayConfig(goldenSpearRushEnabled, value, hungerEvery, hungerCost, rushStrength,
-			flexibleEquipmentEnabled).normalized();
+			flexibleEquipmentEnabled, explorerNavigatorEnabled, worldLimitsRemoved,
+			mercifulVoidEnabled).normalized();
 	}
 
 	public GameplayConfig withHungerEvery(int value) {
 		return new GameplayConfig(goldenSpearRushEnabled, durabilityEvery, value, hungerCost, rushStrength,
-			flexibleEquipmentEnabled).normalized();
+			flexibleEquipmentEnabled, explorerNavigatorEnabled, worldLimitsRemoved,
+			mercifulVoidEnabled).normalized();
 	}
 
 	public GameplayConfig withHungerCost(int value) {
 		return new GameplayConfig(goldenSpearRushEnabled, durabilityEvery, hungerEvery, value, rushStrength,
-			flexibleEquipmentEnabled).normalized();
+			flexibleEquipmentEnabled, explorerNavigatorEnabled, worldLimitsRemoved,
+			mercifulVoidEnabled).normalized();
 	}
 
 	public GameplayConfig withRushStrength(double value) {
 		return new GameplayConfig(goldenSpearRushEnabled, durabilityEvery, hungerEvery, hungerCost, value,
-			flexibleEquipmentEnabled).normalized();
+			flexibleEquipmentEnabled, explorerNavigatorEnabled, worldLimitsRemoved,
+			mercifulVoidEnabled).normalized();
 	}
 
 	public GameplayConfig withFlexibleEquipmentEnabled(boolean value) {
 		return new GameplayConfig(goldenSpearRushEnabled, durabilityEvery, hungerEvery, hungerCost,
-			rushStrength, value).normalized();
+			rushStrength, value, explorerNavigatorEnabled, worldLimitsRemoved,
+			mercifulVoidEnabled).normalized();
+	}
+
+	public GameplayConfig withExplorerNavigatorEnabled(boolean value) {
+		return new GameplayConfig(goldenSpearRushEnabled, durabilityEvery, hungerEvery, hungerCost,
+			rushStrength, flexibleEquipmentEnabled, value, worldLimitsRemoved,
+			mercifulVoidEnabled).normalized();
+	}
+
+	public GameplayConfig withWorldLimitsRemoved(boolean value) {
+		return new GameplayConfig(goldenSpearRushEnabled, durabilityEvery, hungerEvery, hungerCost,
+			rushStrength, flexibleEquipmentEnabled, explorerNavigatorEnabled, value,
+			mercifulVoidEnabled).normalized();
+	}
+
+	public GameplayConfig withMercifulVoidEnabled(boolean value) {
+		return new GameplayConfig(goldenSpearRushEnabled, durabilityEvery, hungerEvery, hungerCost,
+			rushStrength, flexibleEquipmentEnabled, explorerNavigatorEnabled, worldLimitsRemoved,
+			value).normalized();
 	}
 
 	public void save() throws IOException {

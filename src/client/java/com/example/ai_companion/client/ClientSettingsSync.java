@@ -31,5 +31,19 @@ final class ClientSettingsSync {
 		minecraft.getConnection().sendCommand("aiplayer feature strength " + settings.rushStrength);
 		minecraft.getConnection().sendCommand("aiplayer feature flexible-equipment "
 			+ settings.flexibleEquipmentEnabled);
+		minecraft.getConnection().sendCommand("navigator feature navigation "
+			+ settings.explorerNavigatorEnabled);
+		minecraft.getConnection().sendCommand("navigator feature world-limits "
+			+ settings.worldLimitsRemoved);
+		minecraft.getConnection().sendCommand("navigator feature merciful-void "
+			+ settings.mercifulVoidEnabled);
+		minecraft.getConnection().sendCommand("navigator mode "
+			+ settings.explorerNavigationMode().id());
+		if (settings.explorerTargetType() == com.example.ai_companion.exploration.NavigationTargetType.BORDERLANDS) {
+			minecraft.getConnection().sendCommand("navigator target borderlands");
+		} else {
+			minecraft.getConnection().sendCommand("navigator target "
+				+ settings.explorerTargetType().id() + " " + settings.explorerTargetId);
+		}
 	}
 }

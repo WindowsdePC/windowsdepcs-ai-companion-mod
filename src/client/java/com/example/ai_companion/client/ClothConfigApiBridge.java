@@ -1,6 +1,8 @@
 package com.example.ai_companion.client;
 
 import com.example.ai_companion.agent.AgentMode;
+import com.example.ai_companion.exploration.NavigationMode;
+import com.example.ai_companion.exploration.NavigationTargetType;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
@@ -80,6 +82,27 @@ final class ClothConfigApiBridge {
 		client.addEntry(entries.startDoubleField(Component.literal("缩放过渡秒数"),
 			settings.zoomTransitionSeconds).setMin(0.0).setMax(1.0).setDefaultValue(0.18)
 			.setSaveConsumer(value -> settings.zoomTransitionSeconds = value).build());
+		client.addEntry(entries.startBooleanToggle(Component.literal("结构群系指南针"),
+			settings.explorerNavigatorEnabled).setDefaultValue(false)
+			.setTooltip(Component.literal("定位群系、结构或边境之地；默认关闭"))
+			.setSaveConsumer(value -> settings.explorerNavigatorEnabled = value).build());
+		client.addEntry(entries.startEnumSelector(Component.literal("指南针模式"), NavigationMode.class,
+			settings.explorerNavigationMode()).setDefaultValue(NavigationMode.NAVIGATE)
+			.setSaveConsumer(settings::setExplorerNavigationMode).build());
+		client.addEntry(entries.startEnumSelector(Component.literal("导航目标类型"), NavigationTargetType.class,
+			settings.explorerTargetType()).setDefaultValue(NavigationTargetType.BIOME)
+			.setSaveConsumer(settings::setExplorerTargetType).build());
+		client.addEntry(entries.startStrField(Component.literal("群系/结构 ID"), settings.explorerTargetId)
+			.setDefaultValue("minecraft:plains").setSaveConsumer(value -> settings.explorerTargetId = value)
+			.build());
+		client.addEntry(entries.startBooleanToggle(Component.literal("实验性世界限制解除"),
+			settings.worldLimitsRemoved).setDefaultValue(false)
+			.setTooltip(Component.literal("将边境扩至引擎硬极限并停用本模组渲染限流；默认关闭"))
+			.setSaveConsumer(value -> settings.worldLimitsRemoved = value).build());
+		client.addEntry(entries.startBooleanToggle(Component.literal("仁慈的虚空"),
+			settings.mercifulVoidEnabled).setDefaultValue(false)
+			.setTooltip(Component.literal("跌入虚空后送回高空并给予缓降；默认关闭"))
+			.setSaveConsumer(value -> settings.mercifulVoidEnabled = value).build());
 
 		category(builder, entries, "小游戏中心", "贪吃蛇、俄罗斯方块、扫雷、2048 与 AI 猜拳；返回完整管理中心后可开始游戏");
 		category(builder, entries, "休闲系统", "后续功能版本开放");

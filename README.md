@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.6.6](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.6)
+当前版本：[v0.6.7](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.7)
 
 ## 环境要求
 
@@ -153,6 +153,14 @@ EclipseUI 模式提供分类卡片、图标、开关、滑块、下拉菜单和�
 - 帧率低于目标 5 FPS 时每次缩短 8 格；高于目标 10 FPS 时每次恢复 8 格，形成滞回区间以避免频繁抖动。
 - 目标帧率可设为 30～240，最大距离可设为 16～256 格，最小距离不会超过最大值。
 - 不修改原版区块、实体、粒子或服务器模拟距离；关闭后立即恢复原有渲染行为。
+
+### 结构群系指南针、世界边界与仁慈虚空
+
+- 新增 `ai_companion:explorer_compass`，可在界面或 `/navigator` 命令中选择群系、结构、边境之地，以及导航/传送模式。
+- 导航模式显示手机式 AR 方向提示、目标与坐标详情、剩余方块数和类似原版 Boss 血条的进度条；到达 8 格内自动结束。
+- 实验性世界限制解除会把原版世界边境扩至引擎硬坐标范围，关闭后恢复启用前的边境数据；它不会伪造突破区块存档格式或维度方块高度的能力。
+- “仁慈的虚空”会把跌至维度底部以下的玩家送回可站立地形上空，清除下落速度并给予 45 秒缓降。
+- 三项功能默认均关闭；导航到约 1255 万格的边境之地前必须明确开启实验性世界限制解除。
 
 ### 金矛突进
 

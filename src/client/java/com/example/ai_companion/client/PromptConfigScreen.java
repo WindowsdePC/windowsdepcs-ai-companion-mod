@@ -8,6 +8,8 @@ import com.example.ai_companion.client.minigame.RockPaperScissorsScreen;
 import com.example.ai_companion.client.minigame.SnakeScreen;
 import com.example.ai_companion.client.minigame.TetrisScreen;
 import com.example.ai_companion.config.PromptStore;
+import com.example.ai_companion.exploration.NavigationMode;
+import com.example.ai_companion.exploration.NavigationTargetType;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -76,6 +78,12 @@ public final class PromptConfigScreen extends Screen {
 	private String performanceTargetFps;
 	private String extraRenderDistance;
 	private String minimumExtraRenderDistance;
+	private boolean explorerNavigatorEnabled;
+	private boolean worldLimitsRemoved;
+	private boolean mercifulVoidEnabled;
+	private NavigationMode explorerNavigationMode;
+	private NavigationTargetType explorerTargetType;
+	private String explorerTargetId;
 	private String durabilityEvery;
 	private String hungerEvery;
 	private String hungerCost;
@@ -108,6 +116,12 @@ public final class PromptConfigScreen extends Screen {
 		performanceTargetFps = Integer.toString(settings.performanceTargetFps);
 		extraRenderDistance = Integer.toString(settings.extraRenderDistance);
 		minimumExtraRenderDistance = Integer.toString(settings.minimumExtraRenderDistance);
+		explorerNavigatorEnabled = settings.explorerNavigatorEnabled;
+		worldLimitsRemoved = settings.worldLimitsRemoved;
+		mercifulVoidEnabled = settings.mercifulVoidEnabled;
+		explorerNavigationMode = settings.explorerNavigationMode();
+		explorerTargetType = settings.explorerTargetType();
+		explorerTargetId = settings.explorerTargetId;
 		durabilityEvery = Integer.toString(settings.durabilityEvery);
 		hungerEvery = Integer.toString(settings.hungerEvery);
 		hungerCost = Integer.toString(settings.hungerCost);
@@ -388,11 +402,50 @@ public final class PromptConfigScreen extends Screen {
 			screenZoomEnabled = !screenZoomEnabled;
 			rebuildPanel();
 		}).bounds(left + 270, 75, 220, 20).build());
-		numberBox(left, 135, zoomFactor, 5, value -> zoomFactor = value);
-		numberBox(left + 200, 135, zoomTransitionSeconds, 5,
+		numberBox(left, 105, zoomFactor, 5, value -> zoomFactor = value);
+		numberBox(left + 200, 105, zoomTransitionSeconds, 5,
 			value -> zoomTransitionSeconds = value);
+		addRenderableWidget(Button.builder(Component.literal("结构群系指南针："
+			+ (explorerNavigatorEnabled ? "开启" : "关闭")), b -> {
+			explorerNavigatorEnabled = !explorerNavigatorEnabled;
+			rebuildPanel();
+		}).bounds(left, 140, 220, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("模式：" + explorerNavigationMode.label()), b -> {
+			explorerNavigationMode = explorerNavigationMode == NavigationMode.NAVIGATE
+				? NavigationMode.TELEPORT : NavigationMode.NAVIGATE;
+			rebuildPanel();
+		}).bounds(left + 230, 140, 140, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("目标：" + explorerTargetType.label()), b -> {
+			explorerTargetType = switch (explorerTargetType) {
+				case BIOME -> NavigationTargetType.STRUCTURE;
+				case STRUCTURE -> NavigationTargetType.BORDERLANDS;
+				case BORDERLANDS -> NavigationTargetType.BIOME;
+			};
+			rebuildPanel();
+		}).bounds(left + 380, 140, 150, 20).build());
+		EditBox target = addRenderableWidget(new EditBox(font, left + 540, 140,
+			Math.max(120, panelWidth - 540), 20, Component.literal("minecraft:plains")));
+		target.setMaxLength(160);
+		target.setValue(explorerTargetId);
+		target.setResponder(value -> explorerTargetId = value);
+		addRenderableWidget(Button.builder(Component.literal("实验性世界限制解除："
+			+ (worldLimitsRemoved ? "开启" : "关闭")), b -> {
+			worldLimitsRemoved = !worldLimitsRemoved;
+			rebuildPanel();
+		}).bounds(left, 175, 250, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("仁慈的虚空："
+			+ (mercifulVoidEnabled ? "开启" : "关闭")), b -> {
+			mercifulVoidEnabled = !mercifulVoidEnabled;
+			rebuildPanel();
+		}).bounds(left + 260, 175, 190, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("开始导航"), b -> startNavigation())
+			.bounds(left + 460, 175, 110, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("停止导航"), b -> {
+			sendCommand("navigator stop");
+			status = "已请求停止导航";
+		}).bounds(left + 580, 175, 110, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("保存客户端增强设置"), b -> saveClientEnhancements())
-			.bounds(left, 190, 220, 20).build());
+			.bounds(left, 210, 220, 20).build());
 	}
 
 	private void buildPerformancePanel(int left, int panelWidth) {
@@ -671,10 +724,29 @@ public final class PromptConfigScreen extends Screen {
 			settings.zoomKey = ClientSettings.normalizeKey(zoomKey, "C");
 			settings.zoomFactor = parseDouble(zoomFactor, 1.5, 12.0, "缩放倍率");
 			settings.zoomTransitionSeconds = parseDouble(zoomTransitionSeconds, 0.0, 1.0, "过渡时间");
+			settings.explorerNavigatorEnabled = explorerNavigatorEnabled;
+			settings.worldLimitsRemoved = worldLimitsRemoved;
+			settings.mercifulVoidEnabled = mercifulVoidEnabled;
+			settings.setExplorerNavigationMode(explorerNavigationMode);
+			settings.setExplorerTargetType(explorerTargetType);
+			settings.explorerTargetId = explorerTargetId == null || explorerTargetId.isBlank()
+				? "minecraft:plains" : explorerTargetId.strip().toLowerCase();
 			settings.save();
-			status = "已保存客户端增强设置；按住 " + settings.zoomKey + " 使用缩放";
+			ClientSettingsSync.save(settings);
+			status = "已保存客户端增强、导航、世界限制与虚空设置";
 		} catch (RuntimeException | IOException error) {
 			status = "保存失败: " + error.getMessage();
+		}
+	}
+
+	private void startNavigation() {
+		try {
+			saveClientEnhancements();
+			if (status.startsWith("保存失败")) return;
+			sendCommand("navigator start");
+			status = "已请求定位并开始指南针操作";
+		} catch (RuntimeException error) {
+			status = "导航失败: " + error.getMessage();
 		}
 	}
 

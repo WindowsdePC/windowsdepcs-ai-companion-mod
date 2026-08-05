@@ -54,6 +54,7 @@ public final class ClientPerformanceController {
 
 	public static boolean shouldRenderExtra(Entity entity) {
 		ClientSettings current = settings;
+		if (current != null && current.worldLimitsRemoved) return true;
 		if (current == null || !current.clientPerformanceOptimizerEnabled) return true;
 		Entity camera = Minecraft.getInstance().getCameraEntity();
 		if (camera == null || camera == entity) return true;

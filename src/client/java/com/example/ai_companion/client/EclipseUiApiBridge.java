@@ -1,6 +1,8 @@
 package com.example.ai_companion.client;
 
 import com.example.ai_companion.agent.AgentMode;
+import com.example.ai_companion.exploration.NavigationMode;
+import com.example.ai_companion.exploration.NavigationTargetType;
 import dev.eclipseui.EclipseUI;
 import dev.eclipseui.api.Theme;
 import net.minecraft.client.gui.screens.Screen;
@@ -83,7 +85,31 @@ final class EclipseUiApiBridge {
 					value -> settings.zoomFactor = value).defaultValue(4.0))
 				.slider(slider -> slider.name(Component.literal("缩放过渡秒数"))
 					.range(0.0, 1.0, 0.01).bindingDouble(() -> settings.zoomTransitionSeconds,
-					value -> settings.zoomTransitionSeconds = value).defaultValue(0.18)))
+					value -> settings.zoomTransitionSeconds = value).defaultValue(0.18))
+				.toggle(toggle -> toggle.name(Component.literal("结构群系指南针"))
+					.description(Component.literal("定位群系、结构或边境之地；默认关闭"))
+					.binding(() -> settings.explorerNavigatorEnabled,
+						value -> settings.explorerNavigatorEnabled = value).defaultValue(false))
+				.<NavigationMode>dropdown(option -> option.name("指南针模式")
+					.enumClass(NavigationMode.class)
+					.binding(settings::explorerNavigationMode, settings::setExplorerNavigationMode)
+					.defaultValue(NavigationMode.NAVIGATE))
+				.<NavigationTargetType>dropdown(option -> option.name("导航目标类型")
+					.enumClass(NavigationTargetType.class)
+					.binding(settings::explorerTargetType, settings::setExplorerTargetType)
+					.defaultValue(NavigationTargetType.BIOME))
+				.textInput(field -> field.name(Component.literal("群系/结构 ID"))
+					.binding(() -> settings.explorerTargetId, value -> settings.explorerTargetId = value)
+					.defaultValue("minecraft:plains").maxLength(160)
+					.validator(value -> value.matches("[a-z0-9_.-]+:[a-z0-9_./-]+")))
+				.toggle(toggle -> toggle.name(Component.literal("实验性世界限制解除"))
+					.description(Component.literal("将边境扩至引擎硬极限并停用本模组渲染限流；默认关闭"))
+					.binding(() -> settings.worldLimitsRemoved,
+						value -> settings.worldLimitsRemoved = value).defaultValue(false))
+				.toggle(toggle -> toggle.name(Component.literal("仁慈的虚空"))
+					.description(Component.literal("跌入虚空后送回高空并给予缓降；默认关闭"))
+					.binding(() -> settings.mercifulVoidEnabled,
+						value -> settings.mercifulVoidEnabled = value).defaultValue(false)))
 			.category(category -> category.name(Component.literal("小游戏中心"))
 				.icon(icon("target"))
 				.description(Component.literal("贪吃蛇、俄罗斯方块、扫雷、2048 与 AI 猜拳"))

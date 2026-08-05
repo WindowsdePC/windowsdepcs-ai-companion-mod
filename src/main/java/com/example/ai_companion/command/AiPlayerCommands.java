@@ -433,7 +433,10 @@ public final class AiPlayerCommands {
 			+ ", 饥饿间隔=" + config.hungerEvery()
 			+ ", 饥饿消耗=" + config.hungerCost()
 			+ ", 强度=" + config.rushStrength()
-			+ ", 任意物品装备=" + config.flexibleEquipmentEnabled()), false);
+			+ ", 任意物品装备=" + config.flexibleEquipmentEnabled()
+			+ ", 结构群系指南针=" + config.explorerNavigatorEnabled()
+			+ ", 世界限制解除=" + config.worldLimitsRemoved()
+			+ ", 仁慈虚空=" + config.mercifulVoidEnabled()), false);
 		return 1;
 	}
 

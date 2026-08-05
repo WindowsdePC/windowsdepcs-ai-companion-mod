@@ -18,6 +18,7 @@ public final class AiCompanionClient implements ClientModInitializer {
 		ScreenZoomController.initialize(settings);
 		ClientPerformanceController.initialize(settings);
 		AgentPositionHud.initialize();
+		ExplorerNavigationHud.initialize();
 		boolean[] chordHeld = {false};
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			boolean pressed = InputConstants.isKeyDown(client.getWindow(), settings.primaryCode())

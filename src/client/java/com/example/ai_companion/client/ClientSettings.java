@@ -6,6 +6,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.example.ai_companion.AiCompanionMod;
 import com.example.ai_companion.agent.AgentMode;
+import com.example.ai_companion.exploration.NavigationMode;
+import com.example.ai_companion.exploration.NavigationTargetType;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.IOException;
@@ -40,6 +42,12 @@ public final class ClientSettings {
 	public int performanceTargetFps = 60;
 	public int extraRenderDistance = 96;
 	public int minimumExtraRenderDistance = 24;
+	public boolean explorerNavigatorEnabled = false;
+	public boolean worldLimitsRemoved = false;
+	public boolean mercifulVoidEnabled = false;
+	public String explorerNavigationMode = NavigationMode.NAVIGATE.name();
+	public String explorerTargetType = NavigationTargetType.BIOME.name();
+	public String explorerTargetId = "minecraft:plains";
 
 	public static ClientSettings load() {
 		try {
@@ -85,7 +93,43 @@ public final class ClientSettings {
 		extraRenderDistance = Math.clamp(extraRenderDistance, 16, 256);
 		minimumExtraRenderDistance = Math.clamp(minimumExtraRenderDistance, 16,
 			extraRenderDistance);
+		try {
+			explorerNavigationMode = NavigationMode.valueOf(explorerNavigationMode).name();
+		} catch (RuntimeException ignored) {
+			explorerNavigationMode = NavigationMode.NAVIGATE.name();
+		}
+		try {
+			explorerTargetType = NavigationTargetType.valueOf(explorerTargetType).name();
+		} catch (RuntimeException ignored) {
+			explorerTargetType = NavigationTargetType.BIOME.name();
+		}
+		explorerTargetId = explorerTargetId == null || explorerTargetId.isBlank()
+			? "minecraft:plains" : explorerTargetId.strip().toLowerCase();
 		return this;
+	}
+
+	public NavigationMode explorerNavigationMode() {
+		try {
+			return NavigationMode.valueOf(explorerNavigationMode);
+		} catch (RuntimeException ignored) {
+			return NavigationMode.NAVIGATE;
+		}
+	}
+
+	public void setExplorerNavigationMode(NavigationMode mode) {
+		explorerNavigationMode = (mode == null ? NavigationMode.NAVIGATE : mode).name();
+	}
+
+	public NavigationTargetType explorerTargetType() {
+		try {
+			return NavigationTargetType.valueOf(explorerTargetType);
+		} catch (RuntimeException ignored) {
+			return NavigationTargetType.BIOME;
+		}
+	}
+
+	public void setExplorerTargetType(NavigationTargetType type) {
+		explorerTargetType = (type == null ? NavigationTargetType.BIOME : type).name();
 	}
 
 	public AgentMode defaultAgentMode() {
