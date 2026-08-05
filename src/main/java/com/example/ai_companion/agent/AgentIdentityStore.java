@@ -53,7 +53,8 @@ public final class AgentIdentityStore {
 
 	public record StoredAgent(String name, String uuid, String dimension, double x, double y, double z,
 			String mode, String targetName, String promptId, String textureValue,
-			String textureSignature, long createdAtEpochMillis) {
+			String textureSignature, long createdAtEpochMillis, boolean automaticEnabled,
+			int automaticIntervalTicks) {
 		public StoredAgent normalized() {
 			String safeName = name == null ? "" : name.strip();
 			if (!safeName.matches("[A-Za-z0-9_]{3,16}")) throw new IllegalArgumentException("Invalid AI name");
@@ -68,7 +69,12 @@ public final class AgentIdentityStore {
 				dimension == null || dimension.isBlank() ? "minecraft:overworld" : dimension,
 				x, y, z, parsedMode.name(), bounded(targetName, 16), bounded(promptId, 64),
 				bounded(textureValue, 16_384), bounded(textureSignature, 4_096),
-				Math.max(0, createdAtEpochMillis));
+				Math.max(0, createdAtEpochMillis), automaticEnabled,
+				normalizeAutomaticInterval(automaticIntervalTicks));
+		}
+
+		private static int normalizeAutomaticInterval(int ticks) {
+			return ticks == 0 ? 200 : Math.clamp(ticks, 100, 72_000);
 		}
 
 		private static String bounded(String value, int max) {

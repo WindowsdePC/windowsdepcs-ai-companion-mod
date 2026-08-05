@@ -32,6 +32,9 @@ import java.util.function.Supplier;
 /** Owns fake-player lifecycles and applies allow-listed AI actions. */
 public final class AgentManager implements AutoCloseable {
 	private static final long EYE_COOLDOWN_TICKS = 20L * 60L;
+	public static final int DEFAULT_AUTOMATIC_INTERVAL_TICKS = 200;
+	public static final int MIN_AUTOMATIC_INTERVAL_TICKS = 100;
+	public static final int MAX_AUTOMATIC_INTERVAL_TICKS = 72_000;
 
 	private static final class Agent {
 		final String name;
@@ -48,6 +51,9 @@ public final class AgentManager implements AutoCloseable {
 		double remainingX;
 		double remainingZ;
 		boolean arenaLocked;
+		boolean automaticEnabled;
+		int automaticIntervalTicks = DEFAULT_AUTOMATIC_INTERVAL_TICKS;
+		long nextAutomaticTick;
 
 		Agent(String name, FakePlayer player, String textureValue, String textureSignature,
 				long createdAtEpochMillis) {
@@ -82,6 +88,15 @@ public final class AgentManager implements AutoCloseable {
 		public String displayText() {
 			return "%s · %s · %s (%.1f, %.1f, %.1f) · 进度 %d".formatted(name, uuid, dimension,
 				x, y, z, completedAdvancements);
+		}
+	}
+
+	public record AutomaticStatus(String name, boolean enabled, int intervalTicks, long ticksUntilNext,
+			boolean thinking) {
+		public String displayText() {
+			return "%s · 自动决策=%s · 间隔=%dt (%.1fs) · 下次=%dt%s".formatted(name,
+				enabled ? "开启" : "关闭", intervalTicks, intervalTicks / 20.0,
+				Math.max(0, ticksUntilNext), thinking ? " · 正在思考" : "");
 		}
 	}
 
@@ -134,6 +149,9 @@ public final class AgentManager implements AutoCloseable {
 				agent.mode = AgentMode.valueOf(stored.mode());
 				agent.targetName = stored.targetName();
 				agent.promptId = stored.promptId();
+				agent.automaticEnabled = stored.automaticEnabled();
+				agent.automaticIntervalTicks = stored.automaticIntervalTicks();
+				agent.nextAutomaticTick = server.getTickCount() + agent.automaticIntervalTicks;
 				agents.put(stored.name().toLowerCase(), agent);
 			} catch (RuntimeException error) {
 				AiCompanionMod.LOGGER.error("Cannot restore AI identity {}", stored.name(), error);
@@ -193,6 +211,25 @@ public final class AgentManager implements AutoCloseable {
 			.map(advancement -> advancement.id().toString()).sorted().toList();
 	}
 
+	public synchronized AutomaticStatus configureAutomatic(String name, boolean enabled, int intervalTicks,
+			long currentTick) {
+		Agent agent = requireAgent(name);
+		agent.automaticEnabled = enabled;
+		agent.automaticIntervalTicks = Math.clamp(intervalTicks, MIN_AUTOMATIC_INTERVAL_TICKS,
+			MAX_AUTOMATIC_INTERVAL_TICKS);
+		agent.nextAutomaticTick = currentTick + agent.automaticIntervalTicks;
+		saveIdentities();
+		return automaticStatus(agent, currentTick);
+	}
+
+	public synchronized AutomaticStatus automaticStatus(String name, long currentTick) {
+		return automaticStatus(requireAgent(name), currentTick);
+	}
+
+	public synchronized Collection<AutomaticStatus> automaticStatuses(long currentTick) {
+		return agents.values().stream().map(agent -> automaticStatus(agent, currentTick)).toList();
+	}
+
 	/** Prevents normal prompt movement from fighting with the server-authoritative arena controller. */
 	public synchronized void setArenaLocked(String name, boolean locked) {
 		Agent agent = requireAgent(name);
@@ -241,24 +278,33 @@ public final class AgentManager implements AutoCloseable {
 		if (agent == null) throw new IllegalArgumentException("找不到 AI: " + name);
 		if (agent.arenaLocked) throw new IllegalStateException("该 AI 正在参加竞技场比赛");
 		if (!agent.thinking.compareAndSet(false, true)) throw new IllegalStateException("该 AI 正在思考");
+		requestDecision(server, agent, instruction, result);
+	}
 
+	private void requestDecision(MinecraftServer server, Agent agent, String instruction,
+			Consumer<String> result) {
 		long now = server.getTickCount();
 		String eye = agent.eyeSnapshot == null ? "天眼快照=无"
 			: agent.eyeSnapshot.promptText(now);
 		String observation = "名字=%s，模式=%s，维度=%s，位置=(%.1f,%.1f,%.1f)，任务=%s，%s".formatted(
 			agent.name, agent.mode, agent.player.level().dimension().identifier(), agent.player.getX(),
 			agent.player.getY(), agent.player.getZ(), instruction, eye);
-		client.decide(config.get(), promptFor(agent), observation).whenComplete((decision, error) ->
-			server.execute(() -> {
-				agent.thinking.set(false);
-				if (error != null) {
-					AiCompanionMod.LOGGER.error("AI request failed for {}", agent.name, error);
-					result.accept("AI 请求失败: " + rootMessage(error));
-					return;
-				}
-				apply(server, agent, decision);
-				result.accept("AI " + agent.name + " 已执行: " + decision.action());
-			}));
+		try {
+			client.decide(config.get(), promptFor(agent), observation).whenComplete((decision, error) ->
+				server.execute(() -> {
+					agent.thinking.set(false);
+					if (error != null) {
+						AiCompanionMod.LOGGER.error("AI request failed for {}", agent.name, error);
+						result.accept("AI 请求失败: " + rootMessage(error));
+						return;
+					}
+					apply(server, agent, decision);
+					result.accept("AI " + agent.name + " 已执行: " + decision.action());
+				}));
+		} catch (RuntimeException error) {
+			agent.thinking.set(false);
+			throw error;
+		}
 	}
 
 	public synchronized void tick(MinecraftServer server) {
@@ -272,6 +318,10 @@ public final class AgentManager implements AutoCloseable {
 				captureEye(server, agent, now);
 			}
 			if (agent.arenaLocked) continue;
+			if (agent.automaticEnabled && now >= agent.nextAutomaticTick) {
+				agent.nextAutomaticTick = now + agent.automaticIntervalTicks;
+				startAutomaticDecision(server, agent);
+			}
 			double distance = Math.hypot(agent.remainingX, agent.remainingZ);
 			if (distance < 0.01) continue;
 			double step = Math.min(0.18, distance);
@@ -284,6 +334,27 @@ public final class AgentManager implements AutoCloseable {
 			agent.player.setYRot(yaw);
 			agent.player.setYHeadRot(yaw);
 		}
+	}
+
+	private void startAutomaticDecision(MinecraftServer server, Agent agent) {
+		if (!config.get().hasApiKey() || !agent.thinking.compareAndSet(false, true)) return;
+		String instruction = switch (agent.mode) {
+			case HUNTER -> "根据追杀目标、当前观察和天眼快照自主决定下一步；优先正常移动与侦察。";
+			case TEAMMATE -> "根据队友位置、当前观察和风险自主决定下一步；优先跟随、保护或报告。";
+			case PVP_COACH -> "根据训练对象和当前状态自主决定下一步安全训练动作或建议。";
+			case IDLE -> "根据当前环境自主决定一个简短、正常且不作弊的下一步。";
+		};
+		requestDecision(server, agent, instruction, message -> {
+			if (message.startsWith("AI 请求失败")) {
+				AiCompanionMod.LOGGER.warn("Automatic decision failed for {}: {}", agent.name, message);
+			}
+		});
+	}
+
+	private AutomaticStatus automaticStatus(Agent agent, long currentTick) {
+		return new AutomaticStatus(agent.name, agent.automaticEnabled, agent.automaticIntervalTicks,
+			agent.automaticEnabled ? Math.max(0, agent.nextAutomaticTick - currentTick) : 0,
+			agent.thinking.get());
 	}
 
 	private boolean captureEye(MinecraftServer server, Agent agent, long now) {
@@ -338,7 +409,8 @@ public final class AgentManager implements AutoCloseable {
 				agent.name, agent.player.getUUID().toString(),
 				agent.player.level().dimension().identifier().toString(), agent.player.getX(), agent.player.getY(),
 				agent.player.getZ(), agent.mode.name(), agent.targetName, agent.promptId,
-				agent.textureValue, agent.textureSignature, agent.createdAtEpochMillis)).toList());
+				agent.textureValue, agent.textureSignature, agent.createdAtEpochMillis,
+				agent.automaticEnabled, agent.automaticIntervalTicks)).toList());
 		} catch (Exception error) {
 			AiCompanionMod.LOGGER.error("Cannot save persistent AI identities", error);
 		}

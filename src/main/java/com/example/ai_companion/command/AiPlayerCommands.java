@@ -81,6 +81,26 @@ public final class AiPlayerCommands {
 					.then(Commands.argument("instruction", StringArgumentType.greedyString())
 						.executes(c -> ask(c.getSource(), agents, StringArgumentType.getString(c, "name"),
 							StringArgumentType.getString(c, "instruction"))))))
+				.then(Commands.literal("automatic")
+					.then(Commands.literal("status")
+						.executes(c -> automaticStatuses(c.getSource(), agents))
+						.then(Commands.argument("name", StringArgumentType.word())
+							.executes(c -> automaticStatus(c.getSource(), agents,
+								StringArgumentType.getString(c, "name")))))
+					.then(Commands.literal("enable")
+						.requires(s -> s.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
+						.then(Commands.argument("name", StringArgumentType.word())
+							.executes(c -> automaticEnable(c.getSource(), agents,
+								StringArgumentType.getString(c, "name"), null))
+							.then(Commands.argument("seconds", IntegerArgumentType.integer(5, 3600))
+								.executes(c -> automaticEnable(c.getSource(), agents,
+									StringArgumentType.getString(c, "name"),
+									IntegerArgumentType.getInteger(c, "seconds"))))))
+					.then(Commands.literal("disable")
+						.requires(s -> s.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
+						.then(Commands.argument("name", StringArgumentType.word())
+							.executes(c -> automaticDisable(c.getSource(), agents,
+								StringArgumentType.getString(c, "name"))))))
 				.then(Commands.literal("prompt")
 					.then(Commands.literal("list")
 						.executes(c -> promptList(c.getSource(), prompts)))
@@ -448,6 +468,54 @@ public final class AiPlayerCommands {
 			agents.ask(source.getServer(), name, instruction,
 				message -> source.sendSuccess(() -> Component.literal(message), false));
 			source.sendSuccess(() -> Component.literal("已发送请求，AI 正在思考……"), false);
+			return 1;
+		} catch (RuntimeException error) {
+			source.sendFailure(Component.literal(error.getMessage()));
+			return 0;
+		}
+	}
+
+	private static int automaticStatuses(CommandSourceStack source, AgentManager agents) {
+		var statuses = agents.automaticStatuses(source.getServer().getTickCount());
+		if (statuses.isEmpty()) {
+			source.sendSuccess(() -> Component.literal("当前没有 AI 玩家"), false);
+			return 0;
+		}
+		statuses.forEach(status -> source.sendSuccess(() -> Component.literal(status.displayText()), false));
+		return statuses.size();
+	}
+
+	private static int automaticStatus(CommandSourceStack source, AgentManager agents, String name) {
+		try {
+			var status = agents.automaticStatus(name, source.getServer().getTickCount());
+			source.sendSuccess(() -> Component.literal(status.displayText()), false);
+			return 1;
+		} catch (RuntimeException error) {
+			source.sendFailure(Component.literal(error.getMessage()));
+			return 0;
+		}
+	}
+
+	private static int automaticEnable(CommandSourceStack source, AgentManager agents, String name,
+			Integer seconds) {
+		try {
+			long now = source.getServer().getTickCount();
+			int interval = seconds == null ? agents.automaticStatus(name, now).intervalTicks() : seconds * 20;
+			var status = agents.configureAutomatic(name, true, interval, now);
+			source.sendSuccess(() -> Component.literal("已开启：" + status.displayText()), true);
+			return 1;
+		} catch (RuntimeException error) {
+			source.sendFailure(Component.literal(error.getMessage()));
+			return 0;
+		}
+	}
+
+	private static int automaticDisable(CommandSourceStack source, AgentManager agents, String name) {
+		try {
+			long now = source.getServer().getTickCount();
+			int interval = agents.automaticStatus(name, now).intervalTicks();
+			var status = agents.configureAutomatic(name, false, interval, now);
+			source.sendSuccess(() -> Component.literal("已关闭：" + status.displayText()), true);
 			return 1;
 		} catch (RuntimeException error) {
 			source.sendFailure(Component.literal(error.getMessage()));
