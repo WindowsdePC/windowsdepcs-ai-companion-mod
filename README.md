@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.6.6](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.6)
+当前版本：[v0.6.7](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.7)
 
 ## 环境要求
 
@@ -58,6 +58,14 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 - `/aiplayer album review <编号>` 将照片元数据、场景摘要和玩家说明交给 AI 评价。
 - AI 被明确禁止声称看见没有提供的像素细节；同时每位玩家最多只有一个并发评价请求。
 - 相机拍摄有 1 秒服务端冷却。照片条目不会存储客户端屏幕像素或自动写出 PNG 文件。
+
+### 旅行日志与冒险图鉴
+
+- 玩家进入新的群系、维度、村庄或世界结构时，服务器会自动写入按 UUID 隔离的旅行日志。
+- 遗迹类结构与其他特殊结构会分开归类；同一地点不会因反复经过而重复记录。
+- 每条记录包含地点名称、维度、XYZ 和首次发现时间，每位玩家最多保存 512 条。
+- `/aiplayer travel list [页码]`、`show` 和 `stats` 可浏览冒险图鉴。
+- 可把同维度且在地点 256 格范围内拍摄的相册照片关联到日志，形成带照片编号的旅行条目。
 
 ### 双 UI 配置
 
@@ -231,6 +239,11 @@ UI 是主要入口，管理员也可以使用命令：
 /aiplayer album caption <照片编号> <说明>
 /aiplayer album review <照片编号>
 /aiplayer album delete <照片编号>
+/aiplayer travel list [页码]
+/aiplayer travel show <日志编号>
+/aiplayer travel stats
+/aiplayer travel photo link <日志编号> <照片编号>
+/aiplayer travel photo unlink <日志编号>
 ```
 
 修改服务器 API、全局提示词、AI 分配和玩法数值需要管理员权限。
@@ -254,14 +267,16 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.6.6.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.6.6-sources.jar`：源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.6.6-javadoc.jar`：Java API 文档包。
+- `windowsdepcs-ai-companion-0.6.7.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.6.7-sources.jar`：本地构建的源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.6.7-javadoc.jar`：本地构建的 Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
+从 v0.6.7 起，GitHub Release 也只附加第一个正式模组 JAR，不再上传另外两个 JAR或校验文件。
 
 ## 当前边界
 
+0.6.7 的旅行日志保存服务器能确认的地点、结构和相册编号，不生成或伪造客户端照片像素。
 0.6.6 的优化器只限制本模组附加渲染距离，不改写原版渲染距离或服务器状态。
 0.6.5 的屏幕缩放完全在客户端完成，不修改原版 FOV 配置或服务器状态。
 0.6.4 的照片是服务器权威的相册条目，包含场景元数据与玩家说明；它不会读取或保存客户端帧缓冲像素。

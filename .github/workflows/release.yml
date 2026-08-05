@@ -28,18 +28,6 @@ jobs:
       - name: Build and test
         run: ./gradlew build
 
-      - name: Create SHA-256 checksum file
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: bash
-        run: |
-          release_version="${GITHUB_REF_NAME#v}"
-          cd build/libs
-          sha256sum \
-            "windowsdepcs-ai-companion-${release_version}.jar" \
-            "windowsdepcs-ai-companion-${release_version}-sources.jar" \
-            "windowsdepcs-ai-companion-${release_version}-javadoc.jar" \
-            > "SHA-256_SUMS-${release_version}.txt"
-
       - name: Validate release notes
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
@@ -47,11 +35,17 @@ jobs:
           notes_file=".github/release-notes/${GITHUB_REF_NAME}.md"
           test -s "$notes_file"
 
+      - name: Stage installable mod
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          release_version="${GITHUB_REF_NAME#v}"
+          mkdir -p release-assets
+          cp "build/libs/windowsdepcs-ai-companion-${release_version}.jar" release-assets/
+
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           body_path: .github/release-notes/${{ github.ref_name }}.md
-          files: |
-            build/libs/windowsdepcs-ai-companion-*.jar
-            build/libs/SHA-256_SUMS-*.txt
+          files: release-assets/windowsdepcs-ai-companion-*.jar

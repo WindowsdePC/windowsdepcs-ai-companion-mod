@@ -2,17 +2,15 @@
 
 ## 发行附件
 
-每个 GitHub Release 只上传以下三个模组 JAR：
+从 `v0.6.7` 起，每个 GitHub Release 只上传一个可直接放入游戏的正式模组 JAR：
 
-1. `windowsdepcs-ai-companion-<版本>.jar`
-2. `windowsdepcs-ai-companion-<版本>-sources.jar`
-3. `windowsdepcs-ai-companion-<版本>-javadoc.jar`
+`windowsdepcs-ai-companion-<版本>.jar`
 
-另附校验清单 `SHA-256_SUMS-<版本>.txt`。不再上传完整工程 ZIP；源码使用 GitHub
-自动生成的 `Source code (zip)` 与 `Source code (tar.gz)`。
+不再上传 Sources JAR、Javadoc JAR、完整工程 ZIP 或 SHA-256 校验清单。源码使用 GitHub
+自动生成的 `Source code (zip)` 与 `Source code (tar.gz)`；开发者也可直接克隆仓库。
 
 推送 `v*` 标签后，`.github/workflows/release.yml` 会使用 Java 25 运行完整 Gradle 构建与测试，
-生成校验清单并创建 Release。若工作流失败，不得手动上传未经 Gradle/Loom 构建验证的正式 JAR。
+并创建 Release。若工作流失败，不得手动上传未经 Gradle/Loom 构建验证的正式 JAR。
 
 ## 版本规则
 
