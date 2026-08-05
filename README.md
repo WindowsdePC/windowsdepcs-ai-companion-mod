@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.7.2](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.7.2)
+当前版本：[v0.7.3](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.7.3)
 
 ## 环境要求
 
@@ -46,6 +46,8 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 - 自动决策沿用模式提示词、天眼快照和 `say`、`move`、`wait` 白名单，不执行任意命令。
 - 可创建持久化多 AI 协作组；成员共享任务、提案、严格多数票共识和领队选举。
 - 协作组的领队、任务与最近通过的共识会加入成员的后续手动或自动决策观察信息。
+- 玩家可开启由 1～16 名已登记 AI 观看的直播会话；AI 依据服务器提供的维度、位置、生命、饥饿和主手物品生成事实约束弹幕。
+- 直播会话与累计弹幕数会持久化；弹幕间隔限制为 10～600 秒，每名玩家只允许一个并发请求，玩家离线时不会调用 API。
 
 ### AI 竞技场
 
@@ -281,6 +283,10 @@ UI 是主要入口，管理员也可以使用命令：
 /aiplayer news list [页码]
 /aiplayer news show <日报编号>
 /aiplayer news ai <日报编号>
+/aiplayer live start <AI名[,更多AI]> [间隔秒]
+/aiplayer live status
+/aiplayer live interval <10-600秒>
+/aiplayer live stop
 ```
 
 修改服务器 API、全局提示词、AI 分配和玩法数值需要管理员权限。
@@ -304,15 +310,16 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.7.2.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.7.2-sources.jar`：本地构建的源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.7.2-javadoc.jar`：本地构建的 Java API 文档包。
+- `windowsdepcs-ai-companion-0.7.3.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.7.3-sources.jar`：本地构建的源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.7.3-javadoc.jar`：本地构建的 Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 从 v0.6.7 起，GitHub Release 也只附加第一个正式模组 JAR，不再上传另外两个 JAR或校验文件。
 
 ## 当前边界
 
+0.7.3 的直播只向主动开启会话的玩家显示 AI 弹幕；AI 仅能使用服务器明确提供的事实，离线或未配置 API 时不发起请求。
 0.6.8 的日报只总结服务器实际采集的玩家、世界和 AI 事件；AI 编辑器不能补写未提供的事实。
 0.6.7 的旅行日志保存服务器能确认的地点、结构和相册编号，不生成或伪造客户端照片像素。
 0.6.6 的优化器只限制本模组附加渲染距离，不改写原版渲染距离或服务器状态。

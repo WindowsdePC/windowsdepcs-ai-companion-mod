@@ -9,6 +9,7 @@ import com.example.ai_companion.command.CollaborationCommands;
 import com.example.ai_companion.command.PhotographyCommands;
 import com.example.ai_companion.command.TravelLogCommands;
 import com.example.ai_companion.command.MinecraftDailyNewsCommands;
+import com.example.ai_companion.command.LivestreamCommands;
 import com.example.ai_companion.config.GameplayConfig;
 import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
@@ -23,6 +24,7 @@ import com.example.ai_companion.photo.PhotographyManager;
 import com.example.ai_companion.travel.TravelLogManager;
 import com.example.ai_companion.news.MinecraftDailyNewsManager;
 import com.example.ai_companion.navigation.NavigationNetworking;
+import com.example.ai_companion.livestream.LivestreamManager;
 import com.example.ai_companion.world.WorldFeatureCommands;
 import com.example.ai_companion.world.WorldFeatureConfig;
 import com.example.ai_companion.world.WorldFeatureManager;
@@ -49,6 +51,7 @@ public final class AiCompanionMod implements ModInitializer {
 	private TravelLogManager travelLog;
 	private MinecraftDailyNewsManager dailyNews;
 	private CollaborationManager collaboration;
+	private LivestreamManager livestreams;
 	private WorldFeatureConfig worldFeatures;
 	private WorldFeatureManager worldFeatureManager;
 
@@ -66,6 +69,7 @@ public final class AiCompanionMod implements ModInitializer {
 		photography = new PhotographyManager(() -> config);
 		travelLog = new TravelLogManager();
 		dailyNews = new MinecraftDailyNewsManager(() -> config, agents, arena);
+		livestreams = new LivestreamManager(() -> config, agents);
 		worldFeatures = WorldFeatureConfig.load();
 		worldFeatureManager = new WorldFeatureManager(() -> worldFeatures);
 		AgentPositionNetworking.registerServer(agents);
@@ -82,6 +86,7 @@ public final class AiCompanionMod implements ModInitializer {
 		PhotographyItems.register(photography);
 		TravelLogCommands.register(travelLog, photography);
 		MinecraftDailyNewsCommands.register(dailyNews);
+		LivestreamCommands.register(livestreams);
 		WorldFeatureCommands.register(() -> worldFeatures, updated -> worldFeatures = updated);
 		ServerTickEvents.END_SERVER_TICK.register(agents::tick);
 		ServerTickEvents.END_SERVER_TICK.register(arena::tick);
@@ -89,6 +94,7 @@ public final class AiCompanionMod implements ModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(photography::tick);
 		ServerTickEvents.END_SERVER_TICK.register(travelLog::tick);
 		ServerTickEvents.END_SERVER_TICK.register(dailyNews::tick);
+		ServerTickEvents.END_SERVER_TICK.register(livestreams::tick);
 		ServerTickEvents.END_SERVER_TICK.register(worldFeatureManager::tick);
 		ServerLifecycleEvents.SERVER_STARTED.register(agents::restore);
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
@@ -101,6 +107,7 @@ public final class AiCompanionMod implements ModInitializer {
 			photography.close();
 			travelLog.close();
 			dailyNews.close();
+			livestreams.close();
 			worldFeatureManager.close();
 		});
 		LOGGER.info("WindowsdePC's AI Companion Mod initialized. API key present: {}", config.hasApiKey());
