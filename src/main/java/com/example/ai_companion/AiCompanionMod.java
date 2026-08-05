@@ -7,6 +7,7 @@ import com.example.ai_companion.command.AiPlayerCommands;
 import com.example.ai_companion.command.AssistantOrbCommands;
 import com.example.ai_companion.command.PhotographyCommands;
 import com.example.ai_companion.command.TravelLogCommands;
+import com.example.ai_companion.command.MinecraftDailyNewsCommands;
 import com.example.ai_companion.config.GameplayConfig;
 import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
@@ -18,6 +19,7 @@ import com.example.ai_companion.orb.AssistantOrbManager;
 import com.example.ai_companion.photo.PhotographyItems;
 import com.example.ai_companion.photo.PhotographyManager;
 import com.example.ai_companion.travel.TravelLogManager;
+import com.example.ai_companion.news.MinecraftDailyNewsManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -39,6 +41,7 @@ public final class AiCompanionMod implements ModInitializer {
 	private AssistantOrbManager assistantOrb;
 	private PhotographyManager photography;
 	private TravelLogManager travelLog;
+	private MinecraftDailyNewsManager dailyNews;
 
 	@Override
 	public void onInitialize() {
@@ -51,6 +54,7 @@ public final class AiCompanionMod implements ModInitializer {
 		assistantOrb = new AssistantOrbManager(() -> config);
 		photography = new PhotographyManager(() -> config);
 		travelLog = new TravelLogManager();
+		dailyNews = new MinecraftDailyNewsManager(() -> config, agents, arena);
 		AgentPositionNetworking.registerServer(agents);
 		goldenSpearRush = new GoldenSpearRush(() -> gameplay);
 		minigameRewards = new MinigameRewardManager();
@@ -62,11 +66,13 @@ public final class AiCompanionMod implements ModInitializer {
 		PhotographyCommands.register(photography);
 		PhotographyItems.register(photography);
 		TravelLogCommands.register(travelLog, photography);
+		MinecraftDailyNewsCommands.register(dailyNews);
 		ServerTickEvents.END_SERVER_TICK.register(agents::tick);
 		ServerTickEvents.END_SERVER_TICK.register(arena::tick);
 		ServerTickEvents.END_SERVER_TICK.register(assistantOrb::tick);
 		ServerTickEvents.END_SERVER_TICK.register(photography::tick);
 		ServerTickEvents.END_SERVER_TICK.register(travelLog::tick);
+		ServerTickEvents.END_SERVER_TICK.register(dailyNews::tick);
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			arena.close();
 			agents.close();
@@ -75,6 +81,7 @@ public final class AiCompanionMod implements ModInitializer {
 			assistantOrb.close();
 			photography.close();
 			travelLog.close();
+			dailyNews.close();
 		});
 		LOGGER.info("WindowsdePC's AI Companion Mod initialized. API key present: {}", config.hasApiKey());
 	}

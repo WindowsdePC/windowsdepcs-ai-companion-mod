@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.6.7](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.7)
+当前版本：[v0.6.8](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.8)
 
 ## 环境要求
 
@@ -66,6 +66,14 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 - 每条记录包含地点名称、维度、XYZ 和首次发现时间，每位玩家最多保存 512 条。
 - `/aiplayer travel list [页码]`、`show` 和 `stats` 可浏览冒险图鉴。
 - 可把同维度且在地点 256 格范围内拍摄的相册照片关联到日志，形成带照片编号的旅行条目。
+
+### Minecraft 日报
+
+- 服务器自动收集玩家上线/离线与跨维度、天气变化与 Minecraft 日期、AI 创建/移除/模式变化及竞技场开始/结束事件。
+- 事件严格分为玩家事件、世界事件和 AI 事件；服务器自然日期变更时自动归档一期结构化日报。
+- `/aiplayer news today` 可生成或刷新今日版，`list` 与 `show` 可浏览最近 64 期存档。
+- `/aiplayer news ai <日报编号>` 使用现有 OpenAI 兼容 API 对已记录事实进行编辑，并把 AI 版保存到同一期日报。
+- AI 只能使用服务器提供的事件材料；没有材料的栏目会明确显示“暂无记录”，不会虚构玩家或世界事件。
 
 ### 双 UI 配置
 
@@ -244,6 +252,10 @@ UI 是主要入口，管理员也可以使用命令：
 /aiplayer travel stats
 /aiplayer travel photo link <日志编号> <照片编号>
 /aiplayer travel photo unlink <日志编号>
+/aiplayer news today
+/aiplayer news list [页码]
+/aiplayer news show <日报编号>
+/aiplayer news ai <日报编号>
 ```
 
 修改服务器 API、全局提示词、AI 分配和玩法数值需要管理员权限。
@@ -267,15 +279,16 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.6.7.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.6.7-sources.jar`：本地构建的源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.6.7-javadoc.jar`：本地构建的 Java API 文档包。
+- `windowsdepcs-ai-companion-0.6.8.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.6.8-sources.jar`：本地构建的源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.6.8-javadoc.jar`：本地构建的 Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 从 v0.6.7 起，GitHub Release 也只附加第一个正式模组 JAR，不再上传另外两个 JAR或校验文件。
 
 ## 当前边界
 
+0.6.8 的日报只总结服务器实际采集的玩家、世界和 AI 事件；AI 编辑器不能补写未提供的事实。
 0.6.7 的旅行日志保存服务器能确认的地点、结构和相册编号，不生成或伪造客户端照片像素。
 0.6.6 的优化器只限制本模组附加渲染距离，不改写原版渲染距离或服务器状态。
 0.6.5 的屏幕缩放完全在客户端完成，不修改原版 FOV 配置或服务器状态。
