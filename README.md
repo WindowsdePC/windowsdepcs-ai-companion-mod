@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.6.5](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.5)
+当前版本：[v0.6.6](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.6)
 
 ## 环境要求
 
@@ -78,7 +78,7 @@ EclipseUI 模式提供分类卡片、图标、开关、滑块、下拉菜单和�
 
 “AI系统”可进入完整 AI 管理器，继续使用批量生成、在线玩家选择、模式分配、API 配置和
 多行提示词编辑等既有功能。“小游戏中心”已开放贪吃蛇、Minecraft 俄罗斯方块、Minecraft
-方块扫雷、2048 与 AI 猜拳；休闲和性能栏目是后续设计文档功能的固定入口，相关功能会按版本逐项启用。
+方块扫雷、2048 与 AI 猜拳；“性能优化”现已提供客户端附加渲染距离控制。
 
 ### 小游戏中心
 
@@ -143,6 +143,16 @@ EclipseUI 模式提供分类卡片、图标、开关、滑块、下拉菜单和�
 - 快捷键、1.5～12 倍缩放倍率和 0～1 秒过渡时间均可在双 UI 中调整。
 - 只在已进入世界且没有打开其他界面时响应，聊天、菜单和断开连接时会平滑复原。
 - 插值按真实帧间隔计算，不依赖服务器 Tick 速度，也不会向服务器发送数据。
+
+### 客户端附加渲染优化
+
+“性能优化”提供默认关闭的附加渲染距离控制，只影响本模组增加的渲染工作。
+
+- 限制 F3+B 发光轮廓与任意装备模式的非护甲 3D 物品模型处理距离。
+- 固定模式始终使用设置的最大距离；自适应模式以 60 帧采样周期逐级调整距离。
+- 帧率低于目标 5 FPS 时每次缩短 8 格；高于目标 10 FPS 时每次恢复 8 格，形成滞回区间以避免频繁抖动。
+- 目标帧率可设为 30～240，最大距离可设为 16～256 格，最小距离不会超过最大值。
+- 不修改原版区块、实体、粒子或服务器模拟距离；关闭后立即恢复原有渲染行为。
 
 ### 金矛突进
 
@@ -244,14 +254,15 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.6.5.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.6.5-sources.jar`：源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.6.5-javadoc.jar`：Java API 文档包。
+- `windowsdepcs-ai-companion-0.6.6.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.6.6-sources.jar`：源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.6.6-javadoc.jar`：Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 
 ## 当前边界
 
+0.6.6 的优化器只限制本模组附加渲染距离，不改写原版渲染距离或服务器状态。
 0.6.5 的屏幕缩放完全在客户端完成，不修改原版 FOV 配置或服务器状态。
 0.6.4 的照片是服务器权威的相册条目，包含场景元数据与玩家说明；它不会读取或保存客户端帧缓冲像素。
 后续若加入真正的 PNG 截图，会使用明确的客户端许可、网络大小上限和专用相册界面。

@@ -2,6 +2,7 @@ package com.example.ai_companion.client.mixin;
 
 import com.example.ai_companion.client.render.FlexibleEquipmentLayer;
 import com.example.ai_companion.client.render.FlexibleEquipmentRenderState;
+import com.example.ai_companion.client.ClientPerformanceController;
 import net.minecraft.client.model.player.PlayerModel;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
@@ -39,6 +40,13 @@ abstract class AvatarRendererMixin
 	private void ai_companion$extractFlexibleEquipment(Avatar avatar, AvatarRenderState state,
 			float partialTick, CallbackInfo callback) {
 		FlexibleEquipmentRenderState extra = (FlexibleEquipmentRenderState) state;
+		if (!ClientPerformanceController.shouldRenderExtra(avatar)) {
+			extra.ai_companion$itemState(EquipmentSlot.HEAD).clear();
+			extra.ai_companion$itemState(EquipmentSlot.CHEST).clear();
+			extra.ai_companion$itemState(EquipmentSlot.LEGS).clear();
+			extra.ai_companion$itemState(EquipmentSlot.FEET).clear();
+			return;
+		}
 		ai_companion$resolve(extra.ai_companion$itemState(EquipmentSlot.HEAD), state.headEquipment,
 			ItemDisplayContext.HEAD, avatar);
 		ai_companion$resolve(extra.ai_companion$itemState(EquipmentSlot.CHEST), state.chestEquipment,

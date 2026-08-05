@@ -35,6 +35,11 @@ public final class ClientSettings {
 	public String zoomKey = "C";
 	public double zoomFactor = 4.0;
 	public double zoomTransitionSeconds = 0.18;
+	public boolean clientPerformanceOptimizerEnabled = false;
+	public boolean adaptiveExtraRenderDistance = true;
+	public int performanceTargetFps = 60;
+	public int extraRenderDistance = 96;
+	public int minimumExtraRenderDistance = 24;
 
 	public static ClientSettings load() {
 		try {
@@ -76,6 +81,10 @@ public final class ClientSettings {
 		zoomKey = normalizeKey(zoomKey, "C");
 		zoomFactor = Math.clamp(zoomFactor, 1.5, 12.0);
 		zoomTransitionSeconds = Math.clamp(zoomTransitionSeconds, 0.0, 1.0);
+		performanceTargetFps = Math.clamp(performanceTargetFps, 30, 240);
+		extraRenderDistance = Math.clamp(extraRenderDistance, 16, 256);
+		minimumExtraRenderDistance = Math.clamp(minimumExtraRenderDistance, 16,
+			extraRenderDistance);
 		return this;
 	}
 

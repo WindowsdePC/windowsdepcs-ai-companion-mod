@@ -83,7 +83,23 @@ final class ClothConfigApiBridge {
 
 		category(builder, entries, "小游戏中心", "贪吃蛇、俄罗斯方块、扫雷、2048 与 AI 猜拳；返回完整管理中心后可开始游戏");
 		category(builder, entries, "休闲系统", "后续功能版本开放");
-		category(builder, entries, "性能优化", "后续功能版本开放");
+		ConfigCategory performance = builder.getOrCreateCategory(Component.literal("性能优化"));
+		performance.addEntry(entries.startBooleanToggle(Component.literal("客户端附加渲染优化"),
+			settings.clientPerformanceOptimizerEnabled).setDefaultValue(false)
+			.setTooltip(Component.literal("仅影响 F3+B 轮廓与装备位附加 3D 模型；默认关闭"))
+			.setSaveConsumer(value -> settings.clientPerformanceOptimizerEnabled = value).build());
+		performance.addEntry(entries.startBooleanToggle(Component.literal("自适应距离"),
+			settings.adaptiveExtraRenderDistance).setDefaultValue(true)
+			.setSaveConsumer(value -> settings.adaptiveExtraRenderDistance = value).build());
+		performance.addEntry(entries.startIntSlider(Component.literal("目标 FPS"),
+			settings.performanceTargetFps, 30, 240).setDefaultValue(60)
+			.setSaveConsumer(value -> settings.performanceTargetFps = value).build());
+		performance.addEntry(entries.startIntSlider(Component.literal("最大附加渲染距离"),
+			settings.extraRenderDistance, 16, 256).setDefaultValue(96)
+			.setSaveConsumer(value -> settings.extraRenderDistance = value).build());
+		performance.addEntry(entries.startIntSlider(Component.literal("最小附加渲染距离"),
+			settings.minimumExtraRenderDistance, 16, 256).setDefaultValue(24)
+			.setSaveConsumer(value -> settings.minimumExtraRenderDistance = value).build());
 		category(builder, entries, "兼容设置", "当前使用 Cloth Config；Simple Voice Chat 为可选兼容项");
 		category(builder, entries, "高级设置", "返回后可使用完整 AI 管理、API 和提示词界面");
 		builder.setSavingRunnable(() -> ClientSettingsSync.save(settings));

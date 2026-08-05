@@ -91,7 +91,24 @@ final class EclipseUiApiBridge {
 			.category(category -> category.name(Component.literal("休闲系统"))
 				.icon(icon("music_disc_13")).label(Component.literal("后续功能版本开放")))
 			.category(category -> category.name(Component.literal("性能优化"))
-				.icon(icon("redstone_torch")).label(Component.literal("后续功能版本开放")))
+				.icon(icon("redstone_torch"))
+				.description(Component.literal("限制本模组的客户端附加渲染距离"))
+				.toggle(toggle -> toggle.name(Component.literal("客户端附加渲染优化"))
+					.description(Component.literal("仅影响 F3+B 轮廓与装备位附加 3D 模型；默认关闭"))
+					.binding(() -> settings.clientPerformanceOptimizerEnabled,
+						value -> settings.clientPerformanceOptimizerEnabled = value).defaultValue(false))
+				.toggle(toggle -> toggle.name(Component.literal("自适应距离"))
+					.binding(() -> settings.adaptiveExtraRenderDistance,
+						value -> settings.adaptiveExtraRenderDistance = value).defaultValue(true))
+				.slider(slider -> slider.name(Component.literal("目标 FPS"))
+					.range(30, 240, 1).bindingInt(() -> settings.performanceTargetFps,
+						value -> settings.performanceTargetFps = value).defaultValue(60))
+				.slider(slider -> slider.name(Component.literal("最大附加渲染距离"))
+					.range(16, 256, 8).bindingInt(() -> settings.extraRenderDistance,
+						value -> settings.extraRenderDistance = value).defaultValue(96))
+				.slider(slider -> slider.name(Component.literal("最小附加渲染距离"))
+					.range(16, 256, 8).bindingInt(() -> settings.minimumExtraRenderDistance,
+						value -> settings.minimumExtraRenderDistance = value).defaultValue(24)))
 			.category(category -> category.name(Component.literal("兼容设置"))
 				.icon(icon("repeater"))
 				.label(Component.literal("当前使用 EclipseUI；Simple Voice Chat 为可选兼容项")))

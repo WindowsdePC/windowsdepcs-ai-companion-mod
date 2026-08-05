@@ -71,6 +71,11 @@ public final class PromptConfigScreen extends Screen {
 	private String zoomKey;
 	private String zoomFactor;
 	private String zoomTransitionSeconds;
+	private boolean performanceOptimizerEnabled;
+	private boolean adaptiveExtraRenderDistance;
+	private String performanceTargetFps;
+	private String extraRenderDistance;
+	private String minimumExtraRenderDistance;
 	private String durabilityEvery;
 	private String hungerEvery;
 	private String hungerCost;
@@ -98,6 +103,11 @@ public final class PromptConfigScreen extends Screen {
 		zoomKey = settings.zoomKey;
 		zoomFactor = Double.toString(settings.zoomFactor);
 		zoomTransitionSeconds = Double.toString(settings.zoomTransitionSeconds);
+		performanceOptimizerEnabled = settings.clientPerformanceOptimizerEnabled;
+		adaptiveExtraRenderDistance = settings.adaptiveExtraRenderDistance;
+		performanceTargetFps = Integer.toString(settings.performanceTargetFps);
+		extraRenderDistance = Integer.toString(settings.extraRenderDistance);
+		minimumExtraRenderDistance = Integer.toString(settings.minimumExtraRenderDistance);
 		durabilityEvery = Integer.toString(settings.durabilityEvery);
 		hungerEvery = Integer.toString(settings.hungerEvery);
 		hungerCost = Integer.toString(settings.hungerCost);
@@ -138,7 +148,7 @@ public final class PromptConfigScreen extends Screen {
 			case CLIENT -> buildClientPanel(panelLeft, panelWidth);
 			case MINIGAMES -> buildMinigamePanel(panelLeft, panelWidth);
 			case LEISURE -> buildPlaceholderPanel("休闲系统将在后续独立功能版本中逐项开放");
-			case PERFORMANCE -> buildPlaceholderPanel("性能优化选项将在对应功能实现后加入");
+			case PERFORMANCE -> buildPerformancePanel(panelLeft, panelWidth);
 			case COMPATIBILITY -> buildPlaceholderPanel("当前 UI 后端：" + backend.displayName()
 				+ "；Simple Voice Chat 为可选兼容项");
 			case ADVANCED -> buildPlaceholderPanel("高级设置保留给调试、迁移与实验功能");
@@ -383,6 +393,26 @@ public final class PromptConfigScreen extends Screen {
 			value -> zoomTransitionSeconds = value);
 		addRenderableWidget(Button.builder(Component.literal("保存客户端增强设置"), b -> saveClientEnhancements())
 			.bounds(left, 190, 220, 20).build());
+	}
+
+	private void buildPerformancePanel(int left, int panelWidth) {
+		addRenderableWidget(Button.builder(Component.literal("客户端附加渲染优化："
+				+ (performanceOptimizerEnabled ? "开启" : "关闭")), b -> {
+			performanceOptimizerEnabled = !performanceOptimizerEnabled;
+			rebuildPanel();
+		}).bounds(left, 70, 260, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("距离模式："
+				+ (adaptiveExtraRenderDistance ? "自适应" : "固定")), b -> {
+			adaptiveExtraRenderDistance = !adaptiveExtraRenderDistance;
+			rebuildPanel();
+		}).bounds(left + 270, 70, 220, 20).build());
+		numberBox(left, 130, performanceTargetFps, 3, value -> performanceTargetFps = value);
+		numberBox(left + 200, 130, extraRenderDistance, 3, value -> extraRenderDistance = value);
+		numberBox(left + 400, 130, minimumExtraRenderDistance, 3,
+			value -> minimumExtraRenderDistance = value);
+		addRenderableWidget(Button.builder(Component.literal("保存性能优化设置"), b -> savePerformance())
+			.bounds(left, 190, 220, 20).build());
+		status = ClientPerformanceController.statusText();
 	}
 
 	private EditBox numberBox(int x, int y, String value, int maxLength,
@@ -648,6 +678,21 @@ public final class PromptConfigScreen extends Screen {
 		}
 	}
 
+	private void savePerformance() {
+		try {
+			settings.clientPerformanceOptimizerEnabled = performanceOptimizerEnabled;
+			settings.adaptiveExtraRenderDistance = adaptiveExtraRenderDistance;
+			settings.performanceTargetFps = parseInt(performanceTargetFps, 30, 240, "目标帧率");
+			settings.extraRenderDistance = parseInt(extraRenderDistance, 16, 256, "最大距离");
+			settings.minimumExtraRenderDistance = parseInt(minimumExtraRenderDistance, 16,
+				settings.extraRenderDistance, "最小距离");
+			settings.save();
+			status = "已保存；" + ClientPerformanceController.statusText();
+		} catch (RuntimeException | IOException error) {
+			status = "保存失败: " + error.getMessage();
+		}
+	}
+
 	private void saveApi() {
 		try {
 			if (apiBase.isBlank() || (!apiBase.startsWith("https://") && !apiBase.startsWith("http://"))) {
@@ -748,7 +793,14 @@ public final class PromptConfigScreen extends Screen {
 					+ " · 最佳连胜 " + minigameProgress.rpsBestStreak,
 					left, 175, 0xFFFFD54F);
 			}
-			case LEISURE, PERFORMANCE, ADVANCED -> { }
+			case PERFORMANCE -> {
+				graphics.text(font, "只限制本模组的 F3+B 轮廓和装备位附加 3D 模型；默认关闭",
+					left, 55, 0xA0A0A0);
+				graphics.text(font, "目标 FPS（30-240）", left, 106, 0xA0A0A0);
+				graphics.text(font, "最大距离（16-256）", left + 200, 106, 0xA0A0A0);
+				graphics.text(font, "最小距离（16-最大值）", left + 400, 106, 0xA0A0A0);
+			}
+			case LEISURE, ADVANCED -> { }
 		}
 		graphics.text(font, status, 12, height - 22, status.contains("失败") ? 0xFF7777 : 0xA8E6A3);
 	}

@@ -23,7 +23,8 @@ public final class F3BHighlightController {
 	}
 
 	public static boolean shouldGlow(Minecraft minecraft, Entity entity) {
-		if (!replacesHitboxes(minecraft) || entity.isInvisible()) return false;
+		if (!replacesHitboxes(minecraft) || entity.isInvisible()
+				|| !ClientPerformanceController.shouldRenderExtra(entity)) return false;
 		return entity != minecraft.getCameraEntity()
 			|| minecraft.options.getCameraType() != CameraType.FIRST_PERSON;
 	}

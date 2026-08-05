@@ -16,6 +16,7 @@ public final class AiCompanionClient implements ClientModInitializer {
 		FlexibleEquipmentMode.configureClient(() -> settings.flexibleEquipmentEnabled);
 		F3BHighlightController.initialize(settings);
 		ScreenZoomController.initialize(settings);
+		ClientPerformanceController.initialize(settings);
 		AgentPositionHud.initialize();
 		boolean[] chordHeld = {false};
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
