@@ -5,6 +5,7 @@
 	"client": [
 		"AvatarRendererMixin",
 		"AvatarRenderStateMixin",
+		"CameraZoomMixin",
 		"EntityHitboxDebugRendererMixin",
 		"MinecraftGlowMixin"
 	],

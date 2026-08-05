@@ -40,6 +40,9 @@ final class ClothConfigApiBridge {
 		shortcuts.addEntry(entries.startStrField(Component.literal("快捷键二"), settings.secondaryKey)
 			.setDefaultValue("B").setErrorSupplier(ClothConfigApiBridge::keyError)
 			.setSaveConsumer(value -> settings.secondaryKey = value).build());
+		shortcuts.addEntry(entries.startStrField(Component.literal("屏幕缩放快捷键"), settings.zoomKey)
+			.setDefaultValue("C").setErrorSupplier(ClothConfigApiBridge::keyError)
+			.setSaveConsumer(value -> settings.zoomKey = value).build());
 
 		ConfigCategory gameplay = builder.getOrCreateCategory(Component.literal("游戏增强"));
 		gameplay.addEntry(entries.startBooleanToggle(Component.literal("金矛二级突进"),
@@ -67,6 +70,16 @@ final class ClothConfigApiBridge {
 			settings.f3BGlowingHitboxesEnabled).setDefaultValue(true)
 			.setTooltip(Component.literal("替代实体碰撞箱线框；仅本地生效"))
 			.setSaveConsumer(value -> settings.f3BGlowingHitboxesEnabled = value).build());
+		client.addEntry(entries.startBooleanToggle(Component.literal("按键屏幕缩放"),
+			settings.screenZoomEnabled).setDefaultValue(false)
+			.setTooltip(Component.literal("按住设置的快捷键平滑缩放；默认关闭"))
+			.setSaveConsumer(value -> settings.screenZoomEnabled = value).build());
+		client.addEntry(entries.startDoubleField(Component.literal("缩放倍率"), settings.zoomFactor)
+			.setMin(1.5).setMax(12.0).setDefaultValue(4.0)
+			.setSaveConsumer(value -> settings.zoomFactor = value).build());
+		client.addEntry(entries.startDoubleField(Component.literal("缩放过渡秒数"),
+			settings.zoomTransitionSeconds).setMin(0.0).setMax(1.0).setDefaultValue(0.18)
+			.setSaveConsumer(value -> settings.zoomTransitionSeconds = value).build());
 
 		category(builder, entries, "小游戏中心", "贪吃蛇、俄罗斯方块、扫雷、2048 与 AI 猜拳；返回完整管理中心后可开始游戏");
 		category(builder, entries, "休闲系统", "后续功能版本开放");

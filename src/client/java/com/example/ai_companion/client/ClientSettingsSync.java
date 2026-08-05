@@ -13,6 +13,7 @@ final class ClientSettingsSync {
 	static void save(ClientSettings settings) {
 		settings.primaryKey = ClientSettings.normalizeKey(settings.primaryKey, "V");
 		settings.secondaryKey = ClientSettings.normalizeKey(settings.secondaryKey, "B");
+		settings.zoomKey = ClientSettings.normalizeKey(settings.zoomKey, "C");
 		settings.normalized();
 		try {
 			settings.save();

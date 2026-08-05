@@ -41,7 +41,10 @@ final class EclipseUiApiBridge {
 					.defaultValue("V").maxLength(1).validator(value -> value.matches("[A-Za-z]")))
 				.textInput(field -> field.name(Component.literal("快捷键二"))
 					.binding(() -> settings.secondaryKey, value -> settings.secondaryKey = value)
-					.defaultValue("B").maxLength(1).validator(value -> value.matches("[A-Za-z]"))))
+					.defaultValue("B").maxLength(1).validator(value -> value.matches("[A-Za-z]")))
+				.textInput(field -> field.name(Component.literal("屏幕缩放快捷键"))
+					.binding(() -> settings.zoomKey, value -> settings.zoomKey = value)
+					.defaultValue("C").maxLength(1).validator(value -> value.matches("[A-Za-z]"))))
 			.category(category -> category.name(Component.literal("游戏增强"))
 				.icon(icon("golden_spear"))
 				.description(Component.literal("金矛突进与服务端玩法数值"))
@@ -70,7 +73,17 @@ final class EclipseUiApiBridge {
 				.toggle(toggle -> toggle.name(Component.literal("F3+B 使用原版发光轮廓"))
 					.description(Component.literal("替代实体碰撞箱线框；仅本地生效"))
 					.binding(() -> settings.f3BGlowingHitboxesEnabled,
-						value -> settings.f3BGlowingHitboxesEnabled = value).defaultValue(true)))
+						value -> settings.f3BGlowingHitboxesEnabled = value).defaultValue(true))
+				.toggle(toggle -> toggle.name(Component.literal("按键屏幕缩放"))
+					.description(Component.literal("按住设置的快捷键平滑缩放；默认关闭"))
+					.binding(() -> settings.screenZoomEnabled,
+						value -> settings.screenZoomEnabled = value).defaultValue(false))
+				.slider(slider -> slider.name(Component.literal("缩放倍率"))
+					.range(1.5, 12.0, 0.5).bindingDouble(() -> settings.zoomFactor,
+					value -> settings.zoomFactor = value).defaultValue(4.0))
+				.slider(slider -> slider.name(Component.literal("缩放过渡秒数"))
+					.range(0.0, 1.0, 0.01).bindingDouble(() -> settings.zoomTransitionSeconds,
+					value -> settings.zoomTransitionSeconds = value).defaultValue(0.18)))
 			.category(category -> category.name(Component.literal("小游戏中心"))
 				.icon(icon("target"))
 				.description(Component.literal("贪吃蛇、俄罗斯方块、扫雷、2048 与 AI 猜拳"))

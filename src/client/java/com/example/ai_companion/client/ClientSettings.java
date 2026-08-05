@@ -31,6 +31,10 @@ public final class ClientSettings {
 	public double rushStrength = 0.916;
 	public boolean flexibleEquipmentEnabled = false;
 	public boolean f3BGlowingHitboxesEnabled = true;
+	public boolean screenZoomEnabled = false;
+	public String zoomKey = "C";
+	public double zoomFactor = 4.0;
+	public double zoomTransitionSeconds = 0.18;
 
 	public static ClientSettings load() {
 		try {
@@ -69,6 +73,9 @@ public final class ClientSettings {
 		hungerEvery = Math.clamp(hungerEvery, 1, 1000);
 		hungerCost = Math.clamp(hungerCost, 0, 20);
 		rushStrength = Math.clamp(rushStrength, 0.1, 4.0);
+		zoomKey = normalizeKey(zoomKey, "C");
+		zoomFactor = Math.clamp(zoomFactor, 1.5, 12.0);
+		zoomTransitionSeconds = Math.clamp(zoomTransitionSeconds, 0.0, 1.0);
 		return this;
 	}
 
@@ -90,6 +97,10 @@ public final class ClientSettings {
 
 	public int secondaryCode() {
 		return keyCode(secondaryKey);
+	}
+
+	public int zoomCode() {
+		return keyCode(zoomKey);
 	}
 
 	public void save() throws IOException {

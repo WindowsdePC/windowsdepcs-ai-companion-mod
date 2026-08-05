@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.6.4](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.4)
+当前版本：[v0.6.5](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.5)
 
 ## 环境要求
 
@@ -135,6 +135,15 @@ EclipseUI 模式提供分类卡片、图标、开关、滑块、下拉菜单和�
 - 关闭选项后恢复原版 F3+B 实体碰撞箱样式。
 - 从 0.4.1 升级时，旧客户端配置会自动迁移为默认开启。
 
+### 平滑屏幕缩放
+
+“客户端增强”提供默认关闭的屏幕缩放。开启后按住默认 `C` 键即可缩放，松开后恢复原视野。
+
+- 缩放直接调整当前客户端相机的最终视野，不改写原版 FOV 设置。
+- 快捷键、1.5～12 倍缩放倍率和 0～1 秒过渡时间均可在双 UI 中调整。
+- 只在已进入世界且没有打开其他界面时响应，聊天、菜单和断开连接时会平滑复原。
+- 插值按真实帧间隔计算，不依赖服务器 Tick 速度，也不会向服务器发送数据。
+
 ### 金矛突进
 
 - 默认开启，金矛无需附魔即可获得二级突进的水平冲量。
@@ -235,14 +244,15 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.6.4.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.6.4-sources.jar`：源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.6.4-javadoc.jar`：Java API 文档包。
+- `windowsdepcs-ai-companion-0.6.5.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.6.5-sources.jar`：源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.6.5-javadoc.jar`：Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 
 ## 当前边界
 
+0.6.5 的屏幕缩放完全在客户端完成，不修改原版 FOV 配置或服务器状态。
 0.6.4 的照片是服务器权威的相册条目，包含场景元数据与玩家说明；它不会读取或保存客户端帧缓冲像素。
 后续若加入真正的 PNG 截图，会使用明确的客户端许可、网络大小上限和专用相册界面。
 0.6.2 的竞技场战术是独立、可恢复的服务器玩法，不会把竞技场动作写回普通任务模式。

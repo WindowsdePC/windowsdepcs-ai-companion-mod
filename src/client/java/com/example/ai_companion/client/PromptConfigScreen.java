@@ -67,6 +67,10 @@ public final class PromptConfigScreen extends Screen {
 	private boolean rushEnabled;
 	private boolean flexibleEquipmentEnabled;
 	private boolean glowingHitboxesEnabled;
+	private boolean screenZoomEnabled;
+	private String zoomKey;
+	private String zoomFactor;
+	private String zoomTransitionSeconds;
 	private String durabilityEvery;
 	private String hungerEvery;
 	private String hungerCost;
@@ -90,6 +94,10 @@ public final class PromptConfigScreen extends Screen {
 		rushEnabled = settings.goldenSpearRushEnabled;
 		flexibleEquipmentEnabled = settings.flexibleEquipmentEnabled;
 		glowingHitboxesEnabled = settings.f3BGlowingHitboxesEnabled;
+		screenZoomEnabled = settings.screenZoomEnabled;
+		zoomKey = settings.zoomKey;
+		zoomFactor = Double.toString(settings.zoomFactor);
+		zoomTransitionSeconds = Double.toString(settings.zoomTransitionSeconds);
 		durabilityEvery = Integer.toString(settings.durabilityEvery);
 		hungerEvery = Integer.toString(settings.hungerEvery);
 		hungerCost = Integer.toString(settings.hungerCost);
@@ -349,6 +357,11 @@ public final class PromptConfigScreen extends Screen {
 		secondary.setMaxLength(1);
 		secondary.setValue(secondaryKey);
 		secondary.setResponder(value -> secondaryKey = value);
+		EditBox zoom = addRenderableWidget(new EditBox(font, left + 270, 85, 120, 20,
+			Component.literal("缩放快捷键")));
+		zoom.setMaxLength(1);
+		zoom.setValue(zoomKey);
+		zoom.setResponder(value -> zoomKey = value);
 
 		addRenderableWidget(Button.builder(Component.literal("保存快捷键"), b -> saveShortcuts())
 			.bounds(left, 130, 180, 20).build());
@@ -360,8 +373,16 @@ public final class PromptConfigScreen extends Screen {
 			glowingHitboxesEnabled = !glowingHitboxesEnabled;
 			rebuildPanel();
 		}).bounds(left, 75, 260, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("屏幕缩放："
+				+ (screenZoomEnabled ? "开启" : "关闭")), b -> {
+			screenZoomEnabled = !screenZoomEnabled;
+			rebuildPanel();
+		}).bounds(left + 270, 75, 220, 20).build());
+		numberBox(left, 135, zoomFactor, 5, value -> zoomFactor = value);
+		numberBox(left + 200, 135, zoomTransitionSeconds, 5,
+			value -> zoomTransitionSeconds = value);
 		addRenderableWidget(Button.builder(Component.literal("保存客户端增强设置"), b -> saveClientEnhancements())
-			.bounds(left, 120, 220, 20).build());
+			.bounds(left, 190, 220, 20).build());
 	}
 
 	private EditBox numberBox(int x, int y, String value, int maxLength,
@@ -568,10 +589,12 @@ public final class PromptConfigScreen extends Screen {
 		try {
 			settings.primaryKey = ClientSettings.normalizeKey(primaryKey, "V");
 			settings.secondaryKey = ClientSettings.normalizeKey(secondaryKey, "B");
+			settings.zoomKey = ClientSettings.normalizeKey(zoomKey, "C");
 			settings.save();
 			primaryKey = settings.primaryKey;
 			secondaryKey = settings.secondaryKey;
-			status = "已保存；新快捷键为 " + primaryKey + "+" + secondaryKey;
+			zoomKey = settings.zoomKey;
+			status = "已保存；界面 " + primaryKey + "+" + secondaryKey + "，缩放 " + zoomKey;
 		} catch (RuntimeException | IOException error) {
 			status = "保存失败: " + error.getMessage();
 		}
@@ -614,9 +637,13 @@ public final class PromptConfigScreen extends Screen {
 	private void saveClientEnhancements() {
 		try {
 			settings.f3BGlowingHitboxesEnabled = glowingHitboxesEnabled;
+			settings.screenZoomEnabled = screenZoomEnabled;
+			settings.zoomKey = ClientSettings.normalizeKey(zoomKey, "C");
+			settings.zoomFactor = parseDouble(zoomFactor, 1.5, 12.0, "缩放倍率");
+			settings.zoomTransitionSeconds = parseDouble(zoomTransitionSeconds, 0.0, 1.0, "过渡时间");
 			settings.save();
-			status = "已保存；F3+B 将" + (glowingHitboxesEnabled ? "使用原版发光轮廓" : "恢复原版碰撞箱");
-		} catch (IOException error) {
+			status = "已保存客户端增强设置；按住 " + settings.zoomKey + " 使用缩放";
+		} catch (RuntimeException | IOException error) {
 			status = "保存失败: " + error.getMessage();
 		}
 	}
@@ -698,10 +725,14 @@ public final class PromptConfigScreen extends Screen {
 				graphics.text(font, "饥饿点数（1鸡腿=2）", left + 400, 106, 0xA0A0A0);
 				graphics.text(font, "突进强度", left + 600, 106, 0xA0A0A0);
 			}
-			case SHORTCUTS -> graphics.text(font, "打开 UI 快捷键（仅支持 A-Z 双键组合）", left, 62, 0xA0A0A0);
-			case CLIENT -> graphics.text(font,
-				"开启后，按 F3+B 时隐藏实体线框并调用原版发光轮廓；默认开启且仅本地生效",
-				left, 55, 0xA0A0A0);
+			case SHORTCUTS -> graphics.text(font, "打开 UI 双键与屏幕缩放键（仅支持 A-Z）", left, 62, 0xA0A0A0);
+			case CLIENT -> {
+				graphics.text(font,
+					"F3+B 轮廓与屏幕缩放均只影响当前客户端；缩放默认关闭",
+					left, 55, 0xA0A0A0);
+				graphics.text(font, "缩放倍率（1.5-12）", left, 111, 0xA0A0A0);
+				graphics.text(font, "过渡秒数（0-1）", left + 200, 111, 0xA0A0A0);
+			}
 			case COMPATIBILITY -> graphics.text(font, "UI 后端：" + backend.displayName(), left, 55, 0xA0A0A0);
 			case MINIGAMES -> {
 				graphics.text(font, "贪吃蛇：最高 " + minigameProgress.snakeHighScore + " · "
