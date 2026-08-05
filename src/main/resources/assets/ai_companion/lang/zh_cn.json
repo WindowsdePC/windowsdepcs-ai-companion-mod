@@ -5,5 +5,8 @@
 	"hud.ai_companion.positions.loading": "正在从服务器刷新……",
 	"hud.ai_companion.positions.empty": "当前没有可查询位置的 AI 玩家",
 	"hud.ai_companion.positions.unsupported": "服务器不支持 AI 位置同步",
-	"hud.ai_companion.positions.more": "另有 %s 个 AI，请使用 /aiplayer positions 查看"
+	"hud.ai_companion.positions.more": "另有 %s 个 AI，请使用 /aiplayer positions 查看",
+	"screen.ai_companion.navigator.title": "结构、群系与维度指南针",
+	"screen.ai_companion.navigator.search": "搜索注册表 ID",
+	"message.ai_companion.merciful_void": "仁慈的虚空将你送回高空；缓降与无伤保护已生效"
 }

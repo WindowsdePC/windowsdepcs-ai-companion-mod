@@ -40,6 +40,10 @@ public final class ClientSettings {
 	public int performanceTargetFps = 60;
 	public int extraRenderDistance = 96;
 	public int minimumExtraRenderDistance = 24;
+	public boolean worldNavigatorEnabled = false;
+	public String navigatorKey = "G";
+	public boolean mercifulVoidEnabled = false;
+	public boolean maximumWorldBorderEnabled = false;
 
 	public static ClientSettings load() {
 		try {
@@ -85,6 +89,7 @@ public final class ClientSettings {
 		extraRenderDistance = Math.clamp(extraRenderDistance, 16, 256);
 		minimumExtraRenderDistance = Math.clamp(minimumExtraRenderDistance, 16,
 			extraRenderDistance);
+		navigatorKey = normalizeKey(navigatorKey, "G");
 		return this;
 	}
 
@@ -110,6 +115,10 @@ public final class ClientSettings {
 
 	public int zoomCode() {
 		return keyCode(zoomKey);
+	}
+
+	public int navigatorCode() {
+		return keyCode(navigatorKey);
 	}
 
 	public void save() throws IOException {

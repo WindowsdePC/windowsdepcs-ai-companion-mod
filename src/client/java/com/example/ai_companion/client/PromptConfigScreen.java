@@ -76,6 +76,10 @@ public final class PromptConfigScreen extends Screen {
 	private String performanceTargetFps;
 	private String extraRenderDistance;
 	private String minimumExtraRenderDistance;
+	private boolean worldNavigatorEnabled;
+	private String navigatorKey;
+	private boolean mercifulVoidEnabled;
+	private boolean maximumWorldBorderEnabled;
 	private String durabilityEvery;
 	private String hungerEvery;
 	private String hungerCost;
@@ -108,6 +112,10 @@ public final class PromptConfigScreen extends Screen {
 		performanceTargetFps = Integer.toString(settings.performanceTargetFps);
 		extraRenderDistance = Integer.toString(settings.extraRenderDistance);
 		minimumExtraRenderDistance = Integer.toString(settings.minimumExtraRenderDistance);
+		worldNavigatorEnabled = settings.worldNavigatorEnabled;
+		navigatorKey = settings.navigatorKey;
+		mercifulVoidEnabled = settings.mercifulVoidEnabled;
+		maximumWorldBorderEnabled = settings.maximumWorldBorderEnabled;
 		durabilityEvery = Integer.toString(settings.durabilityEvery);
 		hungerEvery = Integer.toString(settings.hungerEvery);
 		hungerCost = Integer.toString(settings.hungerCost);
@@ -151,7 +159,7 @@ public final class PromptConfigScreen extends Screen {
 			case PERFORMANCE -> buildPerformancePanel(panelLeft, panelWidth);
 			case COMPATIBILITY -> buildPlaceholderPanel("当前 UI 后端：" + backend.displayName()
 				+ "；Simple Voice Chat 为可选兼容项");
-			case ADVANCED -> buildPlaceholderPanel("高级设置保留给调试、迁移与实验功能");
+			case ADVANCED -> buildAdvancedPanel(panelLeft, panelWidth);
 		}
 		addRenderableWidget(Button.builder(Component.literal("完成"), b -> onClose())
 			.bounds(left + fullWidth - 90, height - 25, 90, 20).build());
@@ -372,9 +380,39 @@ public final class PromptConfigScreen extends Screen {
 		zoom.setMaxLength(1);
 		zoom.setValue(zoomKey);
 		zoom.setResponder(value -> zoomKey = value);
+		EditBox navigator = addRenderableWidget(new EditBox(font, left + 405, 85, 120, 20,
+			Component.literal("导航快捷键")));
+		navigator.setMaxLength(1);
+		navigator.setValue(navigatorKey);
+		navigator.setResponder(value -> navigatorKey = value);
 
 		addRenderableWidget(Button.builder(Component.literal("保存快捷键"), b -> saveShortcuts())
 			.bounds(left, 130, 180, 20).build());
+	}
+
+	private void buildAdvancedPanel(int left, int panelWidth) {
+		addRenderableWidget(Button.builder(Component.literal("结构/群系指南针："
+			+ (worldNavigatorEnabled ? "开启" : "关闭")), button -> {
+			worldNavigatorEnabled = !worldNavigatorEnabled;
+			rebuildPanel();
+		}).bounds(left, 70, 250, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("仁慈的虚空："
+			+ (mercifulVoidEnabled ? "开启" : "关闭")), button -> {
+			mercifulVoidEnabled = !mercifulVoidEnabled;
+			rebuildPanel();
+		}).bounds(left + 260, 70, 220, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("原版最大世界边界："
+			+ (maximumWorldBorderEnabled ? "开启" : "关闭")), button -> {
+			maximumWorldBorderEnabled = !maximumWorldBorderEnabled;
+			rebuildPanel();
+		}).bounds(left, 115, 250, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("打开导航界面"), button -> {
+			if (minecraft != null) com.example.ai_companion.client.navigation.NavigationClientController
+				.open(minecraft, this);
+		}).bounds(left + 260, 115, 220, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("保存高危区域设置"), button ->
+			saveWorldFeatures()).bounds(left, 170, 250, 20).build());
+		status = "高危区域：真正无限高度与64位坐标超出Minecraft区块格式；本版不会伪造该能力";
 	}
 
 	private void buildClientPanel(int left, int panelWidth) {
@@ -620,11 +658,30 @@ public final class PromptConfigScreen extends Screen {
 			settings.primaryKey = ClientSettings.normalizeKey(primaryKey, "V");
 			settings.secondaryKey = ClientSettings.normalizeKey(secondaryKey, "B");
 			settings.zoomKey = ClientSettings.normalizeKey(zoomKey, "C");
+			settings.navigatorKey = ClientSettings.normalizeKey(navigatorKey, "G");
 			settings.save();
 			primaryKey = settings.primaryKey;
 			secondaryKey = settings.secondaryKey;
 			zoomKey = settings.zoomKey;
-			status = "已保存；界面 " + primaryKey + "+" + secondaryKey + "，缩放 " + zoomKey;
+			navigatorKey = settings.navigatorKey;
+			status = "已保存；界面 " + primaryKey + "+" + secondaryKey + "，缩放 " + zoomKey
+				+ "，导航 " + navigatorKey;
+		} catch (RuntimeException | IOException error) {
+			status = "保存失败: " + error.getMessage();
+		}
+	}
+
+	private void saveWorldFeatures() {
+		try {
+			settings.worldNavigatorEnabled = worldNavigatorEnabled;
+			settings.navigatorKey = ClientSettings.normalizeKey(navigatorKey, "G");
+			settings.mercifulVoidEnabled = mercifulVoidEnabled;
+			settings.maximumWorldBorderEnabled = maximumWorldBorderEnabled;
+			settings.save();
+			sendCommand("aiplayer-world navigator " + worldNavigatorEnabled);
+			sendCommand("aiplayer-world merciful-void " + mercifulVoidEnabled);
+			sendCommand("aiplayer-world maximum-border " + maximumWorldBorderEnabled);
+			status = "设置已保存；服务器端高危选项需要管理员权限";
 		} catch (RuntimeException | IOException error) {
 			status = "保存失败: " + error.getMessage();
 		}

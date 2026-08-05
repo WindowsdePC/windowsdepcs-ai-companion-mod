@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.6.8](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.8)
+当前版本：[v0.6.9](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.6.9)
 
 ## 环境要求
 
@@ -20,6 +20,14 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 如果两者都未安装，客户端会明确报告缺少 UI 支持库。
 
 ## 主要功能
+
+### 结构、群系与维度导航
+
+- 默认关闭；管理员在“高级设置”中启用服务器导航后，玩家可用默认 `G` 键打开搜索界面。
+- 目录来自服务器当前的群系、结构与维度注册表，包含模组注册内容。
+- AR 模式显示方向、目标维度、剩余方块和进度条；传送模式仅允许管理员使用。
+- “仁慈的虚空”会在玩家跌出三个原版维度时将其送回本维度安全高空，并提供缓降与落地前无伤保护。
+- 世界边界选项只扩展到原版安全最大值；真正无限高度、64 位坐标与“持续渲染到崩溃”受游戏引擎和存档格式限制，不会伪装成可用功能。
 
 ### AI 玩家
 
