@@ -4,6 +4,7 @@ import com.example.ai_companion.weather.ActiveWeatherEvent;
 import com.example.ai_companion.weather.WeatherEventManager;
 import com.example.ai_companion.weather.WeatherEventRecord;
 import com.example.ai_companion.weather.WeatherEventSettings;
+import com.example.ai_companion.weather.WeatherEventStatistics;
 import com.example.ai_companion.weather.WeatherEventType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -31,6 +32,10 @@ public final class WeatherEventCommands {
 			var weather = Commands.literal("weather")
 				.then(Commands.literal("status").executes(c -> status(c.getSource(), manager)))
 				.then(Commands.literal("forecast").executes(c -> forecast(c.getSource(), manager)))
+				.then(Commands.literal("stats")
+					.executes(c -> stats(c.getSource(), manager, null))
+					.then(Commands.argument("type", StringArgumentType.word())
+						.executes(c -> stats(c.getSource(), manager, StringArgumentType.getString(c, "type")))))
 				.then(Commands.literal("history")
 					.executes(c -> history(c.getSource(), manager, 5))
 					.then(Commands.argument("count", IntegerArgumentType.integer(1, 10))
@@ -89,6 +94,21 @@ public final class WeatherEventCommands {
 		for (WeatherEventRecord entry : entries) source.sendSuccess(() -> Component.literal(HISTORY_TIME.format(Instant.ofEpochMilli(entry.startedAtEpochMillis()))
 			+ " · " + entry.type().displayName() + " · " + entry.plannedDurationSeconds() + " 秒 · " + (entry.automatic() ? "自然" : "管理员")), false);
 		return entries.size();
+	}
+
+	private static int stats(CommandSourceStack source, WeatherEventManager manager, String rawType) {
+		try {
+			WeatherEventType type = rawType == null ? null : WeatherEventType.parse(rawType);
+			var records = manager.history(32).stream().filter(record -> type == null || record.type() == type).toList();
+			WeatherEventStatistics value = WeatherEventStatistics.from(records);
+			String label = type == null ? "全部事件" : type.displayName();
+			source.sendSuccess(() -> Component.literal(label + "统计：共 " + value.events() + " 次（自然 "
+				+ value.automaticEvents() + " / 管理员 " + value.administratorEvents() + "），计划总时长 "
+				+ value.plannedDurationSeconds() + " 秒"), false);
+			return value.events();
+		} catch (Exception error) {
+			source.sendFailure(Component.literal("读取自然事件统计失败：" + error.getMessage())); return 0;
+		}
 	}
 
 	private static int notify(CommandSourceStack source, WeatherEventManager manager, String raw) {
