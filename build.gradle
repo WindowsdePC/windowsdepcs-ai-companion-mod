@@ -1,5 +1,5 @@
 plugins {
-	id "net.fabricmc.fabric-loom" version "${loom_version}"
+	id "net.minecraftforge.gradle" version "[6.0,6.2)"
 	id "maven-publish"
 }
 
@@ -10,77 +10,61 @@ base {
 	archivesName = project.archives_base_name
 }
 
-loom {
-	splitEnvironmentSourceSets()
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
-	mods {
-		"ai_companion" {
-			sourceSet sourceSets.main
-			sourceSet sourceSets.client
+sourceSets {
+	main {
+		java.setSrcDirs(["src/legacyForge/java"])
+		resources.setSrcDirs(["src/legacyForge/resources"])
+	}
+	test {
+		java.setSrcDirs(["src/legacyForgeTest/java"])
+	}
+}
+
+minecraft {
+	mappings channel: "official", version: project.minecraft_version
+	runs {
+		client {
+			workingDirectory project.file("run")
+			property "forge.logging.console.level", "info"
+			mods { ai_companion { source sourceSets.main } }
+		}
+		server {
+			workingDirectory project.file("run-server")
+			property "forge.logging.console.level", "info"
+			mods { ai_companion { source sourceSets.main } }
 		}
 	}
 }
 
-repositories {
-	maven {
-		name = "Modrinth"
-		url = "https://api.modrinth.com/maven"
-		content { includeGroup "maven.modrinth" }
-	}
-}
-
 dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-
-	// Alternative client UI backends. Neither is bundled; runtime routing prefers EclipseUI.
-	clientCompileOnly "maven.modrinth:eclipseui:EW0sBZm4"
-	clientCompileOnly "maven.modrinth:cloth-config:Nv3xnWXd"
-
-	testImplementation platform("org.junit:junit-bom:5.13.4")
-	testImplementation "org.junit.jupiter:junit-jupiter"
-	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
-}
-
-test {
-	useJUnitPlatform()
+	minecraft "net.minecraftforge:forge:${project.minecraft_version}-${project.forge_version}"
 }
 
 processResources {
 	inputs.property "version", project.version
-	filesMatching("fabric.mod.json") {
+	filesMatching("META-INF/mods.toml") {
 		expand "version": project.version
 	}
 }
 
 tasks.withType(JavaCompile).configureEach {
-	options.release = 25
+	options.release = 17
 	options.encoding = "UTF-8"
-}
-
-tasks.withType(Javadoc).configureEach {
-	options.encoding = "UTF-8"
-	options.addStringOption("Xdoclint:none", "-quiet")
-}
-
-java {
-	withSourcesJar()
-	withJavadocJar()
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
 }
 
 jar {
-	from("LICENSE") {
-		rename { "${it}_${project.name}" }
+	manifest {
+		attributes([
+			"Specification-Title": "ai_companion",
+			"Specification-Vendor": "WindowsdePC",
+			"Specification-Version": project.version,
+			"Implementation-Title": project.name,
+			"Implementation-Version": project.version,
+			"Implementation-Vendor": "WindowsdePC"
+		])
 	}
-}
-
-publishing {
-	publications {
-		create("mavenJava", MavenPublication) {
-			from components.java
-		}
-	}
+	from("LICENSE") { rename { "${it}_${project.name}" } }
+	finalizedBy "reobfJar"
 }

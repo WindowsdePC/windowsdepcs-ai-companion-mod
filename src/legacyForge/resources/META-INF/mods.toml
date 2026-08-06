@@ -1,0 +1,24 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="ai_companion"
+version="${version}"
+displayName="WindowsdePC's AI Companion Mod"
+authors="WindowsdePC"
+description='''Minecraft 1.20.1 Forge compatibility edition of the AI Companion Mod.'''
+
+[[dependencies.ai_companion]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.ai_companion]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.20.2)"
+ordering="NONE"
+side="BOTH"
