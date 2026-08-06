@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.5
+
+- Replaced the meteor shower's amethyst placeholder with the registered `ai_companion:star_shard` item.
+- Added translations, item model, common tags and a lossless amethyst conversion recipe on all release targets.
+
 ## 0.8.4
 
 - 新增极光、流星雨、沙尘暴与增强雷暴四类服务器权威自然事件，并限制同时最多一个事件。

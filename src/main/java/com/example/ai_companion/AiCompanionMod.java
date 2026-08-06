@@ -39,6 +39,7 @@ import com.example.ai_companion.music.AiMusicManager;
 import com.example.ai_companion.pet.PetCompetitionManager;
 import com.example.ai_companion.society.AiSocietyManager;
 import com.example.ai_companion.weather.WeatherEventManager;
+import com.example.ai_companion.weather.WeatherItems;
 import com.example.ai_companion.world.WorldFeatureCommands;
 import com.example.ai_companion.world.WorldFeatureConfig;
 import com.example.ai_companion.world.WorldFeatureManager;
@@ -120,6 +121,7 @@ public final class AiCompanionMod implements ModInitializer {
 		AiMusicCommands.register(music);
 		PetCompetitionCommands.register(petCompetitions);
 		AiSocietyCommands.register(society);
+		WeatherItems.register();
 		WeatherEventCommands.register(weatherEvents);
 		MaidCommands.register(maids);
 		WorldFeatureCommands.register(() -> worldFeatures, updated -> worldFeatures = updated);

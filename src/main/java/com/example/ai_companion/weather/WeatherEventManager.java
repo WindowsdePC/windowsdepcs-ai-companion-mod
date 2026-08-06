@@ -12,7 +12,6 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.saveddata.WeatherData;
@@ -100,9 +99,9 @@ public final class WeatherEventManager implements AutoCloseable {
 		double z = player.getZ() + random.nextDouble(-24, 24);
 		level.sendParticles(ParticleTypes.FIREWORK, x, player.getY() + 24, z, 2, 0.3, 4, 0.3, 0.18);
 		if (ticks % 200 == 0 && random.nextInt(4) == 0) {
-			ItemEntity shard = new ItemEntity(level, x, player.getY() + 8, z, new ItemStack(Items.AMETHYST_SHARD));
+			ItemEntity shard = new ItemEntity(level, x, player.getY() + 8, z, new ItemStack(WeatherItems.STAR_SHARD));
 			shard.setDeltaMovement(0, -0.18, 0); level.addFreshEntity(shard);
-			player.sendSystemMessage(Component.literal("一枚星辰碎片坠落在附近（以紫水晶碎片承载）"));
+			player.sendSystemMessage(Component.literal("一枚星辰碎片坠落在附近"));
 		}
 	}
 

@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "ai_companion:star_shard"
+  ],
+  "result": {
+    "id": "minecraft:amethyst_shard",
+    "count": 1
+  }
+}
