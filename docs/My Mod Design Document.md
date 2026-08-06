@@ -13,7 +13,7 @@ WindowsdePC's AI Companion Mod
 
 当前版本：
 
-0.8.2
+0.8.3
 
 
 目标版本：
@@ -35,6 +35,15 @@ WindowsdePC's AI Companion Mod
 - 1.20.1 Forge 版使用独立兼容分支，针对 Forge 事件总线、网络通道和 FakePlayer API 进行适配。
 - 三个版本共享模组 ID、配置语义、AI 安全动作白名单和用户数据格式；加载器专属实现不互相作为前置。
 - 正式发行版同时提供三个带 Minecraft 版本与加载器标识的可安装 JAR，避免玩家下载错误文件。
+
+
+0.8.3 旧版兼容修复状态：
+
+- 1.20.1 Fabric 与 Forge 分支只保留各自参与构建的旧版 Mojang 映射源码，不再携带 26.2 的新版包名与渲染源码。
+- 删除 1.20.1 不存在的金矛突进实现与 lunge 数据资源。
+- 使用 1.20.1 `ResourceLocation`、`Screen`、`GuiGraphics`、`getWindow().getWindow()` 等 API 恢复 V+B、F8、C、G。
+- 组合键采用直接轮询，不注册到原版“控制”列表；F8 会执行服务器权威位置查询，C 按住缩放、松开恢复。
+- 补齐批量创建、PvP 教练、身份、提示词、功能状态等核心命令，并允许普通玩家读取 `config status`。
 
 
 0.6.9 实现状态：
