@@ -19,8 +19,8 @@ public final class WeatherEventCommands {
 	private WeatherEventCommands() { }
 
 	public static void register(WeatherEventManager manager) {
-		CommandRegistrationCallback.EVENT.register((dispatcher, access, environment) -> dispatcher.register(
-			Commands.literal("aiplayer").then(Commands.literal("weather")
+		CommandRegistrationCallback.EVENT.register((dispatcher, access, environment) -> {
+			var weather = Commands.literal("weather")
 				.then(Commands.literal("status").executes(c -> status(c.getSource(), manager)))
 				.then(Commands.literal("stop").requires(s -> s.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
 					.executes(c -> stop(c.getSource(), manager)))
@@ -28,7 +28,9 @@ public final class WeatherEventCommands {
 					.then(Commands.argument("type", StringArgumentType.word())
 						.then(Commands.argument("minutes", IntegerArgumentType.integer(1, 30))
 							.executes(c -> start(c.getSource(), manager, StringArgumentType.getString(c, "type"),
-								IntegerArgumentType.getInteger(c, "minutes"))))))))));
+								IntegerArgumentType.getInteger(c, "minutes"))))));
+			dispatcher.register(Commands.literal("aiplayer").then(weather));
+		});
 	}
 
 	private static int start(CommandSourceStack source, WeatherEventManager manager, String value, int minutes) {
