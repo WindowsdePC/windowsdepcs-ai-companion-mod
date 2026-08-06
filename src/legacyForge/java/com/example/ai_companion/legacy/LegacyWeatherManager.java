@@ -19,14 +19,23 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.SplittableRandom;
+import java.util.UUID;
 
 /** Minecraft 1.20.1 implementation of bounded persistent weather events. */
 final class LegacyWeatherManager {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+	private static final int MAX_HISTORY = 32;
 	private final Path file;
 	private final SplittableRandom random = new SplittableRandom();
+	private final List<History> history = new ArrayList<>();
+	private final Set<UUID> unsubscribed = new HashSet<>();
+	private Policy policy = Policy.defaults();
 	private State active;
 	private long ticks;
 
@@ -36,11 +45,27 @@ final class LegacyWeatherManager {
 		Type type = Type.parse(rawType);
 		if (minutes < 1 || minutes > 30) throw new IllegalArgumentException("时长必须为 1～30 分钟");
 		long duration = minutes * 60L * 20L;
-		active = new State(type.name(), duration, duration, automatic); save(); return active;
+		active = new State(type.name(), duration, duration, automatic);
+		history.add(0, new History(type.name(), System.currentTimeMillis(), minutes * 60, automatic));
+		while (history.size() > MAX_HISTORY) history.remove(history.size() - 1);
+		save();
+		return active;
 	}
 
 	synchronized boolean stop() { boolean existed = active != null; active = null; save(); return existed; }
 	synchronized State active() { return active; }
+	synchronized Policy policy() { return policy.copy(); }
+	synchronized List<History> history(int limit) { return List.copyOf(history.subList(0, Math.min(Math.max(1, limit), history.size()))); }
+	synchronized int nextAutomaticCheckSeconds() {
+		long interval = policy.checkIntervalSeconds * 20L;
+		return (int) Math.ceil((interval - Math.floorMod(ticks, interval)) / 20.0);
+	}
+	synchronized void setAutomaticEnabled(boolean value) { policy.automaticEnabled = value; save(); }
+	synchronized void setCheckInterval(int value) { Policy.validate(value, policy.chanceDenominator, policy.minDurationMinutes, policy.maxDurationMinutes); policy.checkIntervalSeconds = value; save(); }
+	synchronized void setChance(int value) { Policy.validate(policy.checkIntervalSeconds, value, policy.minDurationMinutes, policy.maxDurationMinutes); policy.chanceDenominator = value; save(); }
+	synchronized void setDuration(int minimum, int maximum) { Policy.validate(policy.checkIntervalSeconds, policy.chanceDenominator, minimum, maximum); policy.minDurationMinutes = minimum; policy.maxDurationMinutes = maximum; save(); }
+	synchronized void setNotifications(UUID playerId, boolean enabled) { if (enabled) unsubscribed.remove(playerId); else unsubscribed.add(playerId); save(); }
+	synchronized boolean notificationsEnabled(UUID playerId) { return !unsubscribed.contains(playerId); }
 
 	void tick(MinecraftServer server) {
 		ticks++;
@@ -48,12 +73,12 @@ final class LegacyWeatherManager {
 		synchronized (this) { event = active; }
 		if (event == null) { automatic(server); return; }
 		Type type = Type.valueOf(event.type);
-		if (type.nightOnly && !isNight(server.overworld())) { stop(); broadcast(server, type.label + "随日出结束"); return; }
+		if (type.nightOnly && !isNight(server.overworld())) { stop(); announce(server, type.label + "随日出结束"); return; }
 		if (ticks % 5 == 0) for (ServerPlayer player : server.getPlayerList().getPlayers()) apply(player, type);
 		synchronized (this) {
 			if (active == null) return;
 			active.remainingTicks--;
-			if (active.remainingTicks <= 0) { active = null; broadcast(server, "自然事件已经结束"); }
+			if (active.remainingTicks <= 0) { active = null; announce(server, "自然事件已经结束"); }
 			if (ticks % 200 == 0 || active == null) save();
 		}
 	}
@@ -89,27 +114,41 @@ final class LegacyWeatherManager {
 	}
 
 	private void automatic(MinecraftServer server) {
-		if (ticks % 1200 != 0 || random.nextInt(240) != 0) return;
+		Policy current;
+		synchronized (this) { current = policy.copy(); }
+		long interval = current.checkIntervalSeconds * 20L;
+		if (!current.automaticEnabled || ticks % interval != 0 || random.nextInt(current.chanceDenominator) != 0) return;
 		Type[] types = Type.values();
 		Type type = isNight(server.overworld()) ? types[random.nextInt(types.length)]
 			: (random.nextBoolean() ? Type.SANDSTORM : Type.ENHANCED_THUNDERSTORM);
-		start(type.name(), 5 + random.nextInt(6), true); broadcast(server, "自然事件开始：" + type.label);
+		int minutes = current.minDurationMinutes + random.nextInt(current.maxDurationMinutes - current.minDurationMinutes + 1);
+		start(type.name(), minutes, true); announce(server, "自然事件开始：" + type.label);
 	}
 
 	static Type parse(String value) { return Type.parse(value); }
 	private static boolean isNight(ServerLevel level) { long time = Math.floorMod(level.getDayTime(), 24000L); return time >= 13000 && time <= 23000; }
-	private static void broadcast(MinecraftServer server, String text) { server.getPlayerList().broadcastSystemMessage(Component.literal("[自然事件] " + text), false); }
+	void announce(MinecraftServer server, String text) {
+		for (ServerPlayer player : server.getPlayerList().getPlayers())
+			if (notificationsEnabled(player.getUUID())) player.sendSystemMessage(Component.literal("[自然事件] " + text));
+	}
 
 	private synchronized void load() {
 		if (!Files.isRegularFile(file)) return;
-		try { State loaded = GSON.fromJson(Files.readString(file), State.class); if (loaded != null && loaded.valid()) active = loaded; }
-		catch (Exception ignored) { active = null; }
+		try {
+			Store loaded = GSON.fromJson(Files.readString(file), Store.class);
+			if (loaded == null) return;
+			State candidate = loaded.active != null ? loaded.active : loaded.legacyState();
+			if (candidate != null && candidate.valid()) active = candidate;
+			if (loaded.policy != null && loaded.policy.valid()) policy = loaded.policy;
+			if (loaded.history != null) loaded.history.stream().filter(History::valid).limit(MAX_HISTORY).forEach(history::add);
+			if (loaded.unsubscribed != null) for (String value : loaded.unsubscribed) try { unsubscribed.add(UUID.fromString(value)); } catch (IllegalArgumentException ignored) { }
+		} catch (Exception ignored) { active = null; policy = Policy.defaults(); history.clear(); unsubscribed.clear(); }
 	}
 
 	private synchronized void save() {
 		try {
 			Files.createDirectories(file.getParent()); Path temp = file.resolveSibling(file.getFileName() + ".tmp");
-			Files.writeString(temp, GSON.toJson(active), StandardCharsets.UTF_8);
+			Files.writeString(temp, GSON.toJson(new Store(this)), StandardCharsets.UTF_8);
 			try { Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE); }
 			catch (IOException failure) { Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING); }
 		} catch (IOException ignored) { }
@@ -134,5 +173,34 @@ final class LegacyWeatherManager {
 		State(String type, long remainingTicks, long totalTicks, boolean automatic) { this.type = type; this.remainingTicks = remainingTicks; this.totalTicks = totalTicks; this.automatic = automatic; }
 		boolean valid() { try { Type.valueOf(type); return remainingTicks > 0 && remainingTicks <= totalTicks && totalTicks <= 20L * 60 * 30; } catch (Exception error) { return false; } }
 		int remainingSeconds() { return (int) Math.ceil(remainingTicks / 20.0); }
+	}
+
+	static final class Policy {
+		boolean automaticEnabled = true; int checkIntervalSeconds = 60, chanceDenominator = 240, minDurationMinutes = 5, maxDurationMinutes = 10;
+		static Policy defaults() { return new Policy(); }
+		Policy copy() { Policy result = new Policy(); result.automaticEnabled = automaticEnabled; result.checkIntervalSeconds = checkIntervalSeconds; result.chanceDenominator = chanceDenominator; result.minDurationMinutes = minDurationMinutes; result.maxDurationMinutes = maxDurationMinutes; return result; }
+		boolean valid() { try { validate(checkIntervalSeconds, chanceDenominator, minDurationMinutes, maxDurationMinutes); return true; } catch (IllegalArgumentException error) { return false; } }
+		static void validate(int interval, int chance, int minimum, int maximum) {
+			if (interval < 30 || interval > 3600) throw new IllegalArgumentException("检查间隔必须为 30～3600 秒");
+			if (chance < 1 || chance > 10000) throw new IllegalArgumentException("概率分母必须为 1～10000");
+			if (minimum < 1 || maximum > 30 || minimum > maximum) throw new IllegalArgumentException("时长必须满足 1 ≤ 最短 ≤ 最长 ≤ 30");
+		}
+	}
+
+	static final class History {
+		String type; long startedAtEpochMillis; int plannedDurationSeconds; boolean automatic;
+		History(String type, long startedAtEpochMillis, int plannedDurationSeconds, boolean automatic) { this.type = type; this.startedAtEpochMillis = startedAtEpochMillis; this.plannedDurationSeconds = plannedDurationSeconds; this.automatic = automatic; }
+		boolean valid() { try { Type.valueOf(type); return startedAtEpochMillis >= 0 && plannedDurationSeconds >= 60 && plannedDurationSeconds <= 1800; } catch (Exception error) { return false; } }
+	}
+
+	private static final class Store {
+		State active; Policy policy; List<History> history; List<String> unsubscribed;
+		String type; long remainingTicks, totalTicks; boolean automatic;
+		Store() { }
+		Store(LegacyWeatherManager manager) {
+			active = manager.active; policy = manager.policy.copy(); history = List.copyOf(manager.history);
+			unsubscribed = manager.unsubscribed.stream().map(UUID::toString).sorted().toList();
+		}
+		State legacyState() { return type == null ? null : new State(type, remainingTicks, totalTicks, automatic); }
 	}
 }
