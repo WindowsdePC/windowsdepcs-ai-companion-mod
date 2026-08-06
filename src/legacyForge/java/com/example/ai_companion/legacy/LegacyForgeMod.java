@@ -23,6 +23,7 @@ import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.loading.FMLPaths;
@@ -62,6 +63,8 @@ public final class LegacyForgeMod {
 		.connectTimeout(Duration.ofSeconds(15)).build();
 	private static volatile State state = new State();
 	private static MinecraftServer server;
+	private static final LegacyWeatherManager WEATHER = new LegacyWeatherManager(
+		DATA_FILE.resolveSibling("ai_companion-weather-1.20.1.json"));
 
 	public LegacyForgeMod() {
 		MinecraftForge.EVENT_BUS.register(this);
@@ -105,6 +108,12 @@ public final class LegacyForgeMod {
 				.then(literal("assign").requires(source -> source.hasPermission(2)).then(argument("name", StringArgumentType.word())
 					.then(argument("id", StringArgumentType.word()).executes(LegacyForgeMod::promptAssign)))))
 			.then(literal("feature").then(literal("status").executes(LegacyForgeMod::featureStatus)))
+			.then(literal("weather")
+				.then(literal("status").executes(LegacyForgeMod::weatherStatus))
+				.then(literal("stop").requires(source -> source.hasPermission(2)).executes(LegacyForgeMod::weatherStop))
+				.then(literal("start").requires(source -> source.hasPermission(2))
+					.then(argument("type", StringArgumentType.word())
+						.then(argument("minutes", IntegerArgumentType.integer(1, 30)).executes(LegacyForgeMod::weatherStart)))))
 			.then(literal("config")
 				.then(literal("status").executes(LegacyForgeMod::configStatus))
 				.then(literal("endpoint").requires(source -> source.hasPermission(2)).then(argument("url", StringArgumentType.greedyString())
@@ -161,6 +170,11 @@ public final class LegacyForgeMod {
 	@SubscribeEvent
 	public void serverStopping(ServerStoppingEvent event) {
 		save();
+	}
+
+	@SubscribeEvent
+	public void serverTick(TickEvent.ServerTickEvent event) {
+		if (event.phase == TickEvent.Phase.END && server != null) WEATHER.tick(server);
 	}
 
 	private static int create(CommandContext<CommandSourceStack> context) {
@@ -334,7 +348,7 @@ public final class LegacyForgeMod {
 	}
 
 	private static int compatibility(CommandContext<CommandSourceStack> context) {
-		return ok(context, "AI Companion 0.8.3 · Minecraft 1.20.1 Forge：旧版快捷键、完整核心命令、宠物竞技与模拟社会可用");
+		return ok(context, "AI Companion 0.8.4 · Minecraft 1.20.1 Forge：旧版快捷键、完整核心命令、宠物竞技、模拟社会与自然事件可用");
 	}
 
 	private static int identity(CommandContext<CommandSourceStack> context) {
@@ -371,7 +385,37 @@ public final class LegacyForgeMod {
 	}
 
 	private static int featureStatus(CommandContext<CommandSourceStack> context) {
-		return ok(context, "1.20.1 功能：V+B 管理界面、F8 位置查询、C 缩放、G 导航入口、AI 核心、宠物竞技、模拟社会；已删除 1.20.1 不存在的金矛突进");
+		return ok(context, "1.20.1 功能：V+B 管理界面、F8 位置查询、C 缩放、G 导航入口、AI 核心、宠物竞技、模拟社会、自然事件；已删除 1.20.1 不存在的金矛突进");
+	}
+
+	private static int weatherStart(CommandContext<CommandSourceStack> context) {
+		try {
+			String raw = StringArgumentType.getString(context, "type");
+			LegacyWeatherManager.Type type = LegacyWeatherManager.parse(raw);
+			ServerLevel level = context.getSource().getLevel();
+			if (level.dimension() != Level.OVERWORLD) return fail(context, "自然事件只能从主世界启动");
+			long time = Math.floorMod(level.getDayTime(), 24000L);
+			if (type.nightOnly && (time < 13000 || time > 23000)) return fail(context, type.label + "只能在夜晚启动");
+			ServerPlayer player = context.getSource().getPlayerOrException();
+			if (type == LegacyWeatherManager.Type.SANDSTORM
+					&& !level.getBiome(player.blockPosition()).is(net.minecraft.world.level.biome.Biomes.DESERT))
+				return fail(context, "沙尘暴必须从沙漠群系启动");
+			int minutes = IntegerArgumentType.getInteger(context, "minutes");
+			WEATHER.start(raw, minutes, false);
+			server.getPlayerList().broadcastSystemMessage(Component.literal("[自然事件] " + type.label
+				+ "开始，持续 " + minutes + " 分钟"), false);
+			return 1;
+		} catch (Exception error) { return fail(context, "启动自然事件失败：" + safeError(error)); }
+	}
+
+	private static int weatherStatus(CommandContext<CommandSourceStack> context) {
+		LegacyWeatherManager.State event = WEATHER.active();
+		return ok(context, event == null ? "当前没有自然事件"
+			: LegacyWeatherManager.Type.valueOf(event.type).label + " · 剩余 " + event.remainingSeconds() + " 秒");
+	}
+
+	private static int weatherStop(CommandContext<CommandSourceStack> context) {
+		return WEATHER.stop() ? ok(context, "自然事件已停止") : fail(context, "当前没有自然事件");
 	}
 
 	private static int petCreate(CommandContext<CommandSourceStack> context) {
