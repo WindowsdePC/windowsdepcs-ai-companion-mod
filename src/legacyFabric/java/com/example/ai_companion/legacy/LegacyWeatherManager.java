@@ -20,9 +20,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.UUID;
@@ -35,6 +37,7 @@ final class LegacyWeatherManager {
 	private final SplittableRandom random = new SplittableRandom();
 	private final List<History> history = new ArrayList<>();
 	private final Set<UUID> unsubscribed = new HashSet<>();
+	private final EnumMap<Type, Integer> typeWeights = defaultTypeWeights();
 	private Policy policy = Policy.defaults();
 	private State active;
 	private long ticks;
@@ -63,6 +66,23 @@ final class LegacyWeatherManager {
 			events++; if (entry.automatic) automatic++; seconds += entry.plannedDurationSeconds;
 		}
 		return new Summary(events, automatic, events - automatic, seconds);
+	}
+	synchronized int typeWeight(Type type) { return typeWeights.getOrDefault(type, 100); }
+	synchronized void setTypeWeight(Type type, int weight) {
+		if (weight < 0 || weight > 1000) throw new IllegalArgumentException("事件权重必须为 0～1000");
+		typeWeights.put(type, weight); save();
+	}
+	synchronized String eligibleLabels(boolean night) {
+		StringBuilder value = new StringBuilder();
+		for (Type type : Type.values()) if ((night || !type.nightOnly) && typeWeight(type) > 0) {
+			if (!value.isEmpty()) value.append('/'); value.append(type.label).append('(').append(typeWeight(type)).append(')');
+		}
+		return value.isEmpty() ? "无" : value.toString();
+	}
+	synchronized String weightSummary() {
+		StringBuilder value = new StringBuilder();
+		for (Type type : Type.values()) { if (!value.isEmpty()) value.append('，'); value.append(type.label).append('=').append(typeWeight(type)); }
+		return value.toString();
 	}
 	synchronized int nextAutomaticCheckSeconds() {
 		long interval = policy.checkIntervalSeconds * 20L;
@@ -126,11 +146,23 @@ final class LegacyWeatherManager {
 		synchronized (this) { current = policy.copy(); }
 		long interval = current.checkIntervalSeconds * 20L;
 		if (!current.automaticEnabled || ticks % interval != 0 || random.nextInt(current.chanceDenominator) != 0) return;
-		Type[] types = Type.values();
-		Type type = isNight(server.overworld()) ? types[random.nextInt(types.length)]
-			: (random.nextBoolean() ? Type.SANDSTORM : Type.ENHANCED_THUNDERSTORM);
+		Type type = chooseAutomaticType(isNight(server.overworld()));
+		if (type == null) return;
 		int minutes = current.minDurationMinutes + random.nextInt(current.maxDurationMinutes - current.minDurationMinutes + 1);
 		start(type.name(), minutes, true); announce(server, "自然事件开始：" + type.label);
+	}
+
+	private synchronized Type chooseAutomaticType(boolean night) {
+		int total = 0;
+		for (Type type : Type.values()) if ((night || !type.nightOnly) && typeWeight(type) > 0) total += typeWeight(type);
+		if (total <= 0) return null;
+		int roll = random.nextInt(total);
+		for (Type type : Type.values()) {
+			if (!night && type.nightOnly) continue;
+			int weight = typeWeight(type); if (weight <= 0) continue;
+			if (roll < weight) return type; roll -= weight;
+		}
+		return null;
 	}
 
 	static Type parse(String value) { return Type.parse(value); }
@@ -148,9 +180,13 @@ final class LegacyWeatherManager {
 			State candidate = loaded.active != null ? loaded.active : loaded.legacyState();
 			if (candidate != null && candidate.valid()) active = candidate;
 			if (loaded.policy != null && loaded.policy.valid()) policy = loaded.policy;
+			typeWeights.clear(); typeWeights.putAll(defaultTypeWeights());
+			if (loaded.typeWeights != null) for (Map.Entry<String, Integer> entry : loaded.typeWeights.entrySet()) try {
+				Type type = Type.valueOf(entry.getKey()); int weight = entry.getValue(); if (weight >= 0 && weight <= 1000) typeWeights.put(type, weight);
+			} catch (Exception ignored) { }
 			if (loaded.history != null) loaded.history.stream().filter(History::valid).limit(MAX_HISTORY).forEach(history::add);
 			if (loaded.unsubscribed != null) for (String value : loaded.unsubscribed) try { unsubscribed.add(UUID.fromString(value)); } catch (IllegalArgumentException ignored) { }
-		} catch (Exception ignored) { active = null; policy = Policy.defaults(); history.clear(); unsubscribed.clear(); }
+		} catch (Exception ignored) { active = null; policy = Policy.defaults(); history.clear(); unsubscribed.clear(); typeWeights.clear(); typeWeights.putAll(defaultTypeWeights()); }
 	}
 
 	private synchronized void save() {
@@ -209,13 +245,18 @@ final class LegacyWeatherManager {
 		}
 	}
 
+	private static EnumMap<Type, Integer> defaultTypeWeights() {
+		EnumMap<Type, Integer> values = new EnumMap<>(Type.class); for (Type type : Type.values()) values.put(type, 100); return values;
+	}
+
 	private static final class Store {
-		State active; Policy policy; List<History> history; List<String> unsubscribed;
+		State active; Policy policy; List<History> history; List<String> unsubscribed; Map<String, Integer> typeWeights;
 		String type; long remainingTicks, totalTicks; boolean automatic;
 		Store() { }
 		Store(LegacyWeatherManager manager) {
 			active = manager.active; policy = manager.policy.copy(); history = List.copyOf(manager.history);
 			unsubscribed = manager.unsubscribed.stream().map(UUID::toString).sorted().toList();
+			typeWeights = new java.util.LinkedHashMap<>(); for (Type type : Type.values()) typeWeights.put(type.name(), manager.typeWeight(type));
 		}
 		State legacyState() { return type == null ? null : new State(type, remainingTicks, totalTicks, automatic); }
 	}
