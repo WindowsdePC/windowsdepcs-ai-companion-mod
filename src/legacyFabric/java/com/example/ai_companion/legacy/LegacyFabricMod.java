@@ -104,6 +104,23 @@ public final class LegacyFabricMod implements ModInitializer {
 				.then(literal("feature").then(literal("status").executes(LegacyFabricMod::featureStatus)))
 				.then(literal("weather")
 					.then(literal("status").executes(LegacyFabricMod::weatherStatus))
+					.then(literal("forecast").executes(LegacyFabricMod::weatherForecast))
+					.then(literal("history").executes(ctx -> weatherHistory(ctx, 5))
+						.then(argument("count", IntegerArgumentType.integer(1, 10))
+							.executes(ctx -> weatherHistory(ctx, IntegerArgumentType.getInteger(ctx, "count")))))
+					.then(literal("notify").then(argument("enabled", StringArgumentType.word())
+						.executes(LegacyFabricMod::weatherNotify)))
+					.then(literal("config")
+						.then(literal("status").executes(LegacyFabricMod::weatherConfigStatus))
+						.then(literal("enabled").requires(source -> source.hasPermission(2))
+							.then(argument("value", StringArgumentType.word()).executes(LegacyFabricMod::weatherConfigEnabled)))
+						.then(literal("interval").requires(source -> source.hasPermission(2))
+							.then(argument("seconds", IntegerArgumentType.integer(30, 3600)).executes(LegacyFabricMod::weatherConfigInterval)))
+						.then(literal("chance").requires(source -> source.hasPermission(2))
+							.then(argument("denominator", IntegerArgumentType.integer(1, 10000)).executes(LegacyFabricMod::weatherConfigChance)))
+						.then(literal("duration").requires(source -> source.hasPermission(2))
+							.then(argument("minimum", IntegerArgumentType.integer(1, 30))
+								.then(argument("maximum", IntegerArgumentType.integer(1, 30)).executes(LegacyFabricMod::weatherConfigDuration)))))
 					.then(literal("stop").requires(source -> source.hasPermission(2)).executes(LegacyFabricMod::weatherStop))
 					.then(literal("start").requires(source -> source.hasPermission(2))
 						.then(argument("type", StringArgumentType.word())
@@ -389,8 +406,7 @@ public final class LegacyFabricMod implements ModInitializer {
 				return fail(context, "沙尘暴必须从沙漠群系启动");
 			int minutes = IntegerArgumentType.getInteger(context, "minutes");
 			WEATHER.start(raw, minutes, false);
-			server.getPlayerList().broadcastSystemMessage(Component.literal("[自然事件] " + type.label
-				+ "开始，持续 " + minutes + " 分钟"), false);
+			WEATHER.announce(server, type.label + "开始，持续 " + minutes + " 分钟");
 			return 1;
 		} catch (Exception error) { return fail(context, "启动自然事件失败：" + safeError(error)); }
 	}
@@ -402,8 +418,44 @@ public final class LegacyFabricMod implements ModInitializer {
 	}
 
 	private static int weatherStop(CommandContext<CommandSourceStack> context) {
-		return WEATHER.stop() ? ok(context, "自然事件已停止") : fail(context, "当前没有自然事件");
+		if (!WEATHER.stop()) return fail(context, "当前没有自然事件");
+		WEATHER.announce(server, "已由管理员停止"); return 1;
 	}
+
+	private static int weatherForecast(CommandContext<CommandSourceStack> context) {
+		LegacyWeatherManager.Policy value = WEATHER.policy();
+		long time = Math.floorMod(context.getSource().getLevel().getDayTime(), 24000L);
+		String eligible = time >= 13000 && time <= 23000 ? "极光/流星雨/沙尘暴/增强雷暴" : "沙尘暴/增强雷暴";
+		return ok(context, value.automaticEnabled ? "自然事件预报：" + WEATHER.nextAutomaticCheckSeconds() + " 秒后检查，候选 " + eligible : "自然事件预报：自动生成已关闭");
+	}
+
+	private static int weatherHistory(CommandContext<CommandSourceStack> context, int count) {
+		var entries = WEATHER.history(count); if (entries.isEmpty()) return ok(context, "尚无自然事件历史");
+		var formatter = java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm").withZone(java.time.ZoneId.systemDefault());
+		for (LegacyWeatherManager.History entry : entries) context.getSource().sendSuccess(() -> Component.literal(
+			formatter.format(java.time.Instant.ofEpochMilli(entry.startedAtEpochMillis)) + " · "
+			+ LegacyWeatherManager.Type.valueOf(entry.type).label + " · " + entry.plannedDurationSeconds + " 秒 · "
+			+ (entry.automatic ? "自然" : "管理员")), false);
+		return entries.size();
+	}
+
+	private static int weatherNotify(CommandContext<CommandSourceStack> context) {
+		try { boolean enabled = parseWeatherBoolean(StringArgumentType.getString(context, "enabled"));
+			WEATHER.setNotifications(context.getSource().getPlayerOrException().getUUID(), enabled);
+			return ok(context, "自然事件通知已" + (enabled ? "开启" : "关闭")); }
+		catch (Exception error) { return fail(context, "通知设置失败：" + safeError(error)); }
+	}
+
+	private static int weatherConfigStatus(CommandContext<CommandSourceStack> context) {
+		LegacyWeatherManager.Policy value = WEATHER.policy(); return ok(context, "自动=" + value.automaticEnabled
+			+ "，间隔=" + value.checkIntervalSeconds + "秒，单次概率=1/" + value.chanceDenominator
+			+ "，时长=" + value.minDurationMinutes + "～" + value.maxDurationMinutes + "分钟");
+	}
+	private static int weatherConfigEnabled(CommandContext<CommandSourceStack> context) { try { WEATHER.setAutomaticEnabled(parseWeatherBoolean(StringArgumentType.getString(context, "value"))); return weatherConfigStatus(context); } catch (Exception error) { return fail(context, safeError(error)); } }
+	private static int weatherConfigInterval(CommandContext<CommandSourceStack> context) { try { WEATHER.setCheckInterval(IntegerArgumentType.getInteger(context, "seconds")); return weatherConfigStatus(context); } catch (Exception error) { return fail(context, safeError(error)); } }
+	private static int weatherConfigChance(CommandContext<CommandSourceStack> context) { try { WEATHER.setChance(IntegerArgumentType.getInteger(context, "denominator")); return weatherConfigStatus(context); } catch (Exception error) { return fail(context, safeError(error)); } }
+	private static int weatherConfigDuration(CommandContext<CommandSourceStack> context) { try { WEATHER.setDuration(IntegerArgumentType.getInteger(context, "minimum"), IntegerArgumentType.getInteger(context, "maximum")); return weatherConfigStatus(context); } catch (Exception error) { return fail(context, safeError(error)); } }
+	private static boolean parseWeatherBoolean(String raw) { return switch (raw.toLowerCase(Locale.ROOT)) { case "true", "on", "yes", "1" -> true; case "false", "off", "no", "0" -> false; default -> throw new IllegalArgumentException("值必须是 on/off 或 true/false"); }; }
 
 	private static int petCreate(CommandContext<CommandSourceStack> context) {
 		ServerPlayer owner;
