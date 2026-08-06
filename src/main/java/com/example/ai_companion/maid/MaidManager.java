@@ -10,17 +10,24 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 /** Owns maid metadata while reusing the existing safe fake-player AI executor. */
 public final class MaidManager implements AutoCloseable {
 	private final AgentManager agents;
 	private final MaidStore store = MaidStore.load();
+	private final MaidInventoryStore inventoryStore = new MaidInventoryStore();
 	private final Map<String, MaidProfile> maids = new LinkedHashMap<>();
 
 	public MaidManager(AgentManager agents) {
@@ -151,6 +158,48 @@ public final class MaidManager implements AutoCloseable {
 			profile.name(), profile.level(), MaidProgression.MAX_LEVEL, profile.workExperience(), workCost,
 			playerLevels, MaidProgression.frontLevelPointCost(playerLevels),
 			MaidProgression.maxHealth(profile.level()));
+	}
+
+	public synchronized void openInventory(ServerPlayer owner, String name) {
+		MaidProfile profile = requireOwned(owner, name);
+		MaidInventoryContainer container = new MaidInventoryContainer(owner.getUUID(), profile.level(),
+			inventoryStore.load(profile.name(), owner.registryAccess()));
+		container.addListener(changed -> inventoryStore.save(profile.name(), container.snapshot(),
+			owner.registryAccess()));
+		int unlocked = container.unlockedStorageSlots();
+		Component title = Component.literal("生物背包 · " + profile.name() + " Lv." + profile.level()
+			+ " · " + unlocked + "/" + MaidInventoryLayout.STORAGE_SLOTS
+			+ "格 · 下方：玩家背包");
+		owner.openMenu(new SimpleMenuProvider((containerId, playerInventory, player) ->
+			ChestMenu.sixRows(containerId, playerInventory, container), title));
+	}
+
+	public synchronized int sortInventory(ServerPlayer owner, String name) {
+		MaidProfile profile = requireOwned(owner, name);
+		List<ItemStack> stacks = new ArrayList<>(inventoryStore.load(profile.name(), owner.registryAccess()));
+		int backpackCount = 0;
+		for (int slot = MaidInventoryLayout.FIRST_BACKPACK_SLOT;
+				slot < MaidInventoryLayout.TOTAL_SLOTS; slot++) {
+			if (BackpackCompatibility.isBackpack(stacks.get(slot))) backpackCount++;
+		}
+		int unlocked = MaidInventoryLayout.unlockedStorageSlots(profile.level(), backpackCount);
+		List<ItemStack> sortable = stacks.subList(0, unlocked).stream().filter(stack -> !stack.isEmpty())
+			.map(ItemStack::copy).sorted(Comparator
+				.comparing((ItemStack stack) -> BuiltInRegistries.ITEM.getKey(stack.getItem()).toString())
+				.thenComparing(stack -> stack.getHoverName().getString())).toList();
+		for (int slot = 0; slot < unlocked; slot++) {
+			stacks.set(slot, slot < sortable.size() ? sortable.get(slot) : ItemStack.EMPTY);
+		}
+		inventoryStore.save(profile.name(), stacks, owner.registryAccess());
+		return sortable.size();
+	}
+
+	public synchronized String inventoryStatus(String name) {
+		MaidProfile profile = require(name);
+		int base = MaidInventoryLayout.baseUnlockedStorageSlots(profile.level());
+		return "%s · 生物背包基础解锁 %d/%d 格 · 外部背包槽 2 · 每个有效背包额外解锁 %d 格".formatted(
+			profile.name(), base, MaidInventoryLayout.STORAGE_SLOTS,
+			MaidInventoryLayout.STORAGE_SLOTS_PER_BACKPACK);
 	}
 
 	private synchronized void awardWorkExperience(String name, int amount) {

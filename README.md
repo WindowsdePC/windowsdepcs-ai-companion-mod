@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.7.7](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.7.7)
+当前版本：[v0.7.8](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.7.8)
 
 ## 环境要求
 
@@ -109,6 +109,10 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 - 可选 Simple Voice Chat 检测不改变模组的必需依赖；语音识别提供者产生的转写可经专用通道发送给女仆。
 - 第三版成长系统从 0 级、20 点最大生命开始；执行安全工作会积累工作经验，所有者可主动选择工作经验或玩家经验升级，每级增加 2 点最大生命。
 - 玩家等级费用按前 N 级的实际经验点收取（例如前 4 级为 40 点），不会再把当前显示等级直接减去 N。
+- 女仆生物背包默认解锁两排（18 格），每级再解锁 2 格；标准 9×6 箱子容器使常见一键整理模组可以按普通容器兼容。
+- UI 上方标题标明“生物背包”，并注明下方是“玩家背包”；另有两个外部背包槽，最多背上两个背包。
+- 每个已装备的有效背包额外解锁 9 个生物背包格。兼容检测支持 `c:backpacks`、`fabric:backpacks`、常见背包模组命名空间和 backpack/satchel 物品 ID，不要求安装特定模组。
+- 外部背包物品及其数据组件会完整持久化；其他模组背包内部私有槽位仍由对应模组管理，本模组不会复制或改写其内部物品。
 
 ### 双 UI 配置
 

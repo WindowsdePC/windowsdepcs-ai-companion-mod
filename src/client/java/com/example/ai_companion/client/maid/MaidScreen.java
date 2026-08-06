@@ -78,6 +78,10 @@ public final class MaidScreen extends Screen {
 			.bounds(left, 307, 180, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("使用玩家经验升级"), button -> upgrade(true))
 			.bounds(left + 190, 307, 180, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("打开生物背包"), button -> inventory())
+			.bounds(left, 337, 180, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("一键整理生物背包"), button -> sortInventory())
+			.bounds(left + 190, 337, 180, 20).build());
 
 		EditBox owner = addRenderableWidget(new EditBox(font, left, 273, 280, 20,
 			Component.literal("新所有者玩家名")));
@@ -160,6 +164,22 @@ public final class MaidScreen extends Screen {
 			sendCommand("aimaid upgrade " + name + (playerExperience ? " player" : " work"));
 			status = "已请求升级；只有所有者主动点击后才会扣除对应经验";
 		} catch (RuntimeException error) { status = "升级失败：" + error.getMessage(); }
+	}
+
+	private void inventory() {
+		try {
+			validateName();
+			sendCommand("aimaid inventory " + name);
+			status = "已请求打开：上方生物背包，下方玩家背包";
+		} catch (RuntimeException error) { status = "打开背包失败：" + error.getMessage(); }
+	}
+
+	private void sortInventory() {
+		try {
+			validateName();
+			sendCommand("aimaid sort " + name);
+			status = "已请求整理已解锁的生物背包格；两个外部背包槽保持不变";
+		} catch (RuntimeException error) { status = "整理失败：" + error.getMessage(); }
 	}
 
 	private void importTexture(boolean cape) {

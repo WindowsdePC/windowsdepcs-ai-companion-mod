@@ -61,6 +61,12 @@ public final class MaidCommands {
 							StringArgumentType.getString(c, "name"), false)))
 						.then(Commands.literal("player").executes(c -> upgrade(c.getSource(), maids,
 							StringArgumentType.getString(c, "name"), true)))))
+				.then(Commands.literal("inventory")
+					.then(Commands.argument("name", StringArgumentType.word())
+						.executes(c -> inventory(c.getSource(), maids, StringArgumentType.getString(c, "name")))))
+				.then(Commands.literal("sort")
+					.then(Commands.argument("name", StringArgumentType.word())
+						.executes(c -> sort(c.getSource(), maids, StringArgumentType.getString(c, "name")))))
 				.then(Commands.literal("mood")
 					.then(Commands.argument("name", StringArgumentType.word())
 						.executes(c -> mood(c.getSource(), maids, StringArgumentType.getString(c, "name")))))
@@ -163,6 +169,30 @@ public final class MaidCommands {
 			return 1;
 		} catch (Exception error) {
 			source.sendFailure(Component.literal("升级失败：" + error.getMessage()));
+			return 0;
+		}
+	}
+
+	private static int inventory(CommandSourceStack source, MaidManager maids, String name) {
+		try {
+			var player = source.getPlayerOrException();
+			maids.openInventory(player, name);
+			player.sendOverlayMessage(Component.literal(maids.inventoryStatus(name)));
+			return 1;
+		} catch (Exception error) {
+			source.sendFailure(Component.literal("打开女仆背包失败：" + error.getMessage()));
+			return 0;
+		}
+	}
+
+	private static int sort(CommandSourceStack source, MaidManager maids, String name) {
+		try {
+			int stacks = maids.sortInventory(source.getPlayerOrException(), name);
+			source.getPlayerOrException().sendOverlayMessage(Component.literal(
+				"已整理 " + name + " 的生物背包，共 " + stacks + " 组物品"));
+			return stacks;
+		} catch (Exception error) {
+			source.sendFailure(Component.literal("整理女仆背包失败：" + error.getMessage()));
 			return 0;
 		}
 	}
