@@ -16,15 +16,15 @@ jobs:
       matrix:
         include:
           - target: mc26.2-fabric
-            ref: main
+            ref: codex/0.8.1-main
             java: "25"
             artifact_prefix: windowsdepcs-ai-companion-mc26.2-fabric
           - target: mc1.20.1-fabric
-            ref: mc-1.20.1-fabric
+            ref: codex/0.8.1-fabric
             java: "17"
             artifact_prefix: windowsdepcs-ai-companion-mc1.20.1-fabric
           - target: mc1.20.1-forge
-            ref: mc-1.20.1-forge
+            ref: codex/0.8.1-forge
             java: "17"
             artifact_prefix: windowsdepcs-ai-companion-mc1.20.1-forge
     runs-on: ubuntu-latest
