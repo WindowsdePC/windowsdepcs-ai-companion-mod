@@ -51,15 +51,17 @@ public final class MaidStore {
 	}
 
 	private record Entry(String name, String ownerUuid, String ownerName, String skinKey,
-			String capeKey, String mood, boolean stored) {
+			String capeKey, String mood, boolean stored, int level, int workExperience) {
 		MaidProfile toProfile() {
 			MaidMood parsed;
 			try { parsed = MaidMood.valueOf(mood); } catch (RuntimeException ignored) { parsed = MaidMood.CALM; }
-			return new MaidProfile(name, UUID.fromString(ownerUuid), ownerName, skinKey, capeKey, parsed, stored);
+			return new MaidProfile(name, UUID.fromString(ownerUuid), ownerName, skinKey, capeKey, parsed,
+				stored, level, workExperience);
 		}
 		static Entry from(MaidProfile profile) {
 			return new Entry(profile.name(), profile.ownerUuid().toString(), profile.ownerName(),
-				profile.skinKey(), profile.capeKey(), profile.mood().name(), profile.stored());
+				profile.skinKey(), profile.capeKey(), profile.mood().name(), profile.stored(),
+				profile.level(), profile.workExperience());
 		}
 	}
 }

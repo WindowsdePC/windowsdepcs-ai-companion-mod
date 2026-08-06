@@ -9,6 +9,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -26,6 +27,8 @@ public final class MaidManager implements AutoCloseable {
 		this.agents = agents;
 		store.profiles().forEach(profile -> maids.put(profile.name().toLowerCase(), profile));
 		agents.setPromptDecorator(this::decoratePrompt);
+		agents.setActionObserver((name, decision) -> awardWorkExperience(name,
+			MaidProgression.workExperienceForAction(decision.action())));
 	}
 
 	public synchronized MaidProfile summon(ServerPlayer owner, String name, String skinKey, String capeKey) {
@@ -37,13 +40,17 @@ public final class MaidManager implements AutoCloseable {
 			skinKey, capeKey, MaidMood.HAPPY, false);
 		maids.put(key, profile);
 		updateNameTag(profile);
+		applyHealth(profile, true);
 		save();
 		return profile;
 	}
 
 	public synchronized void restore(MinecraftServer server) {
 		maids.values().stream().filter(profile -> !profile.stored() && agents.hasAgent(profile.name()))
-			.forEach(this::updateNameTag);
+			.forEach(profile -> {
+				updateNameTag(profile);
+				applyHealth(profile, false);
+			});
 	}
 
 	public void chat(ServerPlayer sender, String name, String instruction, Consumer<String> result) {
@@ -103,12 +110,77 @@ public final class MaidManager implements AutoCloseable {
 		MaidProfile active = profile.withStored(false).withMood(MaidMood.HAPPY);
 		maids.put(active.name().toLowerCase(), active);
 		updateNameTag(active);
+		applyHealth(active, true);
 		save();
 		return active;
 	}
 
 	public boolean voiceChatAvailable() {
 		return net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("voicechat");
+	}
+
+	public synchronized MaidProfile upgradeWithWorkExperience(ServerPlayer owner, String name) {
+		MaidProfile profile = requireOwned(owner, name);
+		int cost = MaidProgression.workExperienceCost(profile.level());
+		if (profile.workExperience() < cost) {
+			throw new IllegalStateException("工作经验不足：需要 " + cost + "，当前 " + profile.workExperience());
+		}
+		return completeUpgrade(profile, profile.workExperience() - cost);
+	}
+
+	public synchronized MaidProfile upgradeWithPlayerExperience(ServerPlayer owner, String name) {
+		MaidProfile profile = requireOwned(owner, name);
+		int displayedLevels = MaidProgression.playerLevelCost(profile.level());
+		int pointCost = MaidProgression.frontLevelPointCost(displayedLevels);
+		if (owner.totalExperience < pointCost) {
+			throw new IllegalStateException("玩家经验不足：需要前 " + displayedLevels + " 级共 " + pointCost + " 点经验");
+		}
+		owner.giveExperiencePoints(-pointCost);
+		return completeUpgrade(profile, profile.workExperience());
+	}
+
+	public synchronized String progressionStatus(String name) {
+		MaidProfile profile = require(name);
+		if (profile.level() >= MaidProgression.MAX_LEVEL) {
+			return "%s · 等级 %d（已满级）· 工作经验 %d · 最大生命 %.0f".formatted(profile.name(),
+				profile.level(), profile.workExperience(), MaidProgression.maxHealth(profile.level()));
+		}
+		int workCost = MaidProgression.workExperienceCost(profile.level());
+		int playerLevels = MaidProgression.playerLevelCost(profile.level());
+		return "%s · 等级 %d/%d · 工作经验 %d/%d · 玩家升级费用=前%d级(%d点) · 最大生命 %.0f".formatted(
+			profile.name(), profile.level(), MaidProgression.MAX_LEVEL, profile.workExperience(), workCost,
+			playerLevels, MaidProgression.frontLevelPointCost(playerLevels),
+			MaidProgression.maxHealth(profile.level()));
+	}
+
+	private synchronized void awardWorkExperience(String name, int amount) {
+		MaidProfile profile = maids.get(name == null ? "" : name.toLowerCase());
+		if (profile == null || profile.stored() || amount <= 0) return;
+		MaidProfile updated = profile.addWorkExperience(amount);
+		maids.put(updated.name().toLowerCase(), updated);
+		updateNameTag(updated);
+		save();
+	}
+
+	private MaidProfile completeUpgrade(MaidProfile profile, int remainingWorkExperience) {
+		MaidProfile updated = profile.withProgress(profile.level() + 1, remainingWorkExperience)
+			.withMood(MaidMood.HAPPY);
+		maids.put(updated.name().toLowerCase(), updated);
+		applyHealth(updated, true);
+		updateNameTag(updated);
+		save();
+		return updated;
+	}
+
+	private void applyHealth(MaidProfile profile, boolean healToMaximum) {
+		if (profile.stored() || !agents.hasAgent(profile.name())) return;
+		var player = agents.managedPlayer(profile.name());
+		var attribute = player.getAttribute(Attributes.MAX_HEALTH);
+		if (attribute == null) return;
+		double maximum = MaidProgression.maxHealth(profile.level());
+		attribute.setBaseValue(maximum);
+		if (healToMaximum) player.setHealth((float) maximum);
+		else if (player.getHealth() > maximum) player.setHealth((float) maximum);
 	}
 
 	private String decoratePrompt(String agentName, String prompt) {
@@ -162,7 +234,7 @@ public final class MaidManager implements AutoCloseable {
 	private void updateNameTag(MaidProfile profile) {
 		if (!agents.hasAgent(profile.name())) return;
 		agents.managedPlayer(profile.name()).setCustomName(Component.literal(
-			profile.name() + "  💬 心情：" + profile.mood().displayName()));
+			profile.name() + "  Lv." + profile.level() + "  💬 心情：" + profile.mood().displayName()));
 		agents.managedPlayer(profile.name()).setCustomNameVisible(true);
 	}
 

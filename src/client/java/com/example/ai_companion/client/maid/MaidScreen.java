@@ -72,6 +72,12 @@ public final class MaidScreen extends Screen {
 			.bounds(left + 300, 233, 110, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("语音兼容状态"), button -> voiceStatus())
 			.bounds(left + 420, 233, 120, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("查看成长"), button -> progression())
+			.bounds(left + 420, 273, 120, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("使用工作经验升级"), button -> upgrade(false))
+			.bounds(left, 307, 180, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("使用玩家经验升级"), button -> upgrade(true))
+			.bounds(left + 190, 307, 180, 20).build());
 
 		EditBox owner = addRenderableWidget(new EditBox(font, left, 273, 280, 20,
 			Component.literal("新所有者玩家名")));
@@ -140,6 +146,22 @@ public final class MaidScreen extends Screen {
 		status = "已查询 Simple Voice Chat 可选兼容状态";
 	}
 
+	private void progression() {
+		try {
+			validateName();
+			sendCommand("aimaid progress " + name);
+			status = "已查询 " + name + " 的等级、工作经验和生命成长";
+		} catch (RuntimeException error) { status = "查询失败：" + error.getMessage(); }
+	}
+
+	private void upgrade(boolean playerExperience) {
+		try {
+			validateName();
+			sendCommand("aimaid upgrade " + name + (playerExperience ? " player" : " work"));
+			status = "已请求升级；只有所有者主动点击后才会扣除对应经验";
+		} catch (RuntimeException error) { status = "升级失败：" + error.getMessage(); }
+	}
+
 	private void importTexture(boolean cape) {
 		Frame frame = new Frame();
 		try {
@@ -195,6 +217,7 @@ public final class MaidScreen extends Screen {
 		graphics.text(font, "女仆名字", left, 40, 0xFFA0A0A0);
 		graphics.text(font, "文字聊天 / AI 指令", left, 189, 0xFFA0A0A0);
 		graphics.text(font, "所有权与背包", left, 260, 0xFFA0A0A0);
+		graphics.text(font, "第三版成长：工作经验 / 玩家经验（二选一，由玩家确认）", left, 296, 0xFFA0A0A0);
 		graphics.text(font, "默认皮肤名称来自上传文件名；括号内容不会进入名称。", left, 176, 0xFFB0BEC5);
 		graphics.text(font, status, left, height - 31, status.contains("失败") ? 0xFFFF7777 : 0xFFA8E6A3);
 	}

@@ -29,6 +29,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.BiFunction;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -76,6 +77,7 @@ public final class AgentManager implements AutoCloseable {
 	private final AgentIdentityStore identityStore = AgentIdentityStore.load();
 	private Function<String, String> collaborationContext = ignored -> "";
 	private BiFunction<String, String, String> promptDecorator = (ignored, prompt) -> prompt;
+	private BiConsumer<String, AiDecision> actionObserver = (ignored, decision) -> { };
 	private long nextIdentitySaveTick;
 
 	public record AgentView(String name, AgentMode mode, String targetName, boolean thinking,
@@ -215,6 +217,11 @@ public final class AgentManager implements AutoCloseable {
 	/** Lets feature modules add per-agent identity context without replacing prompt presets. */
 	public synchronized void setPromptDecorator(BiFunction<String, String, String> decorator) {
 		promptDecorator = decorator == null ? (ignored, prompt) -> prompt : decorator;
+	}
+
+	/** Reports successfully applied allow-listed actions to progression modules. */
+	public synchronized void setActionObserver(BiConsumer<String, AiDecision> observer) {
+		actionObserver = observer == null ? (ignored, decision) -> { } : observer;
 	}
 
 	public synchronized AgentIdentity identity(String name, MinecraftServer server) {
@@ -444,15 +451,21 @@ public final class AgentManager implements AutoCloseable {
 		return agent;
 	}
 
-	private synchronized void apply(MinecraftServer server, Agent agent, AiDecision decision) {
-		if (!decision.say().isBlank()) {
-			server.getPlayerList().broadcastSystemMessage(
-				Component.literal("<" + agent.name + "> " + decision.say()), false);
+	private void apply(MinecraftServer server, Agent agent, AiDecision decision) {
+		BiConsumer<String, AiDecision> observer;
+		synchronized (this) {
+			if (!decision.say().isBlank()) {
+				server.getPlayerList().broadcastSystemMessage(
+					Component.literal("<" + agent.name + "> " + decision.say()), false);
+			}
+			if (decision.action().equals("move") && !agent.furnitureSeated) {
+				agent.remainingX = decision.dx();
+				agent.remainingZ = decision.dz();
+			}
+			observer = actionObserver;
 		}
-		if (decision.action().equals("move") && !agent.furnitureSeated) {
-			agent.remainingX = decision.dx();
-			agent.remainingZ = decision.dz();
-		}
+		// Do not call feature modules while holding the agent lock: maid operations call back into us.
+		observer.accept(agent.name, decision);
 	}
 
 	private static String rootMessage(Throwable throwable) {

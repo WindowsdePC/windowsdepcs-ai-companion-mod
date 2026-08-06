@@ -52,6 +52,15 @@ public final class MaidCommands {
 								StringArgumentType.getString(c, "name"),
 								StringArgumentType.getString(c, "player"))))))
 				.then(Commands.literal("voice-status").executes(c -> voiceStatus(c.getSource(), maids)))
+				.then(Commands.literal("progress")
+					.then(Commands.argument("name", StringArgumentType.word())
+						.executes(c -> progress(c.getSource(), maids, StringArgumentType.getString(c, "name")))))
+				.then(Commands.literal("upgrade")
+					.then(Commands.argument("name", StringArgumentType.word())
+						.then(Commands.literal("work").executes(c -> upgrade(c.getSource(), maids,
+							StringArgumentType.getString(c, "name"), false)))
+						.then(Commands.literal("player").executes(c -> upgrade(c.getSource(), maids,
+							StringArgumentType.getString(c, "name"), true)))))
 				.then(Commands.literal("mood")
 					.then(Commands.argument("name", StringArgumentType.word())
 						.executes(c -> mood(c.getSource(), maids, StringArgumentType.getString(c, "name")))))
@@ -132,6 +141,32 @@ public final class MaidCommands {
 		return available ? 1 : 0;
 	}
 
+	private static int progress(CommandSourceStack source, MaidManager maids, String name) {
+		try {
+			source.sendSuccess(() -> Component.literal(maids.progressionStatus(name)), false);
+			return 1;
+		} catch (RuntimeException error) {
+			source.sendFailure(Component.literal("读取成长状态失败：" + error.getMessage()));
+			return 0;
+		}
+	}
+
+	private static int upgrade(CommandSourceStack source, MaidManager maids, String name,
+			boolean usePlayerExperience) {
+		try {
+			MaidProfile profile = usePlayerExperience
+				? maids.upgradeWithPlayerExperience(source.getPlayerOrException(), name)
+				: maids.upgradeWithWorkExperience(source.getPlayerOrException(), name);
+			source.getPlayerOrException().sendOverlayMessage(Component.literal(
+				profile.name() + " 已升级到 Lv." + profile.level() + "，最大生命 "
+					+ (int) com.example.ai_companion.maid.MaidProgression.maxHealth(profile.level())));
+			return 1;
+		} catch (Exception error) {
+			source.sendFailure(Component.literal("升级失败：" + error.getMessage()));
+			return 0;
+		}
+	}
+
 	private static int mood(CommandSourceStack source, MaidManager maids, String name) {
 		try {
 			MaidProfile profile = maids.profile(name);
@@ -152,6 +187,7 @@ public final class MaidCommands {
 		}
 		profiles.forEach(profile -> source.sendSuccess(() -> Component.literal("- " + profile.name()
 			+ " · 主人=" + profile.ownerName() + " · 皮肤=" + profile.skinKey()
+			+ " · Lv." + profile.level() + " · 工作经验=" + profile.workExperience()
 			+ " · 心情=" + profile.mood().displayName()), false));
 		return profiles.size();
 	}

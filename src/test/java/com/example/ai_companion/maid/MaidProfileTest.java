@@ -36,4 +36,22 @@ class MaidProfileTest {
 		assertEquals("1000030745", changed.skinKey());
 		assertEquals("custom/cape", changed.capeKey());
 	}
+
+	@Test void progressionPreservesIdentityAndClampsValues() {
+		UUID owner = UUID.randomUUID();
+		MaidProfile profile = new MaidProfile("Maid_03", owner, "Alex", "1000030744", "",
+			MaidMood.CALM, false, 2, 35).addWorkExperience(9).withProgress(3, 4);
+		assertEquals(owner, profile.ownerUuid());
+		assertEquals(3, profile.level());
+		assertEquals(4, profile.workExperience());
+		assertEquals(26.0, MaidProgression.maxHealth(profile.level()));
+	}
+
+	@Test void frontLevelCostsUseLowLevelsInsteadOfCurrentLevelSubtraction() {
+		assertEquals(0, MaidProgression.frontLevelPointCost(0));
+		assertEquals(7, MaidProgression.frontLevelPointCost(1));
+		assertEquals(40, MaidProgression.frontLevelPointCost(4));
+		assertEquals(352, MaidProgression.frontLevelPointCost(16));
+		assertTrue(MaidProgression.frontLevelPointCost(32) > MaidProgression.frontLevelPointCost(31));
+	}
 }
