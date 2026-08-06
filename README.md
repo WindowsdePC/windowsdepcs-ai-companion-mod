@@ -4,15 +4,15 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.8.0](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.8.0)
+当前版本：[v0.8.1](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.8.1)
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.8.0.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.0.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.8.0.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.8.1.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.1.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.8.1.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
@@ -67,6 +67,14 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 - 每名 AI 有两次有限治疗机会；低生命值时可搭建最多两格高的临时圆石掩体。
 - 比赛自动判断淘汰、队伍胜利和 10 分钟超时平局，可随时查询状态或由管理员安全停止。
 - 开始前会保存参赛 AI 的位置、生命值、主副手和无敌状态；结束时全部恢复，临时掩体也会还原为原方块。
+
+### AI 宠物竞技
+
+- 每位玩家可创建最多 8 只持久化竞技宠物，拥有速度、力量、耐力三项 1～100 属性。
+- `/aipet train` 可提升指定属性；同一只宠物每 30 秒最多训练一次，属性不会超过 100。
+- 竞速支持 2～8 只宠物，综合速度、耐力、力量和受种子约束的小幅波动生成完整排名。
+- 战斗使用速度决定先手、力量决定伤害、耐力决定生命与减伤，最多 100 回合并保证确定结果。
+- 竞速胜场、战斗胜场和总参赛数随玩家 UUID 持久化；玩家不能操作其他玩家的宠物。
 
 ### AI 助手球
 
@@ -308,6 +316,12 @@ UI 是主要入口，管理员也可以使用命令：
 /ai battle free-for-all <AI一> <AI二> <AI三> [更多AI]
 /ai battle status
 /ai battle stop
+/aipet create <名称>
+/aipet list
+/aipet status <名称>
+/aipet train <名称> <speed|strength|endurance>
+/aipet race <宠物一,宠物二[,更多宠物]>
+/aipet battle <宠物一> <宠物二>
 /aiplayer orb chat <消息>
 /aiplayer orb explore
 /aiplayer orb waypoint save <名称>
@@ -360,9 +374,9 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-mc26.2-fabric-0.8.0.jar`：26.2 Fabric 正式模组。
-- `windowsdepcs-ai-companion-mc26.2-fabric-0.8.0-sources.jar`：本地源码包。
-- `windowsdepcs-ai-companion-mc26.2-fabric-0.8.0-javadoc.jar`：本地 Java API 文档包。
+- `windowsdepcs-ai-companion-mc26.2-fabric-0.8.1.jar`：26.2 Fabric 正式模组。
+- `windowsdepcs-ai-companion-mc26.2-fabric-0.8.1-sources.jar`：本地源码包。
+- `windowsdepcs-ai-companion-mc26.2-fabric-0.8.1-javadoc.jar`：本地 Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 从 v0.8.0 起，GitHub Release 同时附加三个平台的正式模组 JAR，不上传 Sources 或 Javadoc JAR。
