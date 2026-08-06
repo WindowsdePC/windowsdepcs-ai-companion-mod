@@ -13,8 +13,8 @@
 不再上传 Sources JAR、Javadoc JAR、完整工程 ZIP 或 SHA-256 校验清单。源码使用 GitHub
 自动生成的 `Source code (zip)` 与 `Source code (tar.gz)`；开发者也可直接克隆仓库。
 
-推送 `v*` 标签后，`.github/workflows/release.yml` 会分别检出三个正式分支，使用 Java 25 或
-Java 17 运行完整构建与测试。只有三个构建全部成功才创建 Release。若任一工作流失败，
+推送 `v*` 标签后，`.github/workflows/release.yml` 会分别检出三个正式分支，使用 Java 25、
+Java 21（输出 Java 17 字节码）或 Java 17 运行完整构建与测试。只有三个构建全部成功才创建 Release。若任一工作流失败，
 不得手动上传未经对应加载器工具链验证的 JAR。
 
 ## 版本规则
