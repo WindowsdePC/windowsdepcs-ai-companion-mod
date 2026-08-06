@@ -88,6 +88,19 @@ public final class LegacyFabricMod implements ModInitializer {
 					.then(literal("token").then(argument("token", StringArgumentType.greedyString())
 						.executes(ctx -> setConfig(ctx, "token")))))
 				.then(literal("compatibility").executes(LegacyFabricMod::compatibility))));
+		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+			dispatcher.register(literal("aipet")
+				.then(literal("create").then(argument("name", StringArgumentType.word())
+					.executes(LegacyFabricMod::petCreate)))
+				.then(literal("list").executes(LegacyFabricMod::petList))
+				.then(literal("status").then(argument("name", StringArgumentType.word())
+					.executes(LegacyFabricMod::petStatus)))
+				.then(literal("train").then(argument("name", StringArgumentType.word())
+					.then(argument("attribute", StringArgumentType.word()).executes(LegacyFabricMod::petTrain))))
+				.then(literal("race").then(argument("pets", StringArgumentType.greedyString())
+					.executes(LegacyFabricMod::petRace)))
+				.then(literal("battle").then(argument("first", StringArgumentType.word())
+					.then(argument("second", StringArgumentType.word()).executes(LegacyFabricMod::petBattle))))));
 
 		ServerLifecycleEvents.SERVER_STARTED.register(LegacyFabricMod::start);
 		ServerLifecycleEvents.SERVER_STOPPING.register(ignored -> save());
@@ -249,7 +262,101 @@ public final class LegacyFabricMod implements ModInitializer {
 	}
 
 	private static int compatibility(CommandContext<CommandSourceStack> context) {
-		return ok(context, "AI Companion 0.8.0 · Minecraft 1.20.1 Fabric：AI 创建/模式/天眼/API/白名单动作/持久化可用");
+		return ok(context, "AI Companion 0.8.1 · Minecraft 1.20.1 Fabric：AI 核心与宠物竞技可用");
+	}
+
+	private static int petCreate(CommandContext<CommandSourceStack> context) {
+		String name = StringArgumentType.getString(context, "name");
+		if (!name.matches("[A-Za-z0-9_\\-]{1,24}")) return fail(context, "宠物名称格式无效");
+		UUID owner = petOwner(context);
+		if (owner == null) return 0;
+		if (state.pets.values().stream().filter(pet -> pet.owner.equals(owner.toString())).count() >= 8) {
+			return fail(context, "每位玩家最多拥有 8 只竞技宠物");
+		}
+		String key = petKey(owner, name);
+		if (state.pets.containsKey(key)) return fail(context, "同名宠物已存在");
+		PetData pet = new PetData(owner.toString(), name);
+		state.pets.put(key, pet); save();
+		return ok(context, "已创建宠物：" + pet.text());
+	}
+
+	private static int petList(CommandContext<CommandSourceStack> context) {
+		UUID owner = petOwner(context); if (owner == null) return 0;
+		var pets = state.pets.values().stream().filter(pet -> pet.owner.equals(owner.toString())).toList();
+		if (pets.isEmpty()) return ok(context, "你还没有竞技宠物");
+		pets.forEach(pet -> context.getSource().sendSuccess(() -> Component.literal(pet.text()), false));
+		return pets.size();
+	}
+
+	private static int petStatus(CommandContext<CommandSourceStack> context) {
+		PetData pet = pet(context, "name"); return pet == null ? 0 : ok(context, pet.text());
+	}
+
+	private static int petTrain(CommandContext<CommandSourceStack> context) {
+		PetData pet = pet(context, "name"); if (pet == null) return 0;
+		long now = System.currentTimeMillis();
+		if (now - pet.lastTraining < 30_000L) return fail(context, "同一只宠物每 30 秒只能训练一次");
+		String attribute = StringArgumentType.getString(context, "attribute").toLowerCase(Locale.ROOT);
+		switch (attribute) {
+			case "speed" -> pet.speed = Math.min(100, pet.speed + 1);
+			case "strength" -> pet.strength = Math.min(100, pet.strength + 1);
+			case "endurance" -> pet.endurance = Math.min(100, pet.endurance + 1);
+			default -> { return fail(context, "属性只能是 speed、strength 或 endurance"); }
+		}
+		pet.lastTraining = now; save(); return ok(context, "训练完成：" + pet.text());
+	}
+
+	private static int petRace(CommandContext<CommandSourceStack> context) {
+		UUID owner = petOwner(context); if (owner == null) return 0;
+		var selected = new LinkedHashMap<String, PetData>();
+		for (String raw : StringArgumentType.getString(context, "pets").split(",")) {
+			String name = raw.strip(); if (!name.isEmpty()) {
+				PetData pet = state.pets.get(petKey(owner, name));
+				if (pet == null) return fail(context, "找不到你的宠物：" + name);
+				selected.putIfAbsent(name.toLowerCase(Locale.ROOT), pet);
+			}
+		}
+		if (selected.size() < 2 || selected.size() > 8) return fail(context, "竞速需要 2～8 只宠物");
+		long seed = server.getTickCount();
+		var ranking = selected.values().stream().sorted((a, b) -> Integer.compare(petRaceScore(b, seed), petRaceScore(a, seed))).toList();
+		for (PetData pet : ranking) { pet.competitions++; if (pet == ranking.get(0)) pet.raceWins++; }
+		save();
+		return ok(context, "竞速冠军：" + ranking.get(0).name + "；排名：" + String.join(" > ", ranking.stream().map(p -> p.name).toList()));
+	}
+
+	private static int petBattle(CommandContext<CommandSourceStack> context) {
+		PetData first = pet(context, "first"); if (first == null) return 0;
+		PetData second = pet(context, "second"); if (second == null) return 0;
+		if (first == second) return fail(context, "战斗需要两只不同的宠物");
+		int firstHealth = 80 + first.endurance * 2, secondHealth = 80 + second.endurance * 2, rounds = 0;
+		while (firstHealth > 0 && secondHealth > 0 && rounds++ < 100) {
+			secondHealth -= Math.max(1, 4 + first.strength / 8 + first.speed / 20 - second.endurance / 25);
+			if (secondHealth > 0) firstHealth -= Math.max(1, 4 + second.strength / 8 + second.speed / 20 - first.endurance / 25);
+		}
+		PetData winner = firstHealth >= secondHealth ? first : second;
+		first.competitions++; second.competitions++; winner.battleWins++; save();
+		return ok(context, "战斗胜者：" + winner.name + "（" + rounds + " 回合）");
+	}
+
+	private static int petRaceScore(PetData pet, long seed) {
+		return pet.speed * 5 + pet.endurance * 3 + pet.strength + Math.floorMod((int) (seed ^ pet.name.hashCode()), 41);
+	}
+
+	private static UUID petOwner(CommandContext<CommandSourceStack> context) {
+		try { return context.getSource().getPlayerOrException().getUUID(); }
+		catch (Exception error) { fail(context, "该命令需要由游戏内玩家执行"); return null; }
+	}
+
+	private static PetData pet(CommandContext<CommandSourceStack> context, String argumentName) {
+		UUID owner = petOwner(context); if (owner == null) return null;
+		String name = StringArgumentType.getString(context, argumentName);
+		PetData pet = state.pets.get(petKey(owner, name));
+		if (pet == null) fail(context, "找不到你的宠物：" + name);
+		return pet;
+	}
+
+	private static String petKey(UUID owner, String name) {
+		return owner + ":" + name.strip().toLowerCase(Locale.ROOT);
 	}
 
 	private static AgentData find(CommandContext<CommandSourceStack> context) {
@@ -352,13 +459,26 @@ public final class LegacyFabricMod implements ModInitializer {
 		private String model = "gpt-5-mini";
 		private String token = "";
 		private Map<String, AgentData> agents = new LinkedHashMap<>();
+		private Map<String, PetData> pets = new LinkedHashMap<>();
 		private State normalized() {
 			if (endpoint == null || endpoint.isBlank()) endpoint = "https://api.openai.com/v1";
 			if (model == null || model.isBlank()) model = "gpt-5-mini";
 			if (token == null) token = "";
 			if (agents == null) agents = new LinkedHashMap<>();
+			if (pets == null) pets = new LinkedHashMap<>();
 			return this;
 		}
+	}
+
+	private static final class PetData {
+		private String owner;
+		private String name;
+		private int speed = 40, strength = 40, endurance = 40;
+		private int raceWins, battleWins, competitions;
+		private long lastTraining;
+		private PetData(String owner, String name) { this.owner = owner; this.name = name; }
+		private String text() { return name + " · 速度 " + speed + " · 力量 " + strength + " · 耐力 " + endurance
+			+ " · 竞速胜 " + raceWins + " · 战斗胜 " + battleWins + " · 参赛 " + competitions; }
 	}
 
 	private static final class AgentData {
