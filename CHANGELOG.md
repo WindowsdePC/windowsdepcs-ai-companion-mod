@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.6
+
+- Added persistent automatic-event policy, bounded history, forecasts and per-player notification subscriptions.
+- Added `/aiplayer weather history`, `forecast`, `notify` and administrator `config` commands on all targets.
+
 ## 0.8.5
 
 - Replaced the meteor shower's amethyst placeholder with the registered `ai_companion:star_shard` item.

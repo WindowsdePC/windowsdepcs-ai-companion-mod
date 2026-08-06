@@ -21,15 +21,24 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.SplittableRandom;
+import java.util.UUID;
 
-/** Runs one bounded natural event at a time and persists its remaining duration. */
+/** Runs one bounded natural event at a time and persists state, policy, history and subscriptions. */
 public final class WeatherEventManager implements AutoCloseable {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final long MAX_TICKS = 20L * 60L * 30L;
+	private static final int MAX_HISTORY = 32;
 	private final Path file = FabricLoader.getInstance().getConfigDir().resolve("ai_companion-weather.json");
 	private final SplittableRandom random = new SplittableRandom();
+	private final List<WeatherEventRecord> history = new ArrayList<>();
+	private final Set<UUID> unsubscribed = new HashSet<>();
+	private WeatherEventSettings settings = WeatherEventSettings.defaults();
 	private ActiveWeatherEvent active;
 	private long ticks;
 
@@ -39,6 +48,8 @@ public final class WeatherEventManager implements AutoCloseable {
 		if (minutes < 1 || minutes > 30) throw new IllegalArgumentException("时长必须为 1～30 分钟");
 		long duration = Math.min(MAX_TICKS, minutes * 60L * 20L);
 		active = new ActiveWeatherEvent(type, duration, duration, automatic);
+		history.add(0, new WeatherEventRecord(type, System.currentTimeMillis(), minutes * 60, automatic));
+		trimHistory();
 		saveQuietly();
 		return active;
 	}
@@ -51,6 +62,25 @@ public final class WeatherEventManager implements AutoCloseable {
 	}
 
 	public synchronized ActiveWeatherEvent active() { return active; }
+	public synchronized WeatherEventSettings settings() { return settings; }
+	public synchronized List<WeatherEventRecord> history(int limit) {
+		return List.copyOf(history.subList(0, Math.min(Math.max(1, limit), history.size())));
+	}
+	public synchronized void updateSettings(WeatherEventSettings value) {
+		settings = value == null ? WeatherEventSettings.defaults() : value;
+		saveQuietly();
+	}
+	public synchronized boolean notificationsEnabled(UUID playerId) { return !unsubscribed.contains(playerId); }
+	public synchronized boolean setNotifications(UUID playerId, boolean enabled) {
+		boolean changed = enabled ? unsubscribed.remove(playerId) : unsubscribed.add(playerId);
+		if (changed) saveQuietly();
+		return enabled;
+	}
+	public synchronized int nextAutomaticCheckSeconds() {
+		long interval = settings.checkIntervalSeconds() * 20L;
+		long remaining = interval - Math.floorMod(ticks, interval);
+		return (int) Math.ceil(remaining / 20.0);
+	}
 
 	public void tick(MinecraftServer server) {
 		ticks++;
@@ -68,7 +98,7 @@ public final class WeatherEventManager implements AutoCloseable {
 		synchronized (this) {
 			if (active == null) return;
 			active = active.nextTick();
-			if (active.expired()) { active = null; broadcast(server, "自然事件已经结束"); }
+			if (active.expired()) { active = null; announce(server, "自然事件已经结束"); }
 			if (ticks % 200 == 0 || active == null) saveQuietly();
 		}
 	}
@@ -126,12 +156,16 @@ public final class WeatherEventManager implements AutoCloseable {
 	}
 
 	private void tryAutomaticStart(MinecraftServer server) {
-		if (ticks % 1200 != 0 || random.nextInt(240) != 0) return;
+		WeatherEventSettings policy;
+		synchronized (this) { policy = settings; }
+		long interval = policy.checkIntervalSeconds() * 20L;
+		if (!policy.automaticEnabled() || ticks % interval != 0 || random.nextInt(policy.chanceDenominator()) != 0) return;
 		WeatherEventType type = isNight(server.overworld())
 			? WeatherEventType.values()[random.nextInt(WeatherEventType.values().length)]
 			: (random.nextBoolean() ? WeatherEventType.SANDSTORM : WeatherEventType.ENHANCED_THUNDERSTORM);
-		start(type, 5 + random.nextInt(6), true);
-		broadcast(server, "自然事件开始：" + type.displayName());
+		int minutes = policy.minDurationMinutes() + random.nextInt(policy.maxDurationMinutes() - policy.minDurationMinutes() + 1);
+		start(type, minutes, true);
+		announce(server, "自然事件开始：" + type.displayName());
 	}
 
 	private static boolean isNight(ServerLevel level) {
@@ -139,35 +173,60 @@ public final class WeatherEventManager implements AutoCloseable {
 		return time >= 13000L && time <= 23000L;
 	}
 
-	private synchronized void finish(MinecraftServer server, String message) { active = null; saveQuietly(); broadcast(server, message); }
-	private static void broadcast(MinecraftServer server, String message) { server.getPlayerList().broadcastSystemMessage(Component.literal("[自然事件] " + message), false); }
+	private synchronized void finish(MinecraftServer server, String message) {
+		active = null; saveQuietly(); announce(server, message);
+	}
+
+	public void announce(MinecraftServer server, String message) {
+		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+			if (notificationsEnabled(player.getUUID())) player.sendSystemMessage(Component.literal("[自然事件] " + message));
+		}
+	}
 
 	private synchronized void load() {
 		if (!Files.isRegularFile(file)) return;
 		try {
 			Stored stored = GSON.fromJson(Files.readString(file), Stored.class);
-			if (stored != null && stored.type != null && stored.remainingTicks > 0) {
+			if (stored == null) return;
+			if (stored.type != null && stored.remainingTicks > 0) {
 				long total = Math.max(20, Math.min(MAX_TICKS, stored.totalTicks));
 				active = new ActiveWeatherEvent(WeatherEventType.valueOf(stored.type.toUpperCase(Locale.ROOT)), stored.remainingTicks, total, stored.automatic);
 			}
-		} catch (Exception ignored) { active = null; }
+			settings = stored.settings == null ? WeatherEventSettings.defaults() : stored.settings;
+			if (stored.history != null) stored.history.stream().filter(record -> record != null).limit(MAX_HISTORY).forEach(history::add);
+			if (stored.unsubscribed != null) for (String value : stored.unsubscribed) try { unsubscribed.add(UUID.fromString(value)); } catch (IllegalArgumentException ignored) { }
+		} catch (Exception ignored) { active = null; settings = WeatherEventSettings.defaults(); history.clear(); unsubscribed.clear(); }
 	}
 
 	private synchronized void saveQuietly() {
 		try {
 			Files.createDirectories(file.getParent());
 			Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
-			Stored stored = active == null ? new Stored() : new Stored(active);
-			Files.writeString(temporary, GSON.toJson(stored), StandardCharsets.UTF_8);
+			Files.writeString(temporary, GSON.toJson(new Stored(this)), StandardCharsets.UTF_8);
 			try { Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE); }
 			catch (IOException atomicFailure) { Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING); }
 		} catch (IOException ignored) { }
 	}
 
+	private void trimHistory() { while (history.size() > MAX_HISTORY) history.remove(history.size() - 1); }
 	@Override public synchronized void close() { saveQuietly(); }
+
 	private static final class Stored {
-		private String type; private long remainingTicks, totalTicks; private boolean automatic;
+		private String type;
+		private long remainingTicks, totalTicks;
+		private boolean automatic;
+		private WeatherEventSettings settings;
+		private List<WeatherEventRecord> history;
+		private List<String> unsubscribed;
 		private Stored() { }
-		private Stored(ActiveWeatherEvent event) { type = event.type().name(); remainingTicks = event.remainingTicks(); totalTicks = event.totalTicks(); automatic = event.automatic(); }
+		private Stored(WeatherEventManager manager) {
+			if (manager.active != null) {
+				type = manager.active.type().name(); remainingTicks = manager.active.remainingTicks();
+				totalTicks = manager.active.totalTicks(); automatic = manager.active.automatic();
+			}
+			settings = manager.settings;
+			history = List.copyOf(manager.history);
+			unsubscribed = manager.unsubscribed.stream().map(UUID::toString).sorted().toList();
+		}
 	}
 }

@@ -4,15 +4,15 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：v0.8.5
+当前版本：v0.8.6
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.8.5.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.5.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.8.5.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.8.6.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.6.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.8.6.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
@@ -35,16 +35,21 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 26.2 Fabric 版使用 Java 25；两个 1.20.1 版本使用 Java 17。两个 UI 库同时存在时优先
 EclipseUI；已安装 EclipseUI 时不需要 Cloth Config。两个 1.20.1 兼容版当前不要求 UI 库。
 
+1.20.1 Fabric 的依赖名称仍是旧版 `Fabric Loader` 与 `Fabric API`，不是 26.2 的对应 JAR；
+1.20.1 Forge 的加载器名称是 `Minecraft Forge 47.x`，不安装 Fabric Loader、Fabric API、
+EclipseUI，也不使用 26.2 Fabric 的文件。模组文件名中的 `mc1.20.1-fabric`、
+`mc1.20.1-forge` 与 `mc26.2-fabric` 必须和实例逐字匹配。
+
 ### 可选依赖
 
 以下模组都不是启动所必需的依赖；未安装时相应兼容入口会自动停用，核心功能仍可使用。
 
-| 模组 | 用途 | 网址 |
-| --- | --- | --- |
-| Simple Voice Chat | 女仆语音转写兼容通道 | [Simple Voice Chat](https://modrinth.com/mod/simple-voice-chat) |
-| Sophisticated Backpacks | 女仆外部背包识别 | [Sophisticated Backpacks](https://www.curseforge.com/minecraft/mc-mods/sophisticated-backpacks) |
-| Traveler's Backpack | 女仆外部背包识别 | [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) |
-| Inventory Profiles Next | 女仆标准容器的一键整理兼容 | [Inventory Profiles Next](https://modrinth.com/mod/inventory-profiles-next) |
+| 模组 | 适用发行目标 | 用途 | 网址 |
+| --- | --- | --- | --- |
+| Simple Voice Chat | 选择与加载器/游戏版本匹配的版本 | 女仆语音转写兼容通道 | [Simple Voice Chat](https://modrinth.com/plugin/simple-voice-chat) |
+| Sophisticated Backpacks | Minecraft 1.20.1 Forge | 女仆外部背包识别 | [Sophisticated Backpacks](https://www.curseforge.com/minecraft/mc-mods/sophisticated-backpacks) |
+| Traveler's Backpack | Minecraft 1.20.1 Fabric 或 Forge | 女仆外部背包识别 | [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) |
+| Inventory Profiles Next | 选择与加载器/游戏版本匹配的版本 | 女仆标准容器的一键整理兼容 | [Inventory Profiles Next](https://modrinth.com/mod/inventory-profiles-next) |
 
 EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必要依赖，不应同时被理解为
 两个都必须安装。外部背包的内部私有槽位始终由对应背包模组管理。
@@ -190,6 +195,8 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 - 星辰碎片加入通用 `c:star_shards` 标签；1.20.1 Forge 版同时提供旧版 `forge:star_shards` 标签。
 - 增强雷暴驱动原版雷雨并增加电火花表现；事件效果不会在其他维度错误施加。
 - 无事件时服务器会以低概率自然生成 5～10 分钟事件；管理员也可手动启动 1～30 分钟事件。
+- 0.8.6 起可查询最近 32 次事件、下一次自动检查与当前候选事件；每名玩家可独立关闭事件通知。
+- 管理员可持久化修改自动生成开关、30～3600 秒检查间隔、1/1～1/10000 单次概率和 1～30 分钟时长范围。
 
 ```text
 /aiplayer weather status
@@ -198,6 +205,14 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 /aiplayer weather start sandstorm 5
 /aiplayer weather start thunder 5
 /aiplayer weather stop
+/aiplayer weather forecast
+/aiplayer weather history [数量]
+/aiplayer weather notify <on|off>
+/aiplayer weather config status
+/aiplayer weather config enabled <on|off>
+/aiplayer weather config interval <秒>
+/aiplayer weather config chance <概率分母>
+/aiplayer weather config duration <最短分钟> <最长分钟>
 ```
 
 ### AI 女仆
