@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.7.8](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.7.8)
+当前版本：[v0.7.9](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.7.9)
 
 ## 环境要求
 
@@ -98,6 +98,21 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 - 四种家具使用独立方块模型；台灯提供 12 级照明，关闭模组后不会改写原版方块。
 - `/aiplayer furniture sit <AI名>` 会让同维度 AI 坐到命令玩家附近 8 格内最近的沙发；竞技场中的 AI 不可入座。
 - 入座时清除剩余移动并保持蹲坐姿态；`stand` 起身，`chat` 在家具区进行一次受白名单执行器保护的 AI 对话。
+
+### AI 音乐合奏
+
+- 玩家可邀请 1～8 名已登记 AI 组成临时乐队；AI 必须与玩家同维度、距离不超过 64 格且未参加竞技场。
+- 合奏开始后，玩家左键敲击音符盒，AI 会在各自位置挥手并用原版竖琴音色跟随演奏。
+- 内置和声、回声、低音三种编排；音高始终折叠在原版音符盒的 0～24 范围内。
+- 每位 AI 同一时间只参加一场合奏，队列和成员数均有上限；AI 离开维度或距离过远时跳过该音符。
+- 5 分钟没有新音符时会自动结束；合奏只保存于当前服务器会话，不改写 AI 的普通任务或装备。
+
+```text
+/aiplayer music start MusicAI,HelperAI harmony
+/aiplayer music style echo
+/aiplayer music status
+/aiplayer music stop
+```
 
 ### AI 女仆
 
@@ -335,27 +350,12 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.7.4.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.7.4-sources.jar`：本地构建的源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.7.4-javadoc.jar`：本地构建的 Java API 文档包。
+- `windowsdepcs-ai-companion-0.7.9.jar`：正式模组，放入 `mods/`。
+- `windowsdepcs-ai-companion-0.7.9-sources.jar`：本地构建的源码包，供开发工具使用。
+- `windowsdepcs-ai-companion-0.7.9-javadoc.jar`：本地构建的 Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 从 v0.6.7 起，GitHub Release 也只附加第一个正式模组 JAR，不再上传另外两个 JAR或校验文件。
-
-## 当前边界
-
-0.7.4 的沙发使用玩家蹲坐姿态表现 AI 入座，不创建不可见坐骑实体；家具区聊天仍使用既有安全动作白名单。
-0.7.3 的直播只向主动开启会话的玩家显示 AI 弹幕；AI 仅能使用服务器明确提供的事实，离线或未配置 API 时不发起请求。
-0.6.8 的日报只总结服务器实际采集的玩家、世界和 AI 事件；AI 编辑器不能补写未提供的事实。
-0.6.7 的旅行日志保存服务器能确认的地点、结构和相册编号，不生成或伪造客户端照片像素。
-0.6.6 的优化器只限制本模组附加渲染距离，不改写原版渲染距离或服务器状态。
-0.6.5 的屏幕缩放完全在客户端完成，不修改原版 FOV 配置或服务器状态。
-0.6.4 的照片是服务器权威的相册条目，包含场景元数据与玩家说明；它不会读取或保存客户端帧缓冲像素。
-后续若加入真正的 PNG 截图，会使用明确的客户端许可、网络大小上限和专用相册界面。
-0.6.2 的竞技场战术是独立、可恢复的服务器玩法，不会把竞技场动作写回普通任务模式。
-自动连续决策与协作上下文仍只使用现有安全动作执行器；复杂地形寻路、完整战斗/挖掘/合成/背包执行器、
-Simple Voice Chat 协议等仍在后续版本开发。设计路线见
-[`docs/My Mod Design Document.md`](docs/My%20Mod%20Design%20Document.md)。
 
 ## 许可证
 

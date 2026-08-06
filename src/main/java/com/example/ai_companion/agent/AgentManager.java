@@ -206,6 +206,11 @@ public final class AgentManager implements AutoCloseable {
 		return name != null && agents.containsKey(name.toLowerCase());
 	}
 
+	/** Allows leisure modules to avoid taking control of arena participants. */
+	public synchronized boolean isArenaLocked(String name) {
+		return requireAgent(name).arenaLocked;
+	}
+
 	public synchronized String canonicalName(String name) {
 		return requireAgent(name).name;
 	}
