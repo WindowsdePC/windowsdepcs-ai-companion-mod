@@ -111,6 +111,27 @@ public final class LegacyForgeMod {
 				.then(literal("battle").then(argument("first", StringArgumentType.word())
 					.then(argument("second", StringArgumentType.word()).executes(ctx -> petCompete(ctx, true)))))
 				.then(literal("leaderboard").executes(LegacyForgeMod::petLeaderboard)))
+			.then(literal("society")
+				.then(literal("enroll").requires(source -> source.hasPermission(2))
+					.then(argument("name", StringArgumentType.word()).executes(LegacyForgeMod::societyEnroll)))
+				.then(literal("home").requires(source -> source.hasPermission(2))
+					.then(argument("name", StringArgumentType.word()).executes(LegacyForgeMod::societyHome)))
+				.then(literal("job").requires(source -> source.hasPermission(2))
+					.then(argument("name", StringArgumentType.word()).then(argument("job", StringArgumentType.word())
+						.executes(LegacyForgeMod::societyJob))))
+				.then(literal("work").requires(source -> source.hasPermission(2))
+					.then(argument("name", StringArgumentType.word()).executes(LegacyForgeMod::societyWork)))
+				.then(literal("rest").requires(source -> source.hasPermission(2))
+					.then(argument("name", StringArgumentType.word()).executes(LegacyForgeMod::societyRest)))
+				.then(literal("socialize").requires(source -> source.hasPermission(2))
+					.then(argument("name", StringArgumentType.word()).then(argument("other", StringArgumentType.word())
+						.executes(LegacyForgeMod::societySocialize))))
+				.then(literal("trade").requires(source -> source.hasPermission(2))
+					.then(argument("seller", StringArgumentType.word()).then(argument("buyer", StringArgumentType.word())
+						.then(argument("amount", IntegerArgumentType.integer(1, 1_000_000))
+							.executes(LegacyForgeMod::societyTrade)))))
+				.then(literal("status").then(argument("name", StringArgumentType.word()).executes(LegacyForgeMod::societyStatus)))
+				.then(literal("leaderboard").executes(LegacyForgeMod::societyLeaderboard)))
 			.then(literal("compatibility").executes(LegacyForgeMod::compatibility)));
 	}
 
@@ -276,7 +297,7 @@ public final class LegacyForgeMod {
 	}
 
 	private static int compatibility(CommandContext<CommandSourceStack> context) {
-		return ok(context, "AI Companion 0.8.1 · Minecraft 1.20.1 Forge：AI 核心与宠物竞技可用");
+		return ok(context, "AI Companion 0.8.2 · Minecraft 1.20.1 Forge：AI 核心、宠物竞技与模拟社会可用");
 	}
 
 	private static int petCreate(CommandContext<CommandSourceStack> context) {
@@ -365,6 +386,89 @@ public final class LegacyForgeMod {
 	private static int petRating(PetData pet) { return pet.speed + pet.strength + pet.endurance + pet.wins * 3 - pet.losses; }
 	private static String petSummary(PetData pet) { return pet.name + " · 速度=" + pet.speed + " · 力量="
 		+ pet.strength + " · 耐力=" + pet.endurance + " · 胜负=" + pet.wins + "/" + pet.losses; }
+
+	private static int societyEnroll(CommandContext<CommandSourceStack> context) {
+		String name = StringArgumentType.getString(context, "name"); String key = name.toLowerCase(Locale.ROOT);
+		AgentData agent = state.agents.get(key); if (agent == null) return fail(context, "未找到已登记 AI：" + name);
+		if (state.society.containsKey(key)) return fail(context, "AI 已加入模拟社会");
+		if (state.society.size() >= 128) return fail(context, "模拟社会最多容纳 128 名 AI");
+		state.society.put(key, new SocietyData(agent.name)); save(); return ok(context, "已加入模拟社会：" + agent.name);
+	}
+
+	private static int societyHome(CommandContext<CommandSourceStack> context) {
+		SocietyData data = societyFind(context, "name"); if (data == null) return 0;
+		ServerPlayer player; try { player = context.getSource().getPlayerOrException(); }
+		catch (Exception error) { return fail(context, "该命令需要由游戏内玩家执行"); }
+		data.homeDimension = player.level().dimension().location().toString();
+		data.homeX = player.getX(); data.homeY = player.getY(); data.homeZ = player.getZ(); save();
+		return ok(context, data.agentName + " 的住宅已设置在当前位置");
+	}
+
+	private static int societyJob(CommandContext<CommandSourceStack> context) {
+		SocietyData data = societyFind(context, "name"); if (data == null) return 0;
+		String job = StringArgumentType.getString(context, "job").toLowerCase(Locale.ROOT);
+		if (societyWage(job) < 0) return fail(context, "职业必须是 farmer、builder、miner、merchant、guard 或 artist");
+		data.job = job; save(); return ok(context, data.agentName + " 的工作已设为 " + job);
+	}
+
+	private static int societyWork(CommandContext<CommandSourceStack> context) {
+		SocietyData data = societyFind(context, "name"); if (data == null) return 0;
+		if (data.homeDimension.isBlank()) return fail(context, "请先为 AI 设置住宅");
+		int wage = societyWage(data.job); if (wage <= 0) return fail(context, "请先为 AI 分配工作");
+		if (data.energy < 15) return fail(context, "AI 精力不足，需要休息");
+		long now = System.currentTimeMillis(); if (now < data.lastWorkMillis + 60_000L) return fail(context, "工作冷却尚未结束");
+		data.balance += wage; data.energy -= 15; data.reputation++; data.lastWorkMillis = now; save();
+		return ok(context, data.agentName + " 完成工作，获得 " + wage + " 信用点，余额=" + data.balance);
+	}
+
+	private static int societyRest(CommandContext<CommandSourceStack> context) {
+		SocietyData data = societyFind(context, "name"); if (data == null) return 0;
+		data.energy = 100; save(); return ok(context, data.agentName + " 已休息并恢复精力");
+	}
+
+	private static int societySocialize(CommandContext<CommandSourceStack> context) {
+		SocietyData first = societyFind(context, "name"); SocietyData second = societyFind(context, "other");
+		if (first == null || second == null) return 0; if (first == second) return fail(context, "AI 不能与自己社交");
+		first.relations.put(second.agentName.toLowerCase(Locale.ROOT), Math.min(100, first.relations.getOrDefault(second.agentName.toLowerCase(Locale.ROOT), 0) + 5));
+		second.relations.put(first.agentName.toLowerCase(Locale.ROOT), Math.min(100, second.relations.getOrDefault(first.agentName.toLowerCase(Locale.ROOT), 0) + 5));
+		first.energy = Math.max(0, first.energy - 3); second.energy = Math.max(0, second.energy - 3);
+		first.reputation++; second.reputation++; save();
+		return ok(context, first.agentName + " 与 " + second.agentName + " 完成社交，关系值=" + first.relations.get(second.agentName.toLowerCase(Locale.ROOT)));
+	}
+
+	private static int societyTrade(CommandContext<CommandSourceStack> context) {
+		SocietyData seller = societyFind(context, "seller"); SocietyData buyer = societyFind(context, "buyer");
+		if (seller == null || buyer == null) return 0; if (seller == buyer) return fail(context, "交易双方不能相同");
+		int amount = IntegerArgumentType.getInteger(context, "amount"); if (seller.balance < amount) return fail(context, "AI 余额不足");
+		seller.balance -= amount; buyer.balance += amount; save();
+		return ok(context, seller.agentName + " 已向 " + buyer.agentName + " 支付 " + amount + " 信用点");
+	}
+
+	private static int societyStatus(CommandContext<CommandSourceStack> context) {
+		SocietyData data = societyFind(context, "name"); return data == null ? 0 : ok(context, societySummary(data));
+	}
+
+	private static int societyLeaderboard(CommandContext<CommandSourceStack> context) {
+		var board = state.society.values().stream().sorted(Comparator.comparingLong((SocietyData data) -> data.balance)
+			.reversed().thenComparing(Comparator.comparingInt((SocietyData data) -> data.reputation).reversed())
+			.thenComparing(data -> data.agentName.toLowerCase(Locale.ROOT))).limit(10).toList();
+		if (board.isEmpty()) return ok(context, "模拟社会暂无居民");
+		for (int i = 0; i < board.size(); i++) { SocietyData data = board.get(i); int rank = i + 1;
+			context.getSource().sendSuccess(() -> Component.literal("#" + rank + " " + societySummary(data)), false); }
+		return board.size();
+	}
+
+	private static SocietyData societyFind(CommandContext<CommandSourceStack> context, String argumentName) {
+		String name = StringArgumentType.getString(context, argumentName); SocietyData data = state.society.get(name.toLowerCase(Locale.ROOT));
+		if (data == null) fail(context, "AI 尚未加入模拟社会：" + name); return data;
+	}
+
+	private static int societyWage(String job) { return switch (job) {
+		case "farmer" -> 12; case "builder" -> 16; case "miner" -> 18; case "merchant" -> 20;
+		case "guard" -> 15; case "artist" -> 14; case "unemployed" -> 0; default -> -1; }; }
+	private static String societySummary(SocietyData data) { return data.agentName + " · 住宅="
+		+ (data.homeDimension.isBlank() ? "未设置" : data.homeDimension) + " · 工作=" + data.job
+		+ " · 余额=" + data.balance + " · 精力=" + data.energy + " · 声望=" + data.reputation; }
 
 	private static AgentData find(CommandContext<CommandSourceStack> context) {
 		String key = StringArgumentType.getString(context, "name").toLowerCase(Locale.ROOT);
@@ -467,14 +571,25 @@ public final class LegacyForgeMod {
 		private String token = "";
 		private Map<String, AgentData> agents = new LinkedHashMap<>();
 		private Map<String, PetData> pets = new LinkedHashMap<>();
+		private Map<String, SocietyData> society = new LinkedHashMap<>();
 		private State normalized() {
 			if (endpoint == null || endpoint.isBlank()) endpoint = "https://api.openai.com/v1";
 			if (model == null || model.isBlank()) model = "gpt-5-mini";
 			if (token == null) token = "";
 			if (agents == null) agents = new LinkedHashMap<>();
 			if (pets == null) pets = new LinkedHashMap<>();
+			if (society == null) society = new LinkedHashMap<>();
 			return this;
 		}
+	}
+
+	private static final class SocietyData {
+		private String agentName, homeDimension = "", job = "unemployed";
+		private double homeX, homeY, homeZ;
+		private long balance, lastWorkMillis;
+		private int energy = 100, reputation;
+		private Map<String, Integer> relations = new LinkedHashMap<>();
+		private SocietyData(String agentName) { this.agentName = agentName; }
 	}
 
 	private static final class PetData {
