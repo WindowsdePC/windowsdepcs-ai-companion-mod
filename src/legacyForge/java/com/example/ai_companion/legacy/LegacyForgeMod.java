@@ -67,6 +67,7 @@ public final class LegacyForgeMod {
 		DATA_FILE.resolveSibling("ai_companion-weather-1.20.1.json"));
 
 	public LegacyForgeMod() {
+		LegacyWeatherItems.register();
 		MinecraftForge.EVENT_BUS.register(this);
 	}
 
