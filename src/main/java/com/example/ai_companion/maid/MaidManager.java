@@ -164,7 +164,7 @@ public final class MaidManager implements AutoCloseable {
 		MaidProfile profile = requireOwned(owner, name);
 		MaidInventoryContainer container = new MaidInventoryContainer(owner.getUUID(), profile.level(),
 			inventoryStore.load(profile.name(), owner.registryAccess()));
-		container.addListener(changed -> inventoryStore.save(profile.name(), container.snapshot(),
+		container.setChangeListener(() -> inventoryStore.save(profile.name(), container.snapshot(),
 			owner.registryAccess()));
 		int unlocked = container.unlockedStorageSlots();
 		Component title = Component.literal("生物背包 · " + profile.name() + " Lv." + profile.level()

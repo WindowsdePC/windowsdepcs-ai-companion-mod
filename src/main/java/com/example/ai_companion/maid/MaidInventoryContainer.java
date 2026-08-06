@@ -13,6 +13,7 @@ final class MaidInventoryContainer extends SimpleContainer {
 	private final UUID ownerUuid;
 	private final int maidLevel;
 	private boolean loading;
+	private Runnable changeListener = () -> { };
 
 	MaidInventoryContainer(UUID ownerUuid, int maidLevel, List<ItemStack> stacks) {
 		super(MaidInventoryLayout.TOTAL_SLOTS);
@@ -32,7 +33,15 @@ final class MaidInventoryContainer extends SimpleContainer {
 
 	@Override public boolean stillValid(Player player) { return player.getUUID().equals(ownerUuid); }
 
-	@Override public void setChanged() { if (!loading) super.setChanged(); }
+	@Override public void setChanged() {
+		if (loading) return;
+		super.setChanged();
+		changeListener.run();
+	}
+
+	void setChangeListener(Runnable listener) {
+		changeListener = listener == null ? () -> { } : listener;
+	}
 
 	int unlockedStorageSlots() {
 		int backpacks = 0;
