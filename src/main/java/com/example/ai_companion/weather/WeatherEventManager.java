@@ -22,9 +22,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.UUID;
@@ -38,6 +40,7 @@ public final class WeatherEventManager implements AutoCloseable {
 	private final SplittableRandom random = new SplittableRandom();
 	private final List<WeatherEventRecord> history = new ArrayList<>();
 	private final Set<UUID> unsubscribed = new HashSet<>();
+	private final EnumMap<WeatherEventType, Integer> typeWeights = defaultTypeWeights();
 	private WeatherEventSettings settings = WeatherEventSettings.defaults();
 	private ActiveWeatherEvent active;
 	private long ticks;
@@ -69,6 +72,24 @@ public final class WeatherEventManager implements AutoCloseable {
 	public synchronized void updateSettings(WeatherEventSettings value) {
 		settings = value == null ? WeatherEventSettings.defaults() : value;
 		saveQuietly();
+	}
+	public synchronized int typeWeight(WeatherEventType type) { return typeWeights.getOrDefault(type, 100); }
+	public synchronized void setTypeWeight(WeatherEventType type, int weight) {
+		if (type == null) throw new IllegalArgumentException("事件类型不能为空");
+		if (weight < 0 || weight > 1000) throw new IllegalArgumentException("事件权重必须为 0～1000");
+		typeWeights.put(type, weight); saveQuietly();
+	}
+	public synchronized String eligibleTypeLabels(boolean night) {
+		String labels = java.util.Arrays.stream(WeatherEventType.values())
+			.filter(type -> (night || !type.nightOnly()) && typeWeight(type) > 0)
+			.map(type -> type.displayName() + "(" + typeWeight(type) + ")")
+			.collect(java.util.stream.Collectors.joining("/"));
+		return labels.isBlank() ? "无" : labels;
+	}
+	public synchronized String typeWeightSummary() {
+		return java.util.Arrays.stream(WeatherEventType.values())
+			.map(type -> type.displayName() + "=" + typeWeight(type))
+			.collect(java.util.stream.Collectors.joining("，"));
 	}
 	public synchronized boolean notificationsEnabled(UUID playerId) { return !unsubscribed.contains(playerId); }
 	public synchronized boolean setNotifications(UUID playerId, boolean enabled) {
@@ -160,12 +181,27 @@ public final class WeatherEventManager implements AutoCloseable {
 		synchronized (this) { policy = settings; }
 		long interval = policy.checkIntervalSeconds() * 20L;
 		if (!policy.automaticEnabled() || ticks % interval != 0 || random.nextInt(policy.chanceDenominator()) != 0) return;
-		WeatherEventType type = isNight(server.overworld())
-			? WeatherEventType.values()[random.nextInt(WeatherEventType.values().length)]
-			: (random.nextBoolean() ? WeatherEventType.SANDSTORM : WeatherEventType.ENHANCED_THUNDERSTORM);
+		WeatherEventType type = chooseAutomaticType(isNight(server.overworld()));
+		if (type == null) return;
 		int minutes = policy.minDurationMinutes() + random.nextInt(policy.maxDurationMinutes() - policy.minDurationMinutes() + 1);
 		start(type, minutes, true);
 		announce(server, "自然事件开始：" + type.displayName());
+	}
+
+	private synchronized WeatherEventType chooseAutomaticType(boolean night) {
+		int total = 0;
+		for (WeatherEventType type : WeatherEventType.values())
+			if ((night || !type.nightOnly()) && typeWeight(type) > 0) total += typeWeight(type);
+		if (total <= 0) return null;
+		int roll = random.nextInt(total);
+		for (WeatherEventType type : WeatherEventType.values()) {
+			if (!night && type.nightOnly()) continue;
+			int weight = typeWeight(type);
+			if (weight <= 0) continue;
+			if (roll < weight) return type;
+			roll -= weight;
+		}
+		return null;
 	}
 
 	private static boolean isNight(ServerLevel level) {
@@ -193,9 +229,14 @@ public final class WeatherEventManager implements AutoCloseable {
 				active = new ActiveWeatherEvent(WeatherEventType.valueOf(stored.type.toUpperCase(Locale.ROOT)), stored.remainingTicks, total, stored.automatic);
 			}
 			settings = stored.settings == null ? WeatherEventSettings.defaults() : stored.settings;
+			typeWeights.clear(); typeWeights.putAll(defaultTypeWeights());
+			if (stored.typeWeights != null) for (Map.Entry<String, Integer> entry : stored.typeWeights.entrySet()) try {
+				WeatherEventType type = WeatherEventType.valueOf(entry.getKey()); int weight = entry.getValue();
+				if (weight >= 0 && weight <= 1000) typeWeights.put(type, weight);
+			} catch (Exception ignored) { }
 			if (stored.history != null) stored.history.stream().filter(record -> record != null).limit(MAX_HISTORY).forEach(history::add);
 			if (stored.unsubscribed != null) for (String value : stored.unsubscribed) try { unsubscribed.add(UUID.fromString(value)); } catch (IllegalArgumentException ignored) { }
-		} catch (Exception ignored) { active = null; settings = WeatherEventSettings.defaults(); history.clear(); unsubscribed.clear(); }
+		} catch (Exception ignored) { active = null; settings = WeatherEventSettings.defaults(); history.clear(); unsubscribed.clear(); typeWeights.clear(); typeWeights.putAll(defaultTypeWeights()); }
 	}
 
 	private synchronized void saveQuietly() {
@@ -209,6 +250,11 @@ public final class WeatherEventManager implements AutoCloseable {
 	}
 
 	private void trimHistory() { while (history.size() > MAX_HISTORY) history.remove(history.size() - 1); }
+	private static EnumMap<WeatherEventType, Integer> defaultTypeWeights() {
+		EnumMap<WeatherEventType, Integer> values = new EnumMap<>(WeatherEventType.class);
+		for (WeatherEventType type : WeatherEventType.values()) values.put(type, 100);
+		return values;
+	}
 	@Override public synchronized void close() { saveQuietly(); }
 
 	private static final class Stored {
@@ -216,6 +262,7 @@ public final class WeatherEventManager implements AutoCloseable {
 		private long remainingTicks, totalTicks;
 		private boolean automatic;
 		private WeatherEventSettings settings;
+		private Map<String, Integer> typeWeights;
 		private List<WeatherEventRecord> history;
 		private List<String> unsubscribed;
 		private Stored() { }
@@ -225,6 +272,8 @@ public final class WeatherEventManager implements AutoCloseable {
 				totalTicks = manager.active.totalTicks(); automatic = manager.active.automatic();
 			}
 			settings = manager.settings;
+			typeWeights = new java.util.LinkedHashMap<>();
+			for (WeatherEventType eventType : WeatherEventType.values()) typeWeights.put(eventType.name(), manager.typeWeight(eventType));
 			history = List.copyOf(manager.history);
 			unsubscribed = manager.unsubscribed.stream().map(UUID::toString).sorted().toList();
 		}

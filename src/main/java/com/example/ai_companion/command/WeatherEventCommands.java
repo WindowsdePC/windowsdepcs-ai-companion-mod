@@ -53,7 +53,11 @@ public final class WeatherEventCommands {
 					.then(Commands.literal("duration").requires(s -> s.permissions().hasPermission(admin))
 						.then(Commands.argument("minimum", IntegerArgumentType.integer(1, 30))
 							.then(Commands.argument("maximum", IntegerArgumentType.integer(1, 30)).executes(c -> configDuration(c.getSource(), manager,
-								IntegerArgumentType.getInteger(c, "minimum"), IntegerArgumentType.getInteger(c, "maximum")))))))
+								IntegerArgumentType.getInteger(c, "minimum"), IntegerArgumentType.getInteger(c, "maximum"))))))
+					.then(Commands.literal("weight").requires(s -> s.permissions().hasPermission(admin))
+						.then(Commands.argument("type", StringArgumentType.word())
+							.then(Commands.argument("weight", IntegerArgumentType.integer(0, 1000))
+								.executes(c -> configWeight(c.getSource(), manager, StringArgumentType.getString(c, "type"), IntegerArgumentType.getInteger(c, "weight")))))))
 				.then(Commands.literal("stop").requires(s -> s.permissions().hasPermission(admin)).executes(c -> stop(c.getSource(), manager)))
 				.then(Commands.literal("start").requires(s -> s.permissions().hasPermission(admin))
 					.then(Commands.argument("type", StringArgumentType.word())
@@ -84,7 +88,7 @@ public final class WeatherEventCommands {
 	private static int forecast(CommandSourceStack source, WeatherEventManager manager) {
 		WeatherEventSettings settings = manager.settings();
 		long time = Math.floorMod(source.getLevel().getOverworldClockTime(), 24000L);
-		String eligible = time >= 13000L && time <= 23000L ? "极光/流星雨/沙尘暴/增强雷暴" : "沙尘暴/增强雷暴";
+		String eligible = manager.eligibleTypeLabels(time >= 13000L && time <= 23000L);
 		source.sendSuccess(() -> Component.literal("自然事件预报：" + (settings.automaticEnabled() ? manager.nextAutomaticCheckSeconds() + " 秒后检查，候选 " + eligible : "自动生成已关闭")), false); return 1;
 	}
 
@@ -121,12 +125,14 @@ public final class WeatherEventCommands {
 	private static int configStatus(CommandSourceStack source, WeatherEventManager manager) {
 		WeatherEventSettings value = manager.settings();
 		source.sendSuccess(() -> Component.literal("自动=" + value.automaticEnabled() + "，间隔=" + value.checkIntervalSeconds()
-			+ "秒，单次概率=1/" + value.chanceDenominator() + "，时长=" + value.minDurationMinutes() + "～" + value.maxDurationMinutes() + "分钟"), false); return 1;
+			+ "秒，单次概率=1/" + value.chanceDenominator() + "，时长=" + value.minDurationMinutes() + "～" + value.maxDurationMinutes()
+			+ "分钟，权重：" + manager.typeWeightSummary()), false); return 1;
 	}
 	private static int configEnabled(CommandSourceStack source, WeatherEventManager manager, String raw) { try { manager.updateSettings(manager.settings().withEnabled(parseBoolean(raw))); return configStatus(source, manager); } catch (Exception error) { return configFailure(source, error); } }
 	private static int configInterval(CommandSourceStack source, WeatherEventManager manager, int value) { try { manager.updateSettings(manager.settings().withInterval(value)); return configStatus(source, manager); } catch (Exception error) { return configFailure(source, error); } }
 	private static int configChance(CommandSourceStack source, WeatherEventManager manager, int value) { try { manager.updateSettings(manager.settings().withChance(value)); return configStatus(source, manager); } catch (Exception error) { return configFailure(source, error); } }
 	private static int configDuration(CommandSourceStack source, WeatherEventManager manager, int min, int max) { try { manager.updateSettings(manager.settings().withDuration(min, max)); return configStatus(source, manager); } catch (Exception error) { return configFailure(source, error); } }
+	private static int configWeight(CommandSourceStack source, WeatherEventManager manager, String rawType, int weight) { try { manager.setTypeWeight(WeatherEventType.parse(rawType), weight); return configStatus(source, manager); } catch (Exception error) { return configFailure(source, error); } }
 	private static int configFailure(CommandSourceStack source, Exception error) { source.sendFailure(Component.literal("自然事件配置失败：" + error.getMessage())); return 0; }
 	private static boolean parseBoolean(String raw) {
 		return switch (raw.toLowerCase(java.util.Locale.ROOT)) { case "true", "on", "yes", "1" -> true; case "false", "off", "no", "0" -> false; default -> throw new IllegalArgumentException("值必须是 on/off 或 true/false"); };
