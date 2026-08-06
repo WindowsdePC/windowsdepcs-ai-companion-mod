@@ -8,7 +8,8 @@
   "license": "MIT",
   "environment": "*",
   "entrypoints": {
-    "main": ["com.example.ai_companion.legacy.LegacyFabricMod"]
+    "main": ["com.example.ai_companion.legacy.LegacyFabricMod"],
+    "client": ["com.example.ai_companion.legacy.LegacyFabricClient"]
   },
   "depends": {
     "fabricloader": ">=0.16.0",

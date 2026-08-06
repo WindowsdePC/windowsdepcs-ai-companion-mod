@@ -1,5 +1,0 @@
-{
-  "type": "minecraft:crafting_shaped", "category": "building", "pattern": [" G ", " S ", "PPP"],
-  "key": { "G": "minecraft:glowstone", "S": "minecraft:stick", "P": "minecraft:oak_planks" },
-  "result": { "id": "ai_companion:table_lamp", "count": 1 }
-}

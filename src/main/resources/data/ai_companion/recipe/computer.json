@@ -1,5 +1,0 @@
-{
-  "type": "minecraft:crafting_shaped", "category": "building", "pattern": ["IGI", "IRI", "SSS"],
-  "key": { "I": "minecraft:iron_ingot", "G": "minecraft:glass_pane", "R": "minecraft:redstone", "S": "minecraft:smooth_stone_slab" },
-  "result": { "id": "ai_companion:computer", "count": 1 }
-}

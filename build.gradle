@@ -50,3 +50,16 @@ jar {
 		rename { "${it}_${project.name}" }
 	}
 }
+
+tasks.register("verifyLegacySources") {
+	doLast {
+		def forbidden = ["net.minecraft.util.Identifier", "AvatarRenderState", "renderer.entity.state", "ClientAsset", "GoldenSpearRush", "lunge.json"]
+		def roots = [file("src/legacyFabric")]
+		forbidden.each { token ->
+			def hit = roots.any { root -> fileTree(root).matching { include "**/*" }.files.any { file -> file.isFile() && file.text.contains(token) } }
+			if (hit) throw new GradleException("1.20.1 Fabric source contains forbidden newer symbol/resource: ${token}")
+		}
+	}
+}
+
+tasks.named("check") { dependsOn("verifyLegacySources") }

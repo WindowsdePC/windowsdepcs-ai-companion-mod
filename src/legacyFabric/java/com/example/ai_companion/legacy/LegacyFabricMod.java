@@ -65,6 +65,9 @@ public final class LegacyFabricMod implements ModInitializer {
 			dispatcher.register(literal("aiplayer")
 				.then(literal("create").requires(source -> source.hasPermission(2))
 					.then(argument("name", StringArgumentType.word()).executes(LegacyFabricMod::create)))
+				.then(literal("create-many").requires(source -> source.hasPermission(2))
+					.then(argument("count", IntegerArgumentType.integer(1, 20))
+						.then(argument("prefix", StringArgumentType.word()).executes(LegacyFabricMod::createMany))))
 				.then(literal("remove").requires(source -> source.hasPermission(2))
 					.then(argument("name", StringArgumentType.word()).executes(LegacyFabricMod::remove)))
 				.then(literal("list").executes(LegacyFabricMod::list))
@@ -77,18 +80,31 @@ public final class LegacyFabricMod implements ModInitializer {
 				.then(literal("team").requires(source -> source.hasPermission(2))
 					.then(argument("name", StringArgumentType.word())
 						.then(argument("target", StringArgumentType.word()).executes(ctx -> mode(ctx, "teammate")))))
+				.then(literal("coach").requires(source -> source.hasPermission(2))
+					.then(argument("name", StringArgumentType.word())
+						.then(argument("target", StringArgumentType.word()).executes(ctx -> mode(ctx, "pvp_coach")))))
 				.then(literal("eye").requires(source -> source.hasPermission(2))
 					.then(argument("name", StringArgumentType.word()).executes(LegacyFabricMod::eye)))
 				.then(literal("ask").requires(source -> source.hasPermission(2))
 					.then(argument("name", StringArgumentType.word())
 						.then(argument("message", StringArgumentType.greedyString()).executes(LegacyFabricMod::ask))))
-				.then(literal("config").requires(source -> source.hasPermission(2))
+				.then(literal("identity")
+					.then(argument("name", StringArgumentType.word()).executes(LegacyFabricMod::identity)))
+				.then(literal("prompt")
+					.then(literal("list").executes(LegacyFabricMod::promptList))
+					.then(literal("show").then(argument("id", StringArgumentType.word()).executes(LegacyFabricMod::promptShow)))
+					.then(literal("set").requires(source -> source.hasPermission(2)).then(argument("id", StringArgumentType.word())
+						.then(argument("text", StringArgumentType.greedyString()).executes(LegacyFabricMod::promptSet))))
+					.then(literal("assign").requires(source -> source.hasPermission(2)).then(argument("name", StringArgumentType.word())
+						.then(argument("id", StringArgumentType.word()).executes(LegacyFabricMod::promptAssign)))))
+				.then(literal("feature").then(literal("status").executes(LegacyFabricMod::featureStatus)))
+				.then(literal("config")
 					.then(literal("status").executes(LegacyFabricMod::configStatus))
-					.then(literal("endpoint").then(argument("url", StringArgumentType.greedyString())
+					.then(literal("endpoint").requires(source -> source.hasPermission(2)).then(argument("url", StringArgumentType.greedyString())
 						.executes(ctx -> setConfig(ctx, "endpoint"))))
-					.then(literal("model").then(argument("model", StringArgumentType.greedyString())
+					.then(literal("model").requires(source -> source.hasPermission(2)).then(argument("model", StringArgumentType.greedyString())
 						.executes(ctx -> setConfig(ctx, "model"))))
-					.then(literal("token").then(argument("token", StringArgumentType.greedyString())
+					.then(literal("token").requires(source -> source.hasPermission(2)).then(argument("token", StringArgumentType.greedyString())
 						.executes(ctx -> setConfig(ctx, "token")))))
 				.then(literal("pet")
 					.then(literal("create").then(argument("name", StringArgumentType.word())
@@ -155,6 +171,27 @@ public final class LegacyFabricMod implements ModInitializer {
 		restore(data);
 		save();
 		return ok(context, "已创建 1.20.1 Fabric AI：" + name);
+	}
+
+	private static int createMany(CommandContext<CommandSourceStack> context) {
+		int count = IntegerArgumentType.getInteger(context, "count");
+		String prefix = StringArgumentType.getString(context, "prefix");
+		if (!prefix.matches("[A-Za-z0-9_]{1,12}")) return fail(context, "前缀必须为 1～12 位字母、数字或下划线");
+		int created = 0;
+		for (int i = 1; i <= count; i++) {
+			String name = prefix + i;
+			if (!NAME.matcher(name).matches() || state.agents.containsKey(name.toLowerCase(Locale.ROOT))) continue;
+			ServerPlayer owner;
+			try { owner = context.getSource().getPlayerOrException(); }
+			catch (Exception error) { return fail(context, "该命令需要由游戏内玩家执行"); }
+			String key = name.toLowerCase(Locale.ROOT);
+			UUID uuid = UUID.nameUUIDFromBytes(("ai_companion:" + key).getBytes(StandardCharsets.UTF_8));
+			AgentData data = new AgentData(name, uuid.toString(), owner.level().dimension().location().toString(),
+				owner.getX() + 1.0 + created, owner.getY(), owner.getZ() + 1.0, "idle", "");
+			state.agents.put(key, data); restore(data); created++;
+		}
+		save();
+		return created == 0 ? fail(context, "没有可创建的名称") : ok(context, "已创建 " + created + " 个 AI");
 	}
 
 	private static int remove(CommandContext<CommandSourceStack> context) {
@@ -287,7 +324,44 @@ public final class LegacyFabricMod implements ModInitializer {
 	}
 
 	private static int compatibility(CommandContext<CommandSourceStack> context) {
-		return ok(context, "AI Companion 0.8.2 · Minecraft 1.20.1 Fabric：AI 核心、宠物竞技与模拟社会可用");
+		return ok(context, "AI Companion 0.8.3 · Minecraft 1.20.1 Fabric：旧版快捷键、完整核心命令、宠物竞技与模拟社会可用");
+	}
+
+	private static int identity(CommandContext<CommandSourceStack> context) {
+		AgentData data = find(context);
+		if (data == null) return 0;
+		return ok(context, String.format(Locale.ROOT, "%s · UUID=%s · %s · X %.1f Y %.1f Z %.1f · 模式=%s · 提示词=%s",
+			data.name, data.uuid, data.dimension, data.x, data.y, data.z, data.mode,
+			data.promptId == null || data.promptId.isBlank() ? "自动" : data.promptId));
+	}
+
+	private static int promptList(CommandContext<CommandSourceStack> context) {
+		return ok(context, "提示词：" + String.join(", ", state.prompts.keySet()));
+	}
+
+	private static int promptShow(CommandContext<CommandSourceStack> context) {
+		String id = StringArgumentType.getString(context, "id").toLowerCase(Locale.ROOT);
+		String value = state.prompts.get(id);
+		return value == null ? fail(context, "未找到提示词") : ok(context, id + "：" + value);
+	}
+
+	private static int promptSet(CommandContext<CommandSourceStack> context) {
+		String id = StringArgumentType.getString(context, "id").toLowerCase(Locale.ROOT);
+		String value = StringArgumentType.getString(context, "text").strip();
+		if (!id.matches("[a-z0-9_]{1,32}") || value.isBlank() || value.length() > 6000) return fail(context, "提示词 ID 或内容无效");
+		state.prompts.put(id, value); save(); return ok(context, "已保存提示词：" + id);
+	}
+
+	private static int promptAssign(CommandContext<CommandSourceStack> context) {
+		AgentData data = find(context);
+		if (data == null) return 0;
+		String id = StringArgumentType.getString(context, "id").toLowerCase(Locale.ROOT);
+		if (!state.prompts.containsKey(id)) return fail(context, "未找到提示词");
+		data.promptId = id; save(); return ok(context, "已将 " + id + " 分配给 " + data.name);
+	}
+
+	private static int featureStatus(CommandContext<CommandSourceStack> context) {
+		return ok(context, "1.20.1 功能：V+B 管理界面、F8 位置查询、C 缩放、G 导航入口、AI 核心、宠物竞技、模拟社会；已删除 1.20.1 不存在的金矛突进");
 	}
 
 	private static int petCreate(CommandContext<CommandSourceStack> context) {
@@ -508,6 +582,11 @@ public final class LegacyFabricMod implements ModInitializer {
 	}
 
 	private static String systemPrompt(AgentData data) {
+		if (data.promptId != null && !data.promptId.isBlank()) {
+			String custom = state.prompts.get(data.promptId);
+			if (custom != null && !custom.isBlank()) return custom.replace("{targets}", data.target == null ? "" : data.target)
+				+ "\n每次只返回 JSON：{\"action\":\"say|move|wait\",\"say\":\"最多240字符\",\"dx\":-8到8,\"dz\":-8到8}";
+		}
 		return "你是 Minecraft 1.20.1 中的真实 AI 玩家。模式=" + data.mode + "，目标="
 			+ (data.target.isBlank() ? "未指定" : data.target) + "。禁止命令、传送、创造模式、复制物品和未经提供的透视信息。"
 			+ "每次只返回 JSON：{\"action\":\"say|move|wait\",\"say\":\"最多240字符\",\"dx\":-8到8,\"dz\":-8到8}";
@@ -575,6 +654,7 @@ public final class LegacyFabricMod implements ModInitializer {
 		private Map<String, AgentData> agents = new LinkedHashMap<>();
 		private Map<String, PetData> pets = new LinkedHashMap<>();
 		private Map<String, SocietyData> society = new LinkedHashMap<>();
+		private Map<String, String> prompts = defaultPrompts();
 		private State normalized() {
 			if (endpoint == null || endpoint.isBlank()) endpoint = "https://api.openai.com/v1";
 			if (model == null || model.isBlank()) model = "gpt-5-mini";
@@ -582,7 +662,17 @@ public final class LegacyFabricMod implements ModInitializer {
 			if (agents == null) agents = new LinkedHashMap<>();
 			if (pets == null) pets = new LinkedHashMap<>();
 			if (society == null) society = new LinkedHashMap<>();
+			if (prompts == null) prompts = defaultPrompts();
+			defaultPrompts().forEach(prompts::putIfAbsent);
 			return this;
+		}
+		private static Map<String, String> defaultPrompts() {
+			Map<String, String> values = new LinkedHashMap<>();
+			values.put("idle", "你是 Minecraft 生存玩家。正常探索、建造、采集与交流；禁止作弊、传送、管理员命令和复制。");
+			values.put("hunter", "你要在正常生存规则内追踪 {targets}，规划路线和装备；禁止作弊或虚构坐标。");
+			values.put("teammate", "你与 {targets} 是队友。合作生存、分享资源并主动报告风险；禁止作弊。");
+			values.put("pvp_coach", "你是 {targets} 的 PvP 教练。进行安全对练并给出走位、距离和节奏建议，危险时停手。");
+			return values;
 		}
 	}
 
@@ -614,6 +704,7 @@ public final class LegacyFabricMod implements ModInitializer {
 		private double z;
 		private String mode;
 		private String target;
+		private String promptId = "";
 		private AgentData(String name, String uuid, String dimension, double x, double y, double z, String mode, String target) {
 			this.name = name; this.uuid = uuid; this.dimension = dimension;
 			this.x = x; this.y = y; this.z = z; this.mode = mode; this.target = target;

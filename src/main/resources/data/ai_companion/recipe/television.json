@@ -1,5 +1,0 @@
-{
-  "type": "minecraft:crafting_shaped", "category": "building", "pattern": ["IGI", "GRG", " I "],
-  "key": { "I": "minecraft:iron_ingot", "G": "minecraft:black_stained_glass", "R": "minecraft:redstone" },
-  "result": { "id": "ai_companion:television", "count": 1 }
-}
