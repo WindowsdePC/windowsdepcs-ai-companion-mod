@@ -4,15 +4,15 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.8.2](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.8.2)
+当前版本：v0.8.7
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.8.2.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.2.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.8.2.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.8.7.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.7.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.8.7.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
@@ -36,12 +36,14 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 
 | 模组 | 用途 | 网址 |
 | --- | --- | --- |
-| Simple Voice Chat | 女仆语音转写兼容通道 | [Simple Voice Chat](https://modrinth.com/mod/simple-voice-chat) |
+| Simple Voice Chat | 女仆语音转写兼容通道 | [Simple Voice Chat](https://modrinth.com/plugin/simple-voice-chat) |
 | Sophisticated Backpacks | 女仆外部背包识别 | [Sophisticated Backpacks](https://www.curseforge.com/minecraft/mc-mods/sophisticated-backpacks) |
 | Traveler's Backpack | 女仆外部背包识别 | [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) |
 | Inventory Profiles Next | 女仆标准容器的一键整理兼容 | [Inventory Profiles Next](https://modrinth.com/mod/inventory-profiles-next) |
 
 以上可选模组均不是启动前置；未安装时只停用对应兼容入口。
+
+0.8.7 新增 `/aiplayer weather stats [aurora|meteor|sandstorm|thunder]`，用于汇总最近 32 次自然事件的自然/管理员次数与计划总时长。
 
 ## 运行环境
 

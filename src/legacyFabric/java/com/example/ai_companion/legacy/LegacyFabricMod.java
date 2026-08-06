@@ -105,6 +105,9 @@ public final class LegacyFabricMod implements ModInitializer {
 				.then(literal("weather")
 					.then(literal("status").executes(LegacyFabricMod::weatherStatus))
 					.then(literal("forecast").executes(LegacyFabricMod::weatherForecast))
+					.then(literal("stats").executes(ctx -> weatherStats(ctx, null))
+						.then(argument("type", StringArgumentType.word())
+							.executes(ctx -> weatherStats(ctx, StringArgumentType.getString(ctx, "type")))))
 					.then(literal("history").executes(ctx -> weatherHistory(ctx, 5))
 						.then(argument("count", IntegerArgumentType.integer(1, 10))
 							.executes(ctx -> weatherHistory(ctx, IntegerArgumentType.getInteger(ctx, "count")))))
@@ -437,6 +440,16 @@ public final class LegacyFabricMod implements ModInitializer {
 			+ LegacyWeatherManager.Type.valueOf(entry.type).label + " · " + entry.plannedDurationSeconds + " 秒 · "
 			+ (entry.automatic ? "自然" : "管理员")), false);
 		return entries.size();
+	}
+
+	private static int weatherStats(CommandContext<CommandSourceStack> context, String rawType) {
+		try {
+			LegacyWeatherManager.Type type = rawType == null ? null : LegacyWeatherManager.parse(rawType);
+			LegacyWeatherManager.Summary value = WEATHER.statistics(type);
+			String label = type == null ? "全部事件" : type.label;
+			return ok(context, label + "统计：共 " + value.events + " 次（自然 " + value.automaticEvents
+				+ " / 管理员 " + value.administratorEvents + "），计划总时长 " + value.plannedDurationSeconds + " 秒");
+		} catch (Exception error) { return fail(context, "读取自然事件统计失败：" + safeError(error)); }
 	}
 
 	private static int weatherNotify(CommandContext<CommandSourceStack> context) {
