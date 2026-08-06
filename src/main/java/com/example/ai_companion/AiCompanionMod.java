@@ -14,6 +14,7 @@ import com.example.ai_companion.command.FurnitureCommands;
 import com.example.ai_companion.command.MaidCommands;
 import com.example.ai_companion.command.AiMusicCommands;
 import com.example.ai_companion.command.PetCompetitionCommands;
+import com.example.ai_companion.command.SocietyCommands;
 import com.example.ai_companion.config.GameplayConfig;
 import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
@@ -35,6 +36,7 @@ import com.example.ai_companion.maid.MaidManager;
 import com.example.ai_companion.maid.MaidNetworking;
 import com.example.ai_companion.music.AiMusicManager;
 import com.example.ai_companion.pet.PetCompetitionManager;
+import com.example.ai_companion.society.SocietyManager;
 import com.example.ai_companion.world.WorldFeatureCommands;
 import com.example.ai_companion.world.WorldFeatureConfig;
 import com.example.ai_companion.world.WorldFeatureManager;
@@ -66,6 +68,7 @@ public final class AiCompanionMod implements ModInitializer {
 	private MaidManager maids;
 	private AiMusicManager music;
 	private PetCompetitionManager petCompetitions;
+	private SocietyManager society;
 	private WorldFeatureConfig worldFeatures;
 	private WorldFeatureManager worldFeatureManager;
 
@@ -88,6 +91,7 @@ public final class AiCompanionMod implements ModInitializer {
 		furniture = new FurnitureManager(agents);
 		music = new AiMusicManager(agents);
 		petCompetitions = new PetCompetitionManager();
+		society = new SocietyManager(agents);
 		worldFeatures = WorldFeatureConfig.load();
 		worldFeatureManager = new WorldFeatureManager(() -> worldFeatures);
 		AgentPositionNetworking.registerServer(agents);
@@ -111,6 +115,7 @@ public final class AiCompanionMod implements ModInitializer {
 		music.register();
 		AiMusicCommands.register(music);
 		PetCompetitionCommands.register(petCompetitions);
+		SocietyCommands.register(society);
 		MaidCommands.register(maids);
 		WorldFeatureCommands.register(() -> worldFeatures, updated -> worldFeatures = updated);
 		ServerTickEvents.END_SERVER_TICK.register(agents::tick);
@@ -122,6 +127,7 @@ public final class AiCompanionMod implements ModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(livestreams::tick);
 		ServerTickEvents.END_SERVER_TICK.register(music::tick);
 		ServerTickEvents.END_SERVER_TICK.register(worldFeatureManager::tick);
+		ServerTickEvents.END_SERVER_TICK.register(society::tick);
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			agents.restore(server);
 			maids.restore(server);
@@ -139,6 +145,7 @@ public final class AiCompanionMod implements ModInitializer {
 			livestreams.close();
 			music.close();
 			petCompetitions.close();
+			society.close();
 			maids.close();
 			worldFeatureManager.close();
 		});
