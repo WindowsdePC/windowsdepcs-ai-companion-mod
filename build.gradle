@@ -1,5 +1,5 @@
 plugins {
-	id "net.fabricmc.fabric-loom" version "${loom_version}"
+	id "net.fabricmc.fabric-loom" version "1.17.17"
 	id "maven-publish"
 }
 
@@ -10,41 +10,21 @@ base {
 	archivesName = project.archives_base_name
 }
 
-loom {
-	splitEnvironmentSourceSets()
-
-	mods {
-		"ai_companion" {
-			sourceSet sourceSets.main
-			sourceSet sourceSets.client
-		}
+sourceSets {
+	main {
+		java.setSrcDirs(["src/legacyFabric/java"])
+		resources.setSrcDirs(["src/legacyFabric/resources"])
 	}
-}
-
-repositories {
-	maven {
-		name = "Modrinth"
-		url = "https://api.modrinth.com/maven"
-		content { includeGroup "maven.modrinth" }
+	test {
+		java.setSrcDirs(["src/legacyFabricTest/java"])
 	}
 }
 
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-
-	// Alternative client UI backends. Neither is bundled; runtime routing prefers EclipseUI.
-	clientCompileOnly "maven.modrinth:eclipseui:EW0sBZm4"
-	clientCompileOnly "maven.modrinth:cloth-config:Nv3xnWXd"
-
-	testImplementation platform("org.junit:junit-bom:5.13.4")
-	testImplementation "org.junit.jupiter:junit-jupiter"
-	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
-}
-
-test {
-	useJUnitPlatform()
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 }
 
 processResources {
@@ -55,32 +35,18 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	options.release = 25
+	options.release = 17
 	options.encoding = "UTF-8"
-}
-
-tasks.withType(Javadoc).configureEach {
-	options.encoding = "UTF-8"
-	options.addStringOption("Xdoclint:none", "-quiet")
 }
 
 java {
 	withSourcesJar()
-	withJavadocJar()
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
 }
 
 jar {
 	from("LICENSE") {
 		rename { "${it}_${project.name}" }
-	}
-}
-
-publishing {
-	publications {
-		create("mavenJava", MavenPublication) {
-			from components.java
-		}
 	}
 }

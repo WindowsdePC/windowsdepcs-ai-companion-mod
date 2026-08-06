@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "ai_companion",
+  "version": "${version}",
+  "name": "WindowsdePC's AI Companion Mod",
+  "description": "Minecraft 1.20.1 Fabric compatibility edition of the AI Companion Mod.",
+  "authors": ["WindowsdePC"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.example.ai_companion.legacy.LegacyFabricMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "fabric-api": ">=0.92.0",
+    "minecraft": "~1.20.1",
+    "java": ">=17"
+  },
+  "suggests": {
+    "cloth-config": "*",
+    "voicechat": "*",
+    "sophisticatedbackpacks": "*"
+  }
+}
