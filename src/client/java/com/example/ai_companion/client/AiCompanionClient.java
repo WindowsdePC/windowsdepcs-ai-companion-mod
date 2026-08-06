@@ -7,6 +7,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import com.example.ai_companion.client.navigation.NavigationClientController;
 import com.example.ai_companion.client.navigation.NavigationHud;
+import com.example.ai_companion.client.maid.MaidClientRegistry;
 
 /** Opens the unified settings screen with a configurable two-key chord. */
 public final class AiCompanionClient implements ClientModInitializer {
@@ -22,6 +23,7 @@ public final class AiCompanionClient implements ClientModInitializer {
 		AgentPositionHud.initialize();
 		NavigationClientController.initialize();
 		NavigationHud.initialize();
+		MaidClientRegistry.initialize();
 		boolean[] chordHeld = {false};
 		boolean[] navigatorHeld = {false};
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {

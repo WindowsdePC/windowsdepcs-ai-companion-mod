@@ -3,6 +3,7 @@ package com.example.ai_companion.client.mixin;
 import com.example.ai_companion.client.render.FlexibleEquipmentLayer;
 import com.example.ai_companion.client.render.FlexibleEquipmentRenderState;
 import com.example.ai_companion.client.ClientPerformanceController;
+import com.example.ai_companion.client.maid.MaidClientRegistry;
 import net.minecraft.client.model.player.PlayerModel;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
@@ -39,6 +40,7 @@ abstract class AvatarRendererMixin
 		+ "Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V", at = @At("TAIL"))
 	private void ai_companion$extractFlexibleEquipment(Avatar avatar, AvatarRenderState state,
 			float partialTick, CallbackInfo callback) {
+		MaidClientRegistry.apply(avatar, state);
 		FlexibleEquipmentRenderState extra = (FlexibleEquipmentRenderState) state;
 		if (!ClientPerformanceController.shouldRenderExtra(avatar)) {
 			extra.ai_companion$itemState(EquipmentSlot.HEAD).clear();

@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -74,6 +75,7 @@ public final class AgentManager implements AutoCloseable {
 	private final PromptStore prompts;
 	private final AgentIdentityStore identityStore = AgentIdentityStore.load();
 	private Function<String, String> collaborationContext = ignored -> "";
+	private BiFunction<String, String, String> promptDecorator = (ignored, prompt) -> prompt;
 	private long nextIdentitySaveTick;
 
 	public record AgentView(String name, AgentMode mode, String targetName, boolean thinking,
@@ -208,6 +210,11 @@ public final class AgentManager implements AutoCloseable {
 
 	public synchronized void setCollaborationContext(Function<String, String> provider) {
 		collaborationContext = provider == null ? ignored -> "" : provider;
+	}
+
+	/** Lets feature modules add per-agent identity context without replacing prompt presets. */
+	public synchronized void setPromptDecorator(BiFunction<String, String, String> decorator) {
+		promptDecorator = decorator == null ? (ignored, prompt) -> prompt : decorator;
 	}
 
 	public synchronized AgentIdentity identity(String name, MinecraftServer server) {
@@ -419,14 +426,16 @@ public final class AgentManager implements AutoCloseable {
 
 	private String promptFor(Agent agent) {
 		if (!agent.promptId.isBlank()) {
-			return PromptTemplates.applyTargets(prompts.get(agent.promptId), agent.targetName);
+			return promptDecorator.apply(agent.name,
+				PromptTemplates.applyTargets(prompts.get(agent.promptId), agent.targetName));
 		}
-		return switch (agent.mode) {
+		String prompt = switch (agent.mode) {
 			case HUNTER -> PromptTemplates.applyTargets(prompts.get("hunter"), agent.targetName);
 			case TEAMMATE -> PromptTemplates.applyTargets(prompts.get("teammate"), agent.targetName);
 			case PVP_COACH -> PromptTemplates.applyTargets(prompts.get("pvp_coach"), agent.targetName);
 			case IDLE -> PromptTemplates.applyTargets(prompts.get("idle"), agent.targetName);
 		};
+		return promptDecorator.apply(agent.name, prompt);
 	}
 
 	private Agent requireAgent(String name) {

@@ -41,7 +41,7 @@ public final class PromptConfigScreen extends Screen {
 		}
 	}
 
-	private enum AiSection { MANAGEMENT, API, PROMPTS }
+	private enum AiSection { MANAGEMENT, MAID, API, PROMPTS }
 
 	private final PromptStore promptStore;
 	private final ClientSettings settings;
@@ -166,18 +166,29 @@ public final class PromptConfigScreen extends Screen {
 	}
 
 	private void buildAiSystemPanel(int left, int panelWidth) {
-		int sectionWidth = (panelWidth - 8) / 3;
+		int sectionWidth = (panelWidth - 12) / 4;
 		addRenderableWidget(Button.builder(Component.literal("AI 管理"), b -> switchAiSection(AiSection.MANAGEMENT))
 			.bounds(left, 28, sectionWidth, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("API"), b -> switchAiSection(AiSection.API))
+		addRenderableWidget(Button.builder(Component.literal("AI 女仆"), b -> switchAiSection(AiSection.MAID))
 			.bounds(left + sectionWidth + 4, 28, sectionWidth, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("提示词"), b -> switchAiSection(AiSection.PROMPTS))
+		addRenderableWidget(Button.builder(Component.literal("API"), b -> switchAiSection(AiSection.API))
 			.bounds(left + (sectionWidth + 4) * 2, 28, sectionWidth, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("提示词"), b -> switchAiSection(AiSection.PROMPTS))
+			.bounds(left + (sectionWidth + 4) * 3, 28, sectionWidth, 20).build());
 		switch (aiSection) {
 			case MANAGEMENT -> buildAiPanel(left, panelWidth);
+			case MAID -> buildMaidPanel(left, panelWidth);
 			case API -> buildApiPanel(left, panelWidth);
 			case PROMPTS -> buildPromptPanel(left, panelWidth);
 		}
+	}
+
+	private void buildMaidPanel(int left, int panelWidth) {
+		addRenderableWidget(Button.builder(Component.literal("打开 AI 女仆创建与聊天界面"), button -> {
+			if (minecraft != null) minecraft.setScreenAndShow(
+				new com.example.ai_companion.client.maid.MaidScreen(this));
+		}).bounds(left, 76, Math.min(330, panelWidth), 22).build());
+		status = "可命名、选择 7 个默认皮肤、导入本地皮肤/披风，并通过文字向女仆发送 AI 指令";
 	}
 
 	private void switchAiSection(AiSection next) {
@@ -807,6 +818,9 @@ public final class PromptConfigScreen extends Screen {
 						graphics.text(font, "AI 模式、当前玩家目标与提示词", left, 106, 0xA0A0A0);
 						graphics.text(font, "立即请求一次 AI 决策", left, 191, 0xA0A0A0);
 					}
+					case MAID -> graphics.text(font,
+						"AI 女仆会使用独立主人身份、女仆提示词和头顶心情对话标记",
+						left, 58, 0xFFA0A0A0);
 					case API -> {
 						graphics.text(font, "OpenAI Chat Completions 兼容 API 地址", left, 61, 0xA0A0A0);
 						graphics.text(font, "模型名称", left, 111, 0xA0A0A0);
