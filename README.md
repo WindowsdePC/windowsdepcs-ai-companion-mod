@@ -4,19 +4,19 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：v0.8.3
+当前版本：v0.8.4
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.8.3.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.3.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.8.3.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.8.4.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.4.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.8.4.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
-0.8.3 修复两个 1.20.1 版本的客户端入口与命令树：V+B、F8、C、G 采用 1.20.1 API
+0.8.3 起修复两个 1.20.1 版本的客户端入口与命令树：V+B、F8、C、G 采用 1.20.1 API
 直接轮询且不写入原版“控制”列表；旧版分支不再保留 26.2 包名、渲染源码或金矛突进资源。
 
 ## 依赖模组
@@ -180,6 +180,23 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 /aiplayer society trade BuilderAI FarmerAI 10
 /aiplayer society status BuilderAI
 /aiplayer society leaderboard
+```
+
+### 世界天气事件
+
+- 服务器一次只运行一个持久化自然事件：极光、流星雨、沙尘暴或增强雷暴。
+- 极光与流星雨只在主世界夜晚生效，日出自动结束；沙尘暴只影响沙漠群系内玩家。
+- 流星雨会在玩家附近掉落以紫水晶碎片承载的“星辰碎片”；沙尘暴短暂降低视野与移动速度。
+- 增强雷暴驱动原版雷雨并增加电火花表现；事件效果不会在其他维度错误施加。
+- 无事件时服务器会以低概率自然生成 5～10 分钟事件；管理员也可手动启动 1～30 分钟事件。
+
+```text
+/aiplayer weather status
+/aiplayer weather start aurora 5
+/aiplayer weather start meteor 5
+/aiplayer weather start sandstorm 5
+/aiplayer weather start thunder 5
+/aiplayer weather stop
 ```
 
 ### AI 女仆
