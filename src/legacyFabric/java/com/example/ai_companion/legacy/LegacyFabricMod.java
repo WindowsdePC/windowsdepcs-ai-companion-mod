@@ -12,6 +12,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.FakePlayer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -62,7 +63,7 @@ public final class LegacyFabricMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-			dispatcher.register(literal("aiplayer")
+				dispatcher.register(literal("aiplayer")
 				.then(literal("create").requires(source -> source.hasPermission(2))
 					.then(argument("name", StringArgumentType.word()).executes(LegacyFabricMod::create)))
 				.then(literal("remove").requires(source -> source.hasPermission(2))
@@ -105,9 +106,26 @@ public final class LegacyFabricMod implements ModInitializer {
 						.then(argument("second", StringArgumentType.word()).executes(ctx -> petCompete(ctx, true)))))
 					.then(literal("leaderboard").executes(LegacyFabricMod::petLeaderboard)))
 				.then(literal("compatibility").executes(LegacyFabricMod::compatibility))));
+		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+			dispatcher.register(literal("aisociety")
+				.then(literal("list").executes(LegacyFabricMod::societyList))
+				.then(literal("status").then(argument("agent", StringArgumentType.word()).executes(LegacyFabricMod::societyStatus)))
+				.then(literal("enroll").requires(source -> source.hasPermission(2))
+					.then(argument("agent", StringArgumentType.word()).executes(LegacyFabricMod::societyEnroll)))
+				.then(literal("home").requires(source -> source.hasPermission(2))
+					.then(argument("agent", StringArgumentType.word()).executes(LegacyFabricMod::societyHome)))
+				.then(literal("job").requires(source -> source.hasPermission(2))
+					.then(argument("agent", StringArgumentType.word()).then(argument("job", StringArgumentType.word())
+						.executes(LegacyFabricMod::societyJob))))
+				.then(literal("work").requires(source -> source.hasPermission(2))
+					.then(argument("agent", StringArgumentType.word()).executes(LegacyFabricMod::societyWork)))
+				.then(literal("social").requires(source -> source.hasPermission(2))
+					.then(argument("first", StringArgumentType.word()).then(argument("second", StringArgumentType.word())
+						.executes(LegacyFabricMod::societySocial))))));
 
 		ServerLifecycleEvents.SERVER_STARTED.register(LegacyFabricMod::start);
 		ServerLifecycleEvents.SERVER_STOPPING.register(ignored -> save());
+		ServerTickEvents.END_SERVER_TICK.register(LegacyFabricMod::societyTick);
 	}
 
 	private static void start(MinecraftServer minecraftServer) {
@@ -266,7 +284,97 @@ public final class LegacyFabricMod implements ModInitializer {
 	}
 
 	private static int compatibility(CommandContext<CommandSourceStack> context) {
-		return ok(context, "AI Companion 0.8.1 · Minecraft 1.20.1 Fabric：AI 核心与宠物竞技可用");
+		return ok(context, "AI Companion 0.8.2 · Minecraft 1.20.1 Fabric：AI 核心、宠物竞技与社会模拟可用");
+	}
+
+	private static void societyTick(MinecraftServer current) {
+		if (current.getTickCount() % 200 != 0) return;
+		long day = current.overworld().getDayTime() / 24_000L;
+		if (day <= state.lastSocietyDay) return;
+		if (state.lastSocietyDay >= 0) for (SocietyData resident : state.society.values()) {
+			int wage = resident.job.equals("unemployed") ? 0 : societyWage(resident) / 2;
+			resident.balance = Math.max(0, Math.min(1_000_000, resident.balance + wage - (resident.homeDimension.isBlank() ? 1 : 2)));
+		}
+		state.lastSocietyDay = day; save();
+	}
+
+	private static int societyEnroll(CommandContext<CommandSourceStack> context) {
+		String name = StringArgumentType.getString(context, "agent");
+		AgentData agent = state.agents.get(name.toLowerCase(Locale.ROOT));
+		if (agent == null) return fail(context, "未找到已登记 AI：" + name);
+		if (state.society.size() >= 128) return fail(context, "社会成员已达到 128 名上限");
+		String key = agent.name.toLowerCase(Locale.ROOT);
+		if (state.society.containsKey(key)) return fail(context, "AI 已加入社会");
+		state.society.put(key, new SocietyData(agent.name)); save();
+		return ok(context, "已登记社会成员：" + societyText(state.society.get(key)));
+	}
+
+	private static int societyHome(CommandContext<CommandSourceStack> context) {
+		SocietyData resident = society(context, "agent"); if (resident == null) return 0;
+		try {
+			ServerPlayer player = context.getSource().getPlayerOrException();
+			resident.homeDimension = player.level().dimension().location().toString();
+			resident.homeX = player.getX(); resident.homeY = player.getY(); resident.homeZ = player.getZ(); save();
+			return ok(context, "住所已设置：" + societyText(resident));
+		} catch (Exception error) { return fail(context, "该命令需要由游戏内玩家执行"); }
+	}
+
+	private static int societyJob(CommandContext<CommandSourceStack> context) {
+		SocietyData resident = society(context, "agent"); if (resident == null) return 0;
+		String job = StringArgumentType.getString(context, "job").toLowerCase(Locale.ROOT);
+		if (!java.util.Set.of("unemployed", "farmer", "builder", "explorer", "guard", "trader").contains(job)) {
+			return fail(context, "职业无效");
+		}
+		resident.job = job; save(); return ok(context, "职业已设置：" + societyText(resident));
+	}
+
+	private static int societyWork(CommandContext<CommandSourceStack> context) {
+		SocietyData resident = society(context, "agent"); if (resident == null) return 0;
+		if (resident.job.equals("unemployed")) return fail(context, "请先为 AI 分配职业");
+		long now = System.currentTimeMillis();
+		if (now - resident.lastWorkMillis < 60_000L) return fail(context, "同一名 AI 每 60 秒只能手动工作一次");
+		resident.balance = Math.min(1_000_000, resident.balance + societyWage(resident));
+		resident.workCycles++; resident.lastWorkMillis = now; save();
+		return ok(context, "工作完成：" + societyText(resident));
+	}
+
+	private static int societySocial(CommandContext<CommandSourceStack> context) {
+		SocietyData first = society(context, "first"); if (first == null) return 0;
+		SocietyData second = society(context, "second"); if (second == null) return 0;
+		if (first == second) return fail(context, "需要两名不同的 AI 社会成员");
+		first.relationships.put(second.name, Math.min(100, first.relationships.getOrDefault(second.name, 0) + 5));
+		second.relationships.put(first.name, Math.min(100, second.relationships.getOrDefault(first.name, 0) + 5)); save();
+		return ok(context, first.name + " 与 " + second.name + " 的关系值为 " + first.relationships.get(second.name));
+	}
+
+	private static int societyStatus(CommandContext<CommandSourceStack> context) {
+		SocietyData resident = society(context, "agent"); return resident == null ? 0 : ok(context, societyText(resident));
+	}
+
+	private static int societyList(CommandContext<CommandSourceStack> context) {
+		if (state.society.isEmpty()) return ok(context, "AI 社会目前没有成员");
+		state.society.values().forEach(resident -> context.getSource().sendSuccess(() -> Component.literal(societyText(resident)), false));
+		return state.society.size();
+	}
+
+	private static SocietyData society(CommandContext<CommandSourceStack> context, String argument) {
+		String name = StringArgumentType.getString(context, argument);
+		SocietyData resident = state.society.get(name.toLowerCase(Locale.ROOT));
+		if (resident == null) fail(context, "AI 尚未加入社会：" + name);
+		return resident;
+	}
+
+	private static int societyWage(SocietyData resident) {
+		int base = switch (resident.job) { case "farmer" -> 8; case "builder" -> 10; case "explorer" -> 9; case "guard" -> 11; case "trader" -> 12; default -> 0; };
+		return base + Math.min(10, resident.workCycles / 5);
+	}
+
+	private static String societyText(SocietyData resident) {
+		int average = resident.relationships.isEmpty() ? 0 : (int) resident.relationships.values().stream().mapToInt(Integer::intValue).average().orElse(0);
+		int wellbeing = Math.max(0, Math.min(100, 30 + (resident.homeDimension.isBlank() ? 0 : 20)
+			+ (resident.job.equals("unemployed") ? 0 : 20) + Math.min(20, resident.balance / 10) + average / 10));
+		return resident.name + " · 家=" + (resident.homeDimension.isBlank() ? "未设置" : resident.homeDimension)
+			+ " · 职业=" + resident.job + " · 余额=" + resident.balance + " · 工作=" + resident.workCycles + " · 幸福=" + wellbeing;
 	}
 
 	private static int petCreate(CommandContext<CommandSourceStack> context) {
@@ -457,14 +565,28 @@ public final class LegacyFabricMod implements ModInitializer {
 		private String token = "";
 		private Map<String, AgentData> agents = new LinkedHashMap<>();
 		private Map<String, PetData> pets = new LinkedHashMap<>();
+		private Map<String, SocietyData> society = new LinkedHashMap<>();
+		private long lastSocietyDay = -1;
 		private State normalized() {
 			if (endpoint == null || endpoint.isBlank()) endpoint = "https://api.openai.com/v1";
 			if (model == null || model.isBlank()) model = "gpt-5-mini";
 			if (token == null) token = "";
 			if (agents == null) agents = new LinkedHashMap<>();
 			if (pets == null) pets = new LinkedHashMap<>();
+			if (society == null) society = new LinkedHashMap<>();
 			return this;
 		}
+	}
+
+	private static final class SocietyData {
+		private String name;
+		private String homeDimension = "";
+		private double homeX, homeY, homeZ;
+		private String job = "unemployed";
+		private int balance = 20, workCycles;
+		private long lastWorkMillis;
+		private Map<String, Integer> relationships = new LinkedHashMap<>();
+		private SocietyData(String name) { this.name = name; }
 	}
 
 	private static final class PetData {
