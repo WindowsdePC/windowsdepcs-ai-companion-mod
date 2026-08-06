@@ -4,19 +4,46 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.8.0](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.8.0)
+当前版本：[v0.8.1](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.8.1)
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.8.0.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.0.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.8.0.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.8.1.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.1.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.8.1.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
-## 环境要求
+## 依赖模组
+
+### 必要依赖
+
+| 目标版本 | 必须安装 | 网址 |
+| --- | --- | --- |
+| Minecraft 26.2 Fabric | Fabric Loader 0.19.3+ | [Fabric 官方安装页](https://fabricmc.net/use/installer/) |
+| Minecraft 26.2 Fabric | Fabric API 0.155.2+26.2+ | [Fabric API](https://modrinth.com/mod/fabric-api) |
+| Minecraft 26.2 Fabric | EclipseUI 或 Cloth Config，二选一 | [EclipseUI](https://modrinth.com/mod/eclipseui) / [Cloth Config](https://modrinth.com/mod/cloth-config) |
+| Minecraft 1.20.1 Fabric | Fabric Loader 0.16.0+ | [Fabric 官方安装页](https://fabricmc.net/use/installer/) |
+| Minecraft 1.20.1 Fabric | Fabric API 0.92.0+1.20.1+ | [Fabric API](https://modrinth.com/mod/fabric-api) |
+| Minecraft 1.20.1 Forge | Minecraft Forge 47.x | [Forge 1.20.1 下载页](https://files.minecraftforge.net/net/minecraftforge/forge/index_1.20.1.html) |
+
+26.2 Fabric 版使用 Java 25；两个 1.20.1 版本使用 Java 17。EclipseUI 和 Cloth Config
+只需安装一个；两个 1.20.1 兼容版当前不要求 UI 库。
+
+### 可选依赖
+
+| 模组 | 用途 | 网址 |
+| --- | --- | --- |
+| Simple Voice Chat | 女仆语音转写兼容通道 | [Simple Voice Chat](https://modrinth.com/mod/simple-voice-chat) |
+| Sophisticated Backpacks | 女仆外部背包识别 | [Sophisticated Backpacks](https://www.curseforge.com/minecraft/mc-mods/sophisticated-backpacks) |
+| Traveler's Backpack | 女仆外部背包识别 | [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) |
+| Inventory Profiles Next | 女仆标准容器的一键整理兼容 | [Inventory Profiles Next](https://modrinth.com/mod/inventory-profiles-next) |
+
+以上可选模组均不是启动前置；未安装时只停用对应兼容入口。
+
+## 运行环境
 
 - Minecraft `26.2`
 - Fabric Loader `0.19.3` 或更高版本
