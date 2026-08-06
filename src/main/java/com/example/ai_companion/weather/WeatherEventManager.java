@@ -15,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.saveddata.WeatherData;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -109,12 +110,19 @@ public final class WeatherEventManager implements AutoCloseable {
 		ServerLevel level = player.level();
 		level.sendParticles(ParticleTypes.POOF, player.getX(), player.getEyeY(), player.getZ(), 12, 5, 2, 5, 0.05);
 		player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 45, 0, false, false));
-		player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 45, 0, false, false));
+		player.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 45, 0, false, false));
 	}
 
 	private void thunder(ServerPlayer player) {
 		ServerLevel level = player.level();
-		if (ticks % 200 == 0) level.setWeatherParameters(0, 20 * 30, true, true);
+		if (ticks % 200 == 0) {
+			WeatherData weather = level.getWeatherData();
+			weather.setClearWeatherTime(0);
+			weather.setRainTime(20 * 30);
+			weather.setThunderTime(20 * 30);
+			weather.setRaining(true);
+			weather.setThundering(true);
+		}
 		level.sendParticles(ParticleTypes.ELECTRIC_SPARK, player.getX(), player.getY() + 8, player.getZ(), 3, 8, 4, 8, 0.02);
 	}
 
@@ -128,7 +136,7 @@ public final class WeatherEventManager implements AutoCloseable {
 	}
 
 	private static boolean isNight(ServerLevel level) {
-		long time = Math.floorMod(level.getDayTime(), 24000L);
+		long time = Math.floorMod(level.getOverworldClockTime(), 24000L);
 		return time >= 13000L && time <= 23000L;
 	}
 

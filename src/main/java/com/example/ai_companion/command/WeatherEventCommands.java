@@ -37,7 +37,7 @@ public final class WeatherEventCommands {
 		try {
 			WeatherEventType type = WeatherEventType.parse(value);
 			if (source.getLevel().dimension() != Level.OVERWORLD) throw new IllegalArgumentException("自然事件只能从主世界启动");
-			long time = Math.floorMod(source.getLevel().getDayTime(), 24000L);
+			long time = Math.floorMod(source.getLevel().getOverworldClockTime(), 24000L);
 			if (type.nightOnly() && (time < 13000L || time > 23000L)) throw new IllegalArgumentException(type.displayName() + "只能在夜晚启动");
 			if (type == WeatherEventType.SANDSTORM && !source.getLevel().getBiome(BlockPos.containing(source.getPosition())).is(Biomes.DESERT))
 				throw new IllegalArgumentException("沙尘暴必须从沙漠群系启动");
