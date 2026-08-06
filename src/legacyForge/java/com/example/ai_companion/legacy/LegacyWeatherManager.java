@@ -56,6 +56,14 @@ final class LegacyWeatherManager {
 	synchronized State active() { return active; }
 	synchronized Policy policy() { return policy.copy(); }
 	synchronized List<History> history(int limit) { return List.copyOf(history.subList(0, Math.min(Math.max(1, limit), history.size()))); }
+	synchronized Summary statistics(Type filter) {
+		int events = 0, automatic = 0; long seconds = 0;
+		for (History entry : history) {
+			if (filter != null && !entry.type.equals(filter.name())) continue;
+			events++; if (entry.automatic) automatic++; seconds += entry.plannedDurationSeconds;
+		}
+		return new Summary(events, automatic, events - automatic, seconds);
+	}
 	synchronized int nextAutomaticCheckSeconds() {
 		long interval = policy.checkIntervalSeconds * 20L;
 		return (int) Math.ceil((interval - Math.floorMod(ticks, interval)) / 20.0);
@@ -191,6 +199,14 @@ final class LegacyWeatherManager {
 		String type; long startedAtEpochMillis; int plannedDurationSeconds; boolean automatic;
 		History(String type, long startedAtEpochMillis, int plannedDurationSeconds, boolean automatic) { this.type = type; this.startedAtEpochMillis = startedAtEpochMillis; this.plannedDurationSeconds = plannedDurationSeconds; this.automatic = automatic; }
 		boolean valid() { try { Type.valueOf(type); return startedAtEpochMillis >= 0 && plannedDurationSeconds >= 60 && plannedDurationSeconds <= 1800; } catch (Exception error) { return false; } }
+	}
+
+	static final class Summary {
+		final int events, automaticEvents, administratorEvents; final long plannedDurationSeconds;
+		Summary(int events, int automaticEvents, int administratorEvents, long plannedDurationSeconds) {
+			this.events = events; this.automaticEvents = automaticEvents; this.administratorEvents = administratorEvents;
+			this.plannedDurationSeconds = plannedDurationSeconds;
+		}
 	}
 
 	private static final class Store {
