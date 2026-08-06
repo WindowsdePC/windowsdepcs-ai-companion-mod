@@ -32,7 +32,26 @@ public final class MaidCommands {
 						.then(Commands.argument("message", StringArgumentType.greedyString())
 							.executes(c -> chat(c.getSource(), maids,
 								StringArgumentType.getString(c, "name"),
-								StringArgumentType.getString(c, "message"))))))
+								StringArgumentType.getString(c, "message"), false)))))
+				.then(Commands.literal("voice")
+					.then(Commands.argument("name", StringArgumentType.word())
+						.then(Commands.argument("transcript", StringArgumentType.greedyString())
+							.executes(c -> chat(c.getSource(), maids,
+								StringArgumentType.getString(c, "name"),
+								StringArgumentType.getString(c, "transcript"), true)))))
+				.then(Commands.literal("collect")
+					.then(Commands.argument("name", StringArgumentType.word())
+						.executes(c -> collect(c.getSource(), maids, StringArgumentType.getString(c, "name")))))
+				.then(Commands.literal("deploy")
+					.then(Commands.argument("name", StringArgumentType.word())
+						.executes(c -> deploy(c.getSource(), maids, StringArgumentType.getString(c, "name")))))
+				.then(Commands.literal("transfer")
+					.then(Commands.argument("name", StringArgumentType.word())
+						.then(Commands.argument("player", StringArgumentType.word())
+							.executes(c -> transfer(c.getSource(), maids,
+								StringArgumentType.getString(c, "name"),
+								StringArgumentType.getString(c, "player"))))))
+				.then(Commands.literal("voice-status").executes(c -> voiceStatus(c.getSource(), maids)))
 				.then(Commands.literal("mood")
 					.then(Commands.argument("name", StringArgumentType.word())
 						.executes(c -> mood(c.getSource(), maids, StringArgumentType.getString(c, "name")))))
@@ -53,10 +72,12 @@ public final class MaidCommands {
 		}
 	}
 
-	private static int chat(CommandSourceStack source, MaidManager maids, String name, String message) {
+	private static int chat(CommandSourceStack source, MaidManager maids, String name, String message,
+			boolean voiceTranscript) {
 		try {
 			var player = source.getPlayerOrException();
-			maids.chat(player, name, message, result ->
+			String instruction = voiceTranscript ? "以下内容来自主人语音转写：" + message : message;
+			maids.chat(player, name, instruction, result ->
 				player.sendOverlayMessage(Component.literal(result)));
 			player.sendOverlayMessage(Component.literal(name + " 正在思考……"));
 			return 1;
@@ -64,6 +85,51 @@ public final class MaidCommands {
 			source.sendFailure(Component.literal("女仆对话失败：" + error.getMessage()));
 			return 0;
 		}
+	}
+
+	private static int collect(CommandSourceStack source, MaidManager maids, String name) {
+		try {
+			maids.collect(source.getPlayerOrException(), name);
+			source.getPlayerOrException().sendOverlayMessage(Component.literal(name + " 已收回背包"));
+			return 1;
+		} catch (Exception error) {
+			source.sendFailure(Component.literal("收回失败：" + error.getMessage()));
+			return 0;
+		}
+	}
+
+	private static int deploy(CommandSourceStack source, MaidManager maids, String name) {
+		try {
+			maids.deploy(source.getPlayerOrException(), name);
+			source.getPlayerOrException().sendOverlayMessage(Component.literal(name + " 已从背包重新召唤"));
+			return 1;
+		} catch (Exception error) {
+			source.sendFailure(Component.literal("重新召唤失败：" + error.getMessage()));
+			return 0;
+		}
+	}
+
+	private static int transfer(CommandSourceStack source, MaidManager maids, String name,
+			String targetName) {
+		try {
+			var target = source.getServer().getPlayerList().getPlayerByName(targetName);
+			if (target == null) throw new IllegalStateException("目标玩家不在线");
+			maids.transfer(source.getPlayerOrException(), name, target);
+			source.sendSuccess(() -> Component.literal(name + " 的所有权已转让给 " + targetName), false);
+			target.sendSystemMessage(Component.literal("你现在是 AI 女仆 " + name + " 的所有者"));
+			return 1;
+		} catch (Exception error) {
+			source.sendFailure(Component.literal("转让失败：" + error.getMessage()));
+			return 0;
+		}
+	}
+
+	private static int voiceStatus(CommandSourceStack source, MaidManager maids) {
+		boolean available = maids.voiceChatAvailable();
+		source.sendSuccess(() -> Component.literal(available
+			? "已检测到 Simple Voice Chat；可把语音转写发送到 /aimaid voice"
+			: "未检测到 Simple Voice Chat；文字聊天不受影响"), false);
+		return available ? 1 : 0;
 	}
 
 	private static int mood(CommandSourceStack source, MaidManager maids, String name) {

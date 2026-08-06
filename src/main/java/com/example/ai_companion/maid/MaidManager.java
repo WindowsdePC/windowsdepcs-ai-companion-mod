@@ -2,8 +2,13 @@ package com.example.ai_companion.maid;
 
 import com.example.ai_companion.agent.AgentManager;
 import net.minecraft.network.chat.Component;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -65,6 +70,47 @@ public final class MaidManager implements AutoCloseable {
 				profile.skinKey(), profile.capeKey(), profile.mood())).toList();
 	}
 
+	public synchronized MaidProfile transfer(ServerPlayer owner, String name, ServerPlayer target) {
+		MaidProfile profile = requireOwned(owner, name);
+		MaidProfile updated = profile.withOwner(target.getUUID(), target.getGameProfile().name());
+		maids.put(updated.name().toLowerCase(), updated);
+		updateNameTag(updated);
+		save();
+		return updated;
+	}
+
+	public synchronized MaidProfile collect(ServerPlayer owner, String name) {
+		MaidProfile profile = requireOwned(owner, name);
+		if (!agents.remove(profile.name())) throw new IllegalStateException("女仆实体当前不存在");
+		MaidProfile stored = profile.withStored(true).withMood(MaidMood.CALM);
+		maids.put(stored.name().toLowerCase(), stored);
+		ItemStack capsule = capsule(stored);
+		owner.addItem(capsule);
+		if (!capsule.isEmpty()) owner.drop(capsule, false);
+		save();
+		return stored;
+	}
+
+	public synchronized MaidProfile deploy(ServerPlayer owner, String name) {
+		MaidProfile profile = require(name);
+		if (!profile.ownerUuid().equals(owner.getUUID())) throw new IllegalStateException("你不是该女仆的所有者");
+		if (!profile.stored()) throw new IllegalStateException("该女仆已经在世界中");
+		int capsuleSlot = findCapsule(owner, profile.name());
+		if (capsuleSlot < 0) throw new IllegalStateException("背包中找不到该女仆的收纳物品");
+		agents.create(owner, profile.name(), null, null);
+		agents.setPrompt(profile.name(), "maid");
+		owner.getInventory().removeItem(capsuleSlot, 1);
+		MaidProfile active = profile.withStored(false).withMood(MaidMood.HAPPY);
+		maids.put(active.name().toLowerCase(), active);
+		updateNameTag(active);
+		save();
+		return active;
+	}
+
+	public boolean voiceChatAvailable() {
+		return net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("voicechat");
+	}
+
 	private String decoratePrompt(String agentName, String prompt) {
 		MaidProfile profile;
 		synchronized (this) { profile = maids.get(agentName.toLowerCase()); }
@@ -80,6 +126,24 @@ public final class MaidManager implements AutoCloseable {
 		if (!profile.ownerUuid().equals(player.getUUID())) throw new IllegalStateException("你不是该女仆的所有者");
 		if (profile.stored()) throw new IllegalStateException("该女仆当前在背包中");
 		return profile;
+	}
+
+	private static ItemStack capsule(MaidProfile profile) {
+		ItemStack stack = new ItemStack(Items.ENDER_EYE);
+		stack.set(DataComponents.CUSTOM_NAME, Component.literal("收纳的 AI 女仆 · " + profile.name()));
+		CompoundTag tag = new CompoundTag();
+		tag.putString("ai_companion_maid", profile.name());
+		stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+		return stack;
+	}
+
+	private static int findCapsule(ServerPlayer owner, String name) {
+		for (int slot = 0; slot < owner.getInventory().getContainerSize(); slot++) {
+			ItemStack stack = owner.getInventory().getItem(slot);
+			CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+			if (data != null && name.equals(data.copyTag().getStringOr("ai_companion_maid", ""))) return slot;
+		}
+		return -1;
 	}
 
 	private MaidProfile require(String name) {

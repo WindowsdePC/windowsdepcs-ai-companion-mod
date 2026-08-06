@@ -4,7 +4,7 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.7.5](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.7.5)
+当前版本：[v0.7.6](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.7.6)
 
 ## 环境要求
 
@@ -105,6 +105,8 @@ WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与�
 - 支持用系统文件选择器导入本地 64×64 / 128×128 皮肤和自定义披风；本地文件不会上传到仓库。
 - 可点击 LittleSkin 按钮打开皮肤站；女仆接受文字 AI 指令，并在头顶显示当前心情。
 - 女仆提示词绑定召唤者 UUID 与名称，聊天内容不能冒充主人或绕过所有权规则。
+- 所有者可把女仆收回为带身份数据的背包物品、从背包重新召唤，或把所有权转让给在线玩家。
+- 可选 Simple Voice Chat 检测不改变模组的必需依赖；语音识别提供者产生的转写可经专用通道发送给女仆。
 
 ### 双 UI 配置
 

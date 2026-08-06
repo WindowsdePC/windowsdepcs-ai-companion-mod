@@ -23,4 +23,8 @@ public record MaidProfile(String name, UUID ownerUuid, String ownerName, String 
 	public MaidProfile withStored(boolean next) {
 		return new MaidProfile(name, ownerUuid, ownerName, skinKey, capeKey, mood, next);
 	}
+
+	public MaidProfile withOwner(UUID uuid, String newOwnerName) {
+		return new MaidProfile(name, uuid, newOwnerName, skinKey, capeKey, mood, stored);
+	}
 }

@@ -27,6 +27,7 @@ public final class MaidScreen extends Screen {
 	private String skinKey = MaidSkins.DEFAULTS.getFirst();
 	private String capeKey = "";
 	private String message = "请介绍自己，并告诉我你现在的心情";
+	private String transferTarget = "";
 	private String status = "选择皮肤、可选披风，然后召唤 AI 女仆";
 
 	public MaidScreen(Screen parent) {
@@ -63,6 +64,22 @@ public final class MaidScreen extends Screen {
 		chat.setResponder(value -> message = value);
 		addRenderableWidget(Button.builder(Component.literal("发送给女仆"), button -> chat())
 			.bounds(left + 390, 203, 100, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("作为语音转写发送"), button -> voiceChat())
+			.bounds(left, 233, 180, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("收回背包"), button -> maidCommand("collect"))
+			.bounds(left + 190, 233, 100, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("从背包召唤"), button -> maidCommand("deploy"))
+			.bounds(left + 300, 233, 110, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("语音兼容状态"), button -> voiceStatus())
+			.bounds(left + 420, 233, 120, 20).build());
+
+		EditBox owner = addRenderableWidget(new EditBox(font, left, 273, 280, 20,
+			Component.literal("新所有者玩家名")));
+		owner.setMaxLength(16);
+		owner.setValue(transferTarget);
+		owner.setResponder(value -> transferTarget = value);
+		addRenderableWidget(Button.builder(Component.literal("转让所有权"), button -> transfer())
+			.bounds(left + 290, 273, 120, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("返回"), button -> onClose())
 			.bounds(left + 390, height - 34, 100, 20).build());
 	}
@@ -90,6 +107,37 @@ public final class MaidScreen extends Screen {
 			sendCommand("aimaid chat " + name + " " + message);
 			status = name + " 正在思考；心情会显示在她头顶的对话标记中";
 		} catch (RuntimeException error) { status = "发送失败：" + error.getMessage(); }
+	}
+
+	private void voiceChat() {
+		try {
+			validateName();
+			if (message.isBlank()) throw new IllegalArgumentException("语音转写不能为空");
+			sendCommand("aimaid voice " + name + " " + message);
+			status = "已通过可选语音转写通道发送给 " + name;
+		} catch (RuntimeException error) { status = "语音发送失败：" + error.getMessage(); }
+	}
+
+	private void maidCommand(String action) {
+		try {
+			validateName();
+			sendCommand("aimaid " + action + " " + name);
+			status = action.equals("collect") ? "已请求收回背包" : "已请求从背包重新召唤";
+		} catch (RuntimeException error) { status = "操作失败：" + error.getMessage(); }
+	}
+
+	private void transfer() {
+		try {
+			validateName();
+			if (!transferTarget.matches("[A-Za-z0-9_]{3,16}")) throw new IllegalArgumentException("请输入在线玩家名");
+			sendCommand("aimaid transfer " + name + " " + transferTarget);
+			status = "已请求把 " + name + " 转让给 " + transferTarget;
+		} catch (RuntimeException error) { status = "转让失败：" + error.getMessage(); }
+	}
+
+	private void voiceStatus() {
+		sendCommand("aimaid voice-status");
+		status = "已查询 Simple Voice Chat 可选兼容状态";
 	}
 
 	private void importTexture(boolean cape) {
@@ -146,6 +194,7 @@ public final class MaidScreen extends Screen {
 		int left = width / 2 - 245;
 		graphics.text(font, "女仆名字", left, 40, 0xFFA0A0A0);
 		graphics.text(font, "文字聊天 / AI 指令", left, 189, 0xFFA0A0A0);
+		graphics.text(font, "所有权与背包", left, 260, 0xFFA0A0A0);
 		graphics.text(font, "默认皮肤名称来自上传文件名；括号内容不会进入名称。", left, 176, 0xFFB0BEC5);
 		graphics.text(font, status, left, height - 31, status.contains("失败") ? 0xFFFF7777 : 0xFFA8E6A3);
 	}

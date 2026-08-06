@@ -25,4 +25,15 @@ class MaidProfileTest {
 			"Steve", "1000030746", "", MaidMood.CALM, false));
 		assertThrows(IllegalArgumentException.class, () -> MaidSkins.validate("../../secret key"));
 	}
+
+	@Test void ownershipAndStoredStateChangeWithoutLosingAppearance() {
+		MaidProfile original = new MaidProfile("Maid_02", UUID.randomUUID(), "Alex",
+			"1000030745", "custom/cape", MaidMood.HAPPY, false);
+		UUID nextOwner = UUID.randomUUID();
+		MaidProfile changed = original.withStored(true).withOwner(nextOwner, "Steve");
+		assertTrue(changed.stored());
+		assertEquals(nextOwner, changed.ownerUuid());
+		assertEquals("1000030745", changed.skinKey());
+		assertEquals("custom/cape", changed.capeKey());
+	}
 }
