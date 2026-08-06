@@ -10,6 +10,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.Permissions;
 
 /** Administrative and inspection commands for the persistent AI society. */
 public final class AiSocietyCommands {
@@ -18,21 +19,21 @@ public final class AiSocietyCommands {
 	public static void register(AiSocietyManager society) {
 		CommandRegistrationCallback.EVENT.register((dispatcher, access, environment) ->
 			dispatcher.register(Commands.literal("aiplayer").then(Commands.literal("society")
-				.then(Commands.literal("enroll").requires(source -> source.hasPermission(2))
+				.then(Commands.literal("enroll").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
 					.then(name().executes(c -> enroll(c.getSource(), society, name(c)))))
-				.then(Commands.literal("home").requires(source -> source.hasPermission(2))
+				.then(Commands.literal("home").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
 					.then(name().executes(c -> home(c.getSource(), society, name(c)))))
-				.then(Commands.literal("job").requires(source -> source.hasPermission(2))
+				.then(Commands.literal("job").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
 					.then(name().then(Commands.argument("job", StringArgumentType.word())
 						.executes(c -> job(c.getSource(), society, name(c), SocietyJob.parse(StringArgumentType.getString(c, "job")))))))
-				.then(Commands.literal("work").requires(source -> source.hasPermission(2))
+				.then(Commands.literal("work").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
 					.then(name().executes(c -> work(c.getSource(), society, name(c)))))
-				.then(Commands.literal("rest").requires(source -> source.hasPermission(2))
+				.then(Commands.literal("rest").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
 					.then(name().executes(c -> rest(c.getSource(), society, name(c)))))
-				.then(Commands.literal("socialize").requires(source -> source.hasPermission(2))
+				.then(Commands.literal("socialize").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
 					.then(name().then(Commands.argument("other", StringArgumentType.word())
 						.executes(c -> socialize(c.getSource(), society, name(c), StringArgumentType.getString(c, "other"))))))
-				.then(Commands.literal("trade").requires(source -> source.hasPermission(2))
+				.then(Commands.literal("trade").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
 					.then(Commands.argument("seller", StringArgumentType.word())
 						.then(Commands.argument("buyer", StringArgumentType.word())
 							.then(Commands.argument("amount", LongArgumentType.longArg(1, 1_000_000))
