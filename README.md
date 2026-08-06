@@ -1,10 +1,20 @@
 # WindowsdePC's AI Companion Mod
 
-WindowsdePC's AI Companion Mod 是面向 Minecraft 26.2 Fabric 的 AI 玩家与游戏增强模组。
+WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 玩家与游戏增强模组。
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.7.9](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.7.9)
+当前版本：[v0.8.0](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.8.0)
+
+## 下载版本
+
+| Minecraft | 加载器 | Java | 发行文件 |
+| --- | --- | --- | --- |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.8.0.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.0.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.8.0.jar` |
+
+三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
 ## 环境要求
 
@@ -350,12 +360,12 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-0.7.9.jar`：正式模组，放入 `mods/`。
-- `windowsdepcs-ai-companion-0.7.9-sources.jar`：本地构建的源码包，供开发工具使用。
-- `windowsdepcs-ai-companion-0.7.9-javadoc.jar`：本地构建的 Java API 文档包。
+- `windowsdepcs-ai-companion-mc26.2-fabric-0.8.0.jar`：26.2 Fabric 正式模组。
+- `windowsdepcs-ai-companion-mc26.2-fabric-0.8.0-sources.jar`：本地源码包。
+- `windowsdepcs-ai-companion-mc26.2-fabric-0.8.0-javadoc.jar`：本地 Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
-从 v0.6.7 起，GitHub Release 也只附加第一个正式模组 JAR，不再上传另外两个 JAR或校验文件。
+从 v0.8.0 起，GitHub Release 同时附加三个平台的正式模组 JAR，不上传 Sources 或 Javadoc JAR。
 
 ## 许可证
 

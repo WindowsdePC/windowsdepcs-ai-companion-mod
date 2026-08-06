@@ -1,4 +1,4 @@
-name: Build and publish release
+name: Build and publish multiplatform release
 
 on:
   workflow_dispatch:
@@ -10,17 +10,35 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: mc26.2-fabric
+            ref: main
+            java: "25"
+            artifact: windowsdepcs-ai-companion-mc26.2-fabric-0.8.0.jar
+          - target: mc1.20.1-fabric
+            ref: mc-1.20.1-fabric
+            java: "17"
+            artifact: windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.0.jar
+          - target: mc1.20.1-forge
+            ref: mc-1.20.1-forge
+            java: "17"
+            artifact: windowsdepcs-ai-companion-mc1.20.1-forge-0.8.0.jar
     runs-on: ubuntu-latest
     steps:
-      - name: Check out source
+      - name: Check out ${{ matrix.target }} source
         uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
 
-      - name: Set up Java 25
+      - name: Set up Java ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "25"
+          java-version: ${{ matrix.java }}
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -28,24 +46,49 @@ jobs:
       - name: Build and test
         run: ./gradlew build
 
-      - name: Validate release notes
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: bash
-        run: |
-          notes_file=".github/release-notes/${GITHUB_REF_NAME}.md"
-          test -s "$notes_file"
-
       - name: Stage installable mod
-        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
-          release_version="${GITHUB_REF_NAME#v}"
+          test -f "build/libs/${{ matrix.artifact }}"
           mkdir -p release-assets
-          cp "build/libs/windowsdepcs-ai-companion-${release_version}.jar" release-assets/
+          cp "build/libs/${{ matrix.artifact }}" release-assets/
+
+      - name: Upload installable mod
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: release-assets/${{ matrix.artifact }}
+          if-no-files-found: error
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release notes
+        uses: actions/checkout@v4
+
+      - name: Validate release notes
+        shell: bash
+        run: test -s ".github/release-notes/${GITHUB_REF_NAME}.md"
+
+      - name: Download all installable mods
+        uses: actions/download-artifact@v4
+        with:
+          pattern: mc*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Validate release set
+        shell: bash
+        run: |
+          test "$(find release-assets -maxdepth 1 -name '*.jar' | wc -l)" -eq 3
+          unzip -t release-assets/windowsdepcs-ai-companion-mc26.2-fabric-0.8.0.jar
+          unzip -t release-assets/windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.0.jar
+          unzip -t release-assets/windowsdepcs-ai-companion-mc1.20.1-forge-0.8.0.jar
 
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           body_path: .github/release-notes/${{ github.ref_name }}.md
-          files: release-assets/windowsdepcs-ai-companion-*.jar
+          files: release-assets/*.jar

@@ -13,7 +13,7 @@ WindowsdePC's AI Companion Mod
 
 当前版本：
 
-0.7.9
+0.8.0
 
 
 目标版本：
@@ -23,11 +23,18 @@ WindowsdePC's AI Companion Mod
 
 运行环境：
 
-Minecraft 26.2
+- Minecraft 26.2 / Fabric Loader / JDK 25
+- Minecraft 1.20.1 / Fabric Loader / JDK 17
+- Minecraft 1.20.1 / Forge / JDK 17
 
-Fabric Loader
 
-JDK 25
+0.8.0 多加载器移植状态：
+
+- 26.2 Fabric 版保留 0.7.9 的完整功能与存档兼容性。
+- 1.20.1 Fabric 版使用独立兼容分支，针对旧版网络、注册表、界面和服务端 API 进行适配。
+- 1.20.1 Forge 版使用独立兼容分支，针对 Forge 事件总线、网络通道和 FakePlayer API 进行适配。
+- 三个版本共享模组 ID、配置语义、AI 安全动作白名单和用户数据格式；加载器专属实现不互相作为前置。
+- 正式发行版同时提供三个带 Minecraft 版本与加载器标识的可安装 JAR，避免玩家下载错误文件。
 
 
 0.6.9 实现状态：
