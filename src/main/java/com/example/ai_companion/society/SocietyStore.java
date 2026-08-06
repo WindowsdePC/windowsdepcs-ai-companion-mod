@@ -66,6 +66,12 @@ public final class SocietyStore implements AutoCloseable {
 	public synchronized void put(SocietyResident resident) throws IOException { residents.put(key(resident.agentName()), resident); save(); }
 
 	public synchronized boolean processDay(long day) throws IOException {
+		if (day < lastDay) {
+			// The server tick counter restarts with the process; establish a new baseline without charging twice.
+			lastDay = day;
+			save();
+			return false;
+		}
 		if (day <= lastDay) return false;
 		if (lastDay >= 0) residents.replaceAll((ignored, resident) -> resident.dayCycle());
 		lastDay = day; save(); return true;

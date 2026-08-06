@@ -38,7 +38,7 @@ public final class SocietyManager implements AutoCloseable {
 
 	public void tick(MinecraftServer server) {
 		if (server.getTickCount() % 200 != 0) return;
-		try { store.processDay(server.overworld().getLevelData().getDayTime() / 24_000L); }
+		try { store.processDay(server.getTickCount() / 24_000L); }
 		catch (IOException error) { AiCompanionMod.LOGGER.error("Cannot process AI society day", error); }
 	}
 
