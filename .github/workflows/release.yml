@@ -21,7 +21,7 @@ jobs:
             artifact: windowsdepcs-ai-companion-mc26.2-fabric-0.8.0.jar
           - target: mc1.20.1-fabric
             ref: mc-1.20.1-fabric
-            java: "21"
+            java: "17"
             artifact: windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.0.jar
           - target: mc1.20.1-forge
             ref: mc-1.20.1-forge
