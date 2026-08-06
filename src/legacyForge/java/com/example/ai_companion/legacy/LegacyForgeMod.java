@@ -130,7 +130,10 @@ public final class LegacyForgeMod {
 						.then(argument("denominator", IntegerArgumentType.integer(1, 10000)).executes(LegacyForgeMod::weatherConfigChance)))
 					.then(literal("duration").requires(source -> source.hasPermission(2))
 						.then(argument("minimum", IntegerArgumentType.integer(1, 30))
-							.then(argument("maximum", IntegerArgumentType.integer(1, 30)).executes(LegacyForgeMod::weatherConfigDuration)))))
+							.then(argument("maximum", IntegerArgumentType.integer(1, 30)).executes(LegacyForgeMod::weatherConfigDuration))))
+					.then(literal("weight").requires(source -> source.hasPermission(2))
+						.then(argument("type", StringArgumentType.word())
+							.then(argument("weight", IntegerArgumentType.integer(0, 1000)).executes(LegacyForgeMod::weatherConfigWeight)))))
 				.then(literal("stop").requires(source -> source.hasPermission(2)).executes(LegacyForgeMod::weatherStop))
 				.then(literal("start").requires(source -> source.hasPermission(2))
 					.then(argument("type", StringArgumentType.word())
@@ -442,7 +445,7 @@ public final class LegacyForgeMod {
 	private static int weatherForecast(CommandContext<CommandSourceStack> context) {
 		LegacyWeatherManager.Policy value = WEATHER.policy();
 		long time = Math.floorMod(context.getSource().getLevel().getDayTime(), 24000L);
-		String eligible = time >= 13000 && time <= 23000 ? "极光/流星雨/沙尘暴/增强雷暴" : "沙尘暴/增强雷暴";
+		String eligible = WEATHER.eligibleLabels(time >= 13000 && time <= 23000);
 		return ok(context, value.automaticEnabled ? "自然事件预报：" + WEATHER.nextAutomaticCheckSeconds() + " 秒后检查，候选 " + eligible : "自然事件预报：自动生成已关闭");
 	}
 
@@ -476,12 +479,13 @@ public final class LegacyForgeMod {
 	private static int weatherConfigStatus(CommandContext<CommandSourceStack> context) {
 		LegacyWeatherManager.Policy value = WEATHER.policy(); return ok(context, "自动=" + value.automaticEnabled
 			+ "，间隔=" + value.checkIntervalSeconds + "秒，单次概率=1/" + value.chanceDenominator
-			+ "，时长=" + value.minDurationMinutes + "～" + value.maxDurationMinutes + "分钟");
+			+ "，时长=" + value.minDurationMinutes + "～" + value.maxDurationMinutes + "分钟，权重：" + WEATHER.weightSummary());
 	}
 	private static int weatherConfigEnabled(CommandContext<CommandSourceStack> context) { try { WEATHER.setAutomaticEnabled(parseWeatherBoolean(StringArgumentType.getString(context, "value"))); return weatherConfigStatus(context); } catch (Exception error) { return fail(context, safeError(error)); } }
 	private static int weatherConfigInterval(CommandContext<CommandSourceStack> context) { try { WEATHER.setCheckInterval(IntegerArgumentType.getInteger(context, "seconds")); return weatherConfigStatus(context); } catch (Exception error) { return fail(context, safeError(error)); } }
 	private static int weatherConfigChance(CommandContext<CommandSourceStack> context) { try { WEATHER.setChance(IntegerArgumentType.getInteger(context, "denominator")); return weatherConfigStatus(context); } catch (Exception error) { return fail(context, safeError(error)); } }
 	private static int weatherConfigDuration(CommandContext<CommandSourceStack> context) { try { WEATHER.setDuration(IntegerArgumentType.getInteger(context, "minimum"), IntegerArgumentType.getInteger(context, "maximum")); return weatherConfigStatus(context); } catch (Exception error) { return fail(context, safeError(error)); } }
+	private static int weatherConfigWeight(CommandContext<CommandSourceStack> context) { try { WEATHER.setTypeWeight(LegacyWeatherManager.parse(StringArgumentType.getString(context, "type")), IntegerArgumentType.getInteger(context, "weight")); return weatherConfigStatus(context); } catch (Exception error) { return fail(context, safeError(error)); } }
 	private static boolean parseWeatherBoolean(String raw) { return switch (raw.toLowerCase(Locale.ROOT)) { case "true", "on", "yes", "1" -> true; case "false", "off", "no", "0" -> false; default -> throw new IllegalArgumentException("值必须是 on/off 或 true/false"); }; }
 
 	private static int petCreate(CommandContext<CommandSourceStack> context) {
