@@ -64,6 +64,7 @@ public final class LegacyFabricMod implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		LegacyWeatherItems.register();
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
 			dispatcher.register(literal("aiplayer")
 				.then(literal("create").requires(source -> source.hasPermission(2))
