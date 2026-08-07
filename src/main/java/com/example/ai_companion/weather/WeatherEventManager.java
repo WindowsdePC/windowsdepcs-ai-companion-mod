@@ -36,14 +36,17 @@ public final class WeatherEventManager implements AutoCloseable {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final long MAX_TICKS = 20L * 60L * 30L;
 	private static final int MAX_HISTORY = 32;
+	private static final int MAX_SCHEDULES = 32;
 	private final Path file = FabricLoader.getInstance().getConfigDir().resolve("ai_companion-weather.json");
 	private final SplittableRandom random = new SplittableRandom();
 	private final List<WeatherEventRecord> history = new ArrayList<>();
+	private final List<ScheduledWeatherEvent> schedules = new ArrayList<>();
 	private final Set<UUID> unsubscribed = new HashSet<>();
 	private final EnumMap<WeatherEventType, Integer> typeWeights = defaultTypeWeights();
 	private WeatherEventSettings settings = WeatherEventSettings.defaults();
 	private int automaticCooldownMinutes = 30;
 	private ActiveWeatherEvent active;
+	private int nextScheduleId = 1;
 	private long ticks;
 
 	public WeatherEventManager() { load(); }
@@ -69,6 +72,18 @@ public final class WeatherEventManager implements AutoCloseable {
 	public synchronized WeatherEventSettings settings() { return settings; }
 	public synchronized List<WeatherEventRecord> history(int limit) {
 		return List.copyOf(history.subList(0, Math.min(Math.max(1, limit), history.size())));
+	}
+	public synchronized ScheduledWeatherEvent schedule(WeatherEventType type, int delayMinutes, int durationMinutes) {
+		if (schedules.size() >= MAX_SCHEDULES) throw new IllegalStateException("最多只能保存 32 个自然事件日程");
+		if (delayMinutes < 1 || delayMinutes > 10080) throw new IllegalArgumentException("延迟必须为 1～10080 分钟");
+		long when = Math.addExact(System.currentTimeMillis(), delayMinutes * 60_000L);
+		ScheduledWeatherEvent event = new ScheduledWeatherEvent(nextScheduleId++, type, when, durationMinutes);
+		schedules.add(event); schedules.sort(null); saveQuietly(); return event;
+	}
+	public synchronized List<ScheduledWeatherEvent> schedules() { return List.copyOf(schedules); }
+	public synchronized boolean cancelSchedule(int id) {
+		boolean removed = schedules.removeIf(event -> event.id() == id);
+		if (removed) saveQuietly(); return removed;
 	}
 	public synchronized void updateSettings(WeatherEventSettings value) {
 		settings = value == null ? WeatherEventSettings.defaults() : value;
@@ -117,6 +132,7 @@ public final class WeatherEventManager implements AutoCloseable {
 		ActiveWeatherEvent event;
 		synchronized (this) { event = active; }
 		if (event == null) {
+			if (tryScheduledStart(server)) return;
 			tryAutomaticStart(server);
 			return;
 		}
@@ -131,6 +147,20 @@ public final class WeatherEventManager implements AutoCloseable {
 			if (active.expired()) { active = null; announce(server, "自然事件已经结束"); }
 			if (ticks % 200 == 0 || active == null) saveQuietly();
 		}
+	}
+
+	private boolean tryScheduledStart(MinecraftServer server) {
+		long now = System.currentTimeMillis();
+		boolean night = isNight(server.overworld());
+		ScheduledWeatherEvent due;
+		synchronized (this) {
+			due = schedules.stream().filter(event -> event.due(now) && event.eligible(night)).findFirst().orElse(null);
+			if (due == null) return false;
+			schedules.remove(due);
+		}
+		start(due.type(), due.durationMinutes(), false);
+		announce(server, "预约事件开始：" + due.type().displayName() + "（日程 #" + due.id() + "）");
+		return true;
 	}
 
 	private void apply(MinecraftServer server, ActiveWeatherEvent event) {
@@ -248,8 +278,13 @@ public final class WeatherEventManager implements AutoCloseable {
 				if (weight >= 0 && weight <= 1000) typeWeights.put(type, weight);
 			} catch (Exception ignored) { }
 			if (stored.history != null) stored.history.stream().filter(record -> record != null).limit(MAX_HISTORY).forEach(history::add);
+			if (stored.schedules != null) stored.schedules.stream().filter(event -> event != null).filter(event -> {
+				try { new ScheduledWeatherEvent(event.id(), event.type(), event.scheduledAtEpochMillis(), event.durationMinutes()); return true; }
+				catch (RuntimeException ignored) { return false; }
+			}).sorted().limit(MAX_SCHEDULES).forEach(schedules::add);
+			nextScheduleId = Math.max(1, schedules.stream().mapToInt(ScheduledWeatherEvent::id).max().orElse(0) + 1);
 			if (stored.unsubscribed != null) for (String value : stored.unsubscribed) try { unsubscribed.add(UUID.fromString(value)); } catch (IllegalArgumentException ignored) { }
-		} catch (Exception ignored) { active = null; settings = WeatherEventSettings.defaults(); automaticCooldownMinutes = 30; history.clear(); unsubscribed.clear(); typeWeights.clear(); typeWeights.putAll(defaultTypeWeights()); }
+		} catch (Exception ignored) { active = null; settings = WeatherEventSettings.defaults(); automaticCooldownMinutes = 30; history.clear(); schedules.clear(); nextScheduleId = 1; unsubscribed.clear(); typeWeights.clear(); typeWeights.putAll(defaultTypeWeights()); }
 	}
 
 	private synchronized void saveQuietly() {
@@ -278,6 +313,7 @@ public final class WeatherEventManager implements AutoCloseable {
 		private Integer automaticCooldownMinutes;
 		private Map<String, Integer> typeWeights;
 		private List<WeatherEventRecord> history;
+		private List<ScheduledWeatherEvent> schedules;
 		private List<String> unsubscribed;
 		private Stored() { }
 		private Stored(WeatherEventManager manager) {
@@ -290,6 +326,7 @@ public final class WeatherEventManager implements AutoCloseable {
 			typeWeights = new java.util.LinkedHashMap<>();
 			for (WeatherEventType eventType : WeatherEventType.values()) typeWeights.put(eventType.name(), manager.typeWeight(eventType));
 			history = List.copyOf(manager.history);
+			schedules = List.copyOf(manager.schedules);
 			unsubscribed = manager.unsubscribed.stream().map(UUID::toString).sorted().toList();
 		}
 	}

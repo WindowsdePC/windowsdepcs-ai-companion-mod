@@ -42,6 +42,18 @@ public final class WeatherEventCommands {
 						.executes(c -> history(c.getSource(), manager, IntegerArgumentType.getInteger(c, "count")))))
 				.then(Commands.literal("notify").then(Commands.argument("enabled", StringArgumentType.word())
 					.executes(c -> notify(c.getSource(), manager, StringArgumentType.getString(c, "enabled")))))
+				.then(Commands.literal("schedule")
+					.executes(c -> scheduleList(c.getSource(), manager))
+					.then(Commands.literal("list").executes(c -> scheduleList(c.getSource(), manager)))
+					.then(Commands.literal("add").requires(s -> s.permissions().hasPermission(admin))
+						.then(Commands.argument("type", StringArgumentType.word())
+							.then(Commands.argument("delay_minutes", IntegerArgumentType.integer(1, 10080))
+								.then(Commands.argument("duration_minutes", IntegerArgumentType.integer(1, 30))
+									.executes(c -> scheduleAdd(c.getSource(), manager, StringArgumentType.getString(c, "type"),
+										IntegerArgumentType.getInteger(c, "delay_minutes"), IntegerArgumentType.getInteger(c, "duration_minutes")))))))
+					.then(Commands.literal("cancel").requires(s -> s.permissions().hasPermission(admin))
+						.then(Commands.argument("id", IntegerArgumentType.integer(1))
+							.executes(c -> scheduleCancel(c.getSource(), manager, IntegerArgumentType.getInteger(c, "id"))))))
 				.then(Commands.literal("config")
 					.then(Commands.literal("status").executes(c -> configStatus(c.getSource(), manager)))
 					.then(Commands.literal("enabled").requires(s -> s.permissions().hasPermission(admin))
@@ -125,6 +137,28 @@ public final class WeatherEventCommands {
 			boolean enabled = parseBoolean(raw); manager.setNotifications(source.getPlayerOrException().getUUID(), enabled);
 			source.sendSuccess(() -> Component.literal("自然事件通知已" + (enabled ? "开启" : "关闭")), false); return 1;
 		} catch (Exception error) { source.sendFailure(Component.literal("通知设置失败：" + error.getMessage())); return 0; }
+	}
+
+	private static int scheduleAdd(CommandSourceStack source, WeatherEventManager manager, String rawType, int delay, int duration) {
+		try {
+			var event = manager.schedule(WeatherEventType.parse(rawType), delay, duration);
+			source.sendSuccess(() -> Component.literal("已创建自然事件日程 #" + event.id() + "：" + event.type().displayName()
+				+ "，" + delay + " 分钟后执行，持续 " + duration + " 分钟"), true); return 1;
+		} catch (Exception error) { source.sendFailure(Component.literal("创建日程失败：" + error.getMessage())); return 0; }
+	}
+
+	private static int scheduleList(CommandSourceStack source, WeatherEventManager manager) {
+		var entries = manager.schedules();
+		if (entries.isEmpty()) { source.sendSuccess(() -> Component.literal("当前没有自然事件日程"), false); return 1; }
+		for (var event : entries) source.sendSuccess(() -> Component.literal("#" + event.id() + " · "
+			+ HISTORY_TIME.format(Instant.ofEpochMilli(event.scheduledAtEpochMillis())) + " · " + event.type().displayName()
+			+ " · " + event.durationMinutes() + " 分钟"), false);
+		return entries.size();
+	}
+
+	private static int scheduleCancel(CommandSourceStack source, WeatherEventManager manager, int id) {
+		if (!manager.cancelSchedule(id)) { source.sendFailure(Component.literal("未找到自然事件日程 #" + id)); return 0; }
+		source.sendSuccess(() -> Component.literal("已取消自然事件日程 #" + id), true); return 1;
 	}
 
 	private static int configStatus(CommandSourceStack source, WeatherEventManager manager) {
