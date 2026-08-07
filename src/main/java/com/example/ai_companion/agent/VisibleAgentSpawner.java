@@ -22,7 +22,8 @@ final class VisibleAgentSpawner {
 	static VisibleFakePlayer spawnNear(ServerPlayer owner, GameProfile profile, int ordinal) {
 		VisibleFakePlayer player = new VisibleFakePlayer(owner.level(), profile);
 		Vec3 position = safePosition(owner.level(), player, owner.position(), ordinal);
-		return register(owner.getServer(), owner.level(), player, position, owner.getYRot(), owner.getXRot());
+		return register(owner.level().getServer(), owner.level(), player, position,
+			owner.getYRot(), owner.getXRot());
 	}
 
 	static VisibleFakePlayer restore(MinecraftServer server, ServerLevel level, GameProfile profile,
