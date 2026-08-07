@@ -122,12 +122,9 @@ public final class AgentManager implements AutoCloseable {
 		if (textureValue != null && !textureValue.isBlank()) {
 			profile.properties().put("textures", new Property("textures", textureValue, textureSignature));
 		}
-		ServerLevel level = owner.level();
-		FakePlayer bot = FakePlayer.get(level, profile);
-		bot.setPos(owner.getX(), owner.getY(), owner.getZ());
+		FakePlayer bot = VisibleAgentSpawner.spawnNear(owner, profile, agents.size());
 		bot.setCustomName(Component.literal(name));
 		bot.setCustomNameVisible(true);
-		level.addNewPlayer(bot);
 		agents.put(key, new Agent(name, bot, textureValue, textureSignature, System.currentTimeMillis()));
 		saveIdentities();
 		return bot;
@@ -147,11 +144,10 @@ public final class AgentManager implements AutoCloseable {
 					profile.properties().put("textures", new Property("textures", stored.textureValue(),
 						stored.textureSignature()));
 				}
-				FakePlayer bot = FakePlayer.get(level, profile);
-				bot.setPos(stored.x(), stored.y(), stored.z());
+				FakePlayer bot = VisibleAgentSpawner.restore(server, level, profile,
+					stored.x(), stored.y(), stored.z());
 				bot.setCustomName(Component.literal(stored.name()));
 				bot.setCustomNameVisible(true);
-				level.addNewPlayer(bot);
 				Agent agent = new Agent(stored.name(), bot, stored.textureValue(), stored.textureSignature(),
 					stored.createdAtEpochMillis());
 				agent.mode = AgentMode.valueOf(stored.mode());
@@ -172,7 +168,12 @@ public final class AgentManager implements AutoCloseable {
 		Agent agent = agents.remove(name.toLowerCase());
 		if (agent == null) return false;
 		agent.player.getAdvancements().save();
-		agent.player.discard();
+		MinecraftServer server = agent.player.level().getServer();
+		if (server.getPlayerList().getPlayer(agent.player.getUUID()) == agent.player) {
+			server.getPlayerList().remove(agent.player);
+		} else {
+			agent.player.discard();
+		}
 		saveIdentities();
 		return true;
 	}

@@ -15,6 +15,7 @@ import com.example.ai_companion.config.PromptStore;
 import com.example.ai_companion.gameplay.MinigameRewardManager;
 import com.example.ai_companion.gameplay.InventoryShuffleManager;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.entity.FakePlayer;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -287,7 +288,8 @@ public final class AiPlayerCommands {
 			}
 		}
 		int result = created;
-		source.sendSuccess(() -> Component.literal("已批量创建 " + result + " 个 AI"), true);
+		source.sendSuccess(() -> Component.literal("已在你身边创建并验证 " + result
+			+ " 个可见 AI；可用 /aiplayer positions 核对坐标"), true);
 		return created;
 	}
 
@@ -401,8 +403,11 @@ public final class AiPlayerCommands {
 			return 0;
 		}
 		try {
-			agents.create(source.getPlayerOrException(), name, value, signature);
-			source.sendSuccess(() -> Component.literal("已创建 AI 玩家: " + name), true);
+			FakePlayer created = agents.create(source.getPlayerOrException(), name, value, signature);
+			source.sendSuccess(() -> Component.literal("已在你身边创建可见 AI 玩家 " + name
+				+ " · " + created.level().dimension().identifier() + " · X "
+				+ String.format(java.util.Locale.ROOT, "%.1f Y %.1f Z %.1f",
+					created.getX(), created.getY(), created.getZ())), true);
 			return 1;
 		} catch (RuntimeException error) {
 			source.sendFailure(Component.literal(error.getMessage()));

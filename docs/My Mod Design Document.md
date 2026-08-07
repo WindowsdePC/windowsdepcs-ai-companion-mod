@@ -13,7 +13,7 @@ WindowsdePC's AI Companion Mod
 
 当前版本：
 
-0.9.0
+0.9.1
 
 
 目标版本：
@@ -44,6 +44,13 @@ WindowsdePC's AI Companion Mod
 - 使用 1.20.1 `ResourceLocation`、`Screen`、`GuiGraphics`、`getWindow().getWindow()` 等 API 恢复 V+B、F8、C、G。
 - 组合键采用直接轮询，不注册到原版“控制”列表；F8 会执行服务器权威位置查询，C 按住缩放、松开恢复。
 - 补齐批量创建、PvP 教练、身份、提示词、功能状态等核心命令，并允许普通玩家读取 `config status`。
+
+
+0.9.1 AI 可见性修复状态：
+
+- 26.2 Fabric、1.20.1 Fabric 与 1.20.1 Forge 均通过原版玩家列表生命周期注册 AI，而不是只加入世界实体集合。
+- 创建成功前同时验证 AI 已进入服务器玩家列表与当前维度；失败会回滚并向命令玩家报告原因。
+- 单个 AI 在执行玩家脚边生成；批量 AI 在玩家身边分散生成，避免模型完全重叠。
 
 
 0.6.9 实现状态：
