@@ -131,6 +131,8 @@ public final class LegacyForgeMod {
 					.then(literal("duration").requires(source -> source.hasPermission(2))
 						.then(argument("minimum", IntegerArgumentType.integer(1, 30))
 							.then(argument("maximum", IntegerArgumentType.integer(1, 30)).executes(LegacyForgeMod::weatherConfigDuration))))
+					.then(literal("cooldown").requires(source -> source.hasPermission(2))
+						.then(argument("minutes", IntegerArgumentType.integer(0, 1440)).executes(LegacyForgeMod::weatherConfigCooldown)))
 					.then(literal("weight").requires(source -> source.hasPermission(2))
 						.then(argument("type", StringArgumentType.word())
 							.then(argument("weight", IntegerArgumentType.integer(0, 1000)).executes(LegacyForgeMod::weatherConfigWeight)))))
@@ -446,7 +448,9 @@ public final class LegacyForgeMod {
 		LegacyWeatherManager.Policy value = WEATHER.policy();
 		long time = Math.floorMod(context.getSource().getLevel().getDayTime(), 24000L);
 		String eligible = WEATHER.eligibleLabels(time >= 13000 && time <= 23000);
-		return ok(context, value.automaticEnabled ? "自然事件预报：" + WEATHER.nextAutomaticCheckSeconds() + " 秒后检查，候选 " + eligible : "自然事件预报：自动生成已关闭");
+		int cooldown = WEATHER.automaticCooldownRemainingSeconds();
+		String detail = cooldown > 0 ? "冷却剩余 " + cooldown + " 秒" : WEATHER.nextAutomaticCheckSeconds() + " 秒后检查，候选 " + eligible;
+		return ok(context, value.automaticEnabled ? "自然事件预报：" + detail : "自然事件预报：自动生成已关闭");
 	}
 
 	private static int weatherHistory(CommandContext<CommandSourceStack> context, int count) {
@@ -479,12 +483,14 @@ public final class LegacyForgeMod {
 	private static int weatherConfigStatus(CommandContext<CommandSourceStack> context) {
 		LegacyWeatherManager.Policy value = WEATHER.policy(); return ok(context, "自动=" + value.automaticEnabled
 			+ "，间隔=" + value.checkIntervalSeconds + "秒，单次概率=1/" + value.chanceDenominator
-			+ "，时长=" + value.minDurationMinutes + "～" + value.maxDurationMinutes + "分钟，权重：" + WEATHER.weightSummary());
+			+ "，时长=" + value.minDurationMinutes + "～" + value.maxDurationMinutes + "分钟，自动冷却="
+			+ WEATHER.automaticCooldownMinutes() + "分钟，权重：" + WEATHER.weightSummary());
 	}
 	private static int weatherConfigEnabled(CommandContext<CommandSourceStack> context) { try { WEATHER.setAutomaticEnabled(parseWeatherBoolean(StringArgumentType.getString(context, "value"))); return weatherConfigStatus(context); } catch (Exception error) { return fail(context, safeError(error)); } }
 	private static int weatherConfigInterval(CommandContext<CommandSourceStack> context) { try { WEATHER.setCheckInterval(IntegerArgumentType.getInteger(context, "seconds")); return weatherConfigStatus(context); } catch (Exception error) { return fail(context, safeError(error)); } }
 	private static int weatherConfigChance(CommandContext<CommandSourceStack> context) { try { WEATHER.setChance(IntegerArgumentType.getInteger(context, "denominator")); return weatherConfigStatus(context); } catch (Exception error) { return fail(context, safeError(error)); } }
 	private static int weatherConfigDuration(CommandContext<CommandSourceStack> context) { try { WEATHER.setDuration(IntegerArgumentType.getInteger(context, "minimum"), IntegerArgumentType.getInteger(context, "maximum")); return weatherConfigStatus(context); } catch (Exception error) { return fail(context, safeError(error)); } }
+	private static int weatherConfigCooldown(CommandContext<CommandSourceStack> context) { try { WEATHER.setAutomaticCooldownMinutes(IntegerArgumentType.getInteger(context, "minutes")); return weatherConfigStatus(context); } catch (Exception error) { return fail(context, safeError(error)); } }
 	private static int weatherConfigWeight(CommandContext<CommandSourceStack> context) { try { WEATHER.setTypeWeight(LegacyWeatherManager.parse(StringArgumentType.getString(context, "type")), IntegerArgumentType.getInteger(context, "weight")); return weatherConfigStatus(context); } catch (Exception error) { return fail(context, safeError(error)); } }
 	private static boolean parseWeatherBoolean(String raw) { return switch (raw.toLowerCase(Locale.ROOT)) { case "true", "on", "yes", "1" -> true; case "false", "off", "no", "0" -> false; default -> throw new IllegalArgumentException("值必须是 on/off 或 true/false"); }; }
 

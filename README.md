@@ -4,17 +4,20 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：v0.8.8
+当前版本：v0.8.9
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.8.8.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.8.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.8.8.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.8.9.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.9.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.8.9.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
+
+0.8.3 起修复两个 1.20.1 版本的客户端入口与命令树：V+B、F8、C、G 采用 1.20.1 API
+直接轮询且不写入原版“控制”列表；旧版分支不再保留 26.2 包名、渲染源码或金矛突进资源。
 
 ## 依赖模组
 
@@ -29,35 +32,27 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 | Minecraft 1.20.1 Fabric | Fabric API 0.92.0+1.20.1+ | [Fabric API](https://modrinth.com/mod/fabric-api) |
 | Minecraft 1.20.1 Forge | Minecraft Forge 47.x | [Forge 1.20.1 下载页](https://files.minecraftforge.net/net/minecraftforge/forge/index_1.20.1.html) |
 
-26.2 Fabric 版使用 Java 25；两个 1.20.1 版本使用 Java 17。EclipseUI 和 Cloth Config
-只需安装一个；两个 1.20.1 兼容版当前不要求 UI 库。
+26.2 Fabric 版使用 Java 25；两个 1.20.1 版本使用 Java 17。两个 UI 库同时存在时优先
+EclipseUI；已安装 EclipseUI 时不需要 Cloth Config。两个 1.20.1 兼容版当前不要求 UI 库。
+
+1.20.1 Fabric 的依赖名称仍是旧版 `Fabric Loader` 与 `Fabric API`，不是 26.2 的对应 JAR；
+1.20.1 Forge 的加载器名称是 `Minecraft Forge 47.x`，不安装 Fabric Loader、Fabric API、
+EclipseUI，也不使用 26.2 Fabric 的文件。模组文件名中的 `mc1.20.1-fabric`、
+`mc1.20.1-forge` 与 `mc26.2-fabric` 必须和实例逐字匹配。
 
 ### 可选依赖
 
-| 模组 | 用途 | 网址 |
-| --- | --- | --- |
-| Simple Voice Chat | 女仆语音转写兼容通道 | [Simple Voice Chat](https://modrinth.com/plugin/simple-voice-chat) |
-| Sophisticated Backpacks | 女仆外部背包识别 | [Sophisticated Backpacks](https://www.curseforge.com/minecraft/mc-mods/sophisticated-backpacks) |
-| Traveler's Backpack | 女仆外部背包识别 | [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) |
-| Inventory Profiles Next | 女仆标准容器的一键整理兼容 | [Inventory Profiles Next](https://modrinth.com/mod/inventory-profiles-next) |
+以下模组都不是启动所必需的依赖；未安装时相应兼容入口会自动停用，核心功能仍可使用。
 
-以上可选模组均不是启动前置；未安装时只停用对应兼容入口。
+| 模组 | 适用发行目标 | 用途 | 网址 |
+| --- | --- | --- | --- |
+| Simple Voice Chat | 选择与加载器/游戏版本匹配的版本 | 女仆语音转写兼容通道 | [Simple Voice Chat](https://modrinth.com/plugin/simple-voice-chat) |
+| Sophisticated Backpacks | Minecraft 1.20.1 Forge | 女仆外部背包识别 | [Sophisticated Backpacks](https://www.curseforge.com/minecraft/mc-mods/sophisticated-backpacks) |
+| Traveler's Backpack | Minecraft 1.20.1 Fabric 或 Forge | 女仆外部背包识别 | [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) |
+| Inventory Profiles Next | 选择与加载器/游戏版本匹配的版本 | 女仆标准容器的一键整理兼容 | [Inventory Profiles Next](https://modrinth.com/mod/inventory-profiles-next) |
 
-0.8.7 新增 `/aiplayer weather stats [aurora|meteor|sandstorm|thunder]`，用于汇总最近 32 次自然事件的自然/管理员次数与计划总时长。
-0.8.8 新增 `/aiplayer weather config weight <aurora|meteor|sandstorm|thunder> <0-1000>`，分别控制四类事件的自然生成权重；0 表示禁用该类型的自然生成。
-
-## 运行环境
-
-- Minecraft `26.2`
-- Fabric Loader `0.19.3` 或更高版本
-- Fabric API `0.155.2+26.2` 或兼容版本
-- Java `25`
-- 下列 UI 支持库二选一：
-  - [EclipseUI](https://modrinth.com/mod/eclipseui) `1.0.5+mc26.2-rc-2` 或兼容版本（优先）
-  - [Cloth Config](https://modrinth.com/mod/cloth-config) `26.2.155` 或兼容版本（备用）
-
-当两个 UI 库同时安装时，模组只使用 EclipseUI；安装 EclipseUI 后不需要 Cloth Config。
-如果两者都未安装，客户端会明确报告缺少 UI 支持库。
+EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必要依赖，不应同时被理解为
+两个都必须安装。外部背包的内部私有槽位始终由对应背包模组管理。
 
 ## 主要功能
 
@@ -152,6 +147,78 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 /aiplayer music style echo
 /aiplayer music status
 /aiplayer music stop
+```
+
+### AI 宠物竞技
+
+- 每位玩家可创建最多 8 只持久化竞技宠物，并分配速度、力量和耐力三项初始属性。
+- 初始属性单项为 10～100、总和不超过 180；训练每 30 秒可将一项属性提高 1 点，最高 100。
+- 竞速以速度为主、耐力为辅；战斗以力量为主、耐力为辅，并保留受控随机变化和耐力决胜规则。
+- 比赛由服务器结算，永久记录胜场、负场、参赛次数、训练次数与综合评分。
+- 宠物名称全服唯一；训练受所有权保护，排行榜最多显示综合评分最高的 10 只宠物。
+
+```text
+/aiplayer pet create Swift 80 40 60
+/aiplayer pet train Swift speed
+/aiplayer pet race Swift Tank
+/aiplayer pet battle Swift Tank
+/aiplayer pet list
+/aiplayer pet leaderboard
+```
+
+### AI 模拟社会
+
+- 已登记的 AI 可加入最多 128 名居民的持久化模拟社会，并拥有独立住宅、工作、余额、精力、声望和关系网。
+- 住宅保存维度与 XYZ；职业包括农夫、建筑师、矿工、商人、守卫和艺术家，不同职业有固定工资。
+- 工作需要住宅、职业和至少 15 点精力，每 60 秒最多结算一次；收入、精力和声望由服务器统一修改。
+- 两名 AI 社交时会双向提高关系值并消耗少量精力；关系限制在 -100～100，不能与自己社交。
+- 管理员可执行受余额保护的信用点交易；社会排行榜按余额、声望和名称稳定排序。
+- 全部资料以独立 JSON 原子保存，不包含 API 令牌，也不修改 AI 的竞技场装备、身份或普通任务。
+
+```text
+/aiplayer society enroll BuilderAI
+/aiplayer society home BuilderAI
+/aiplayer society job BuilderAI builder
+/aiplayer society work BuilderAI
+/aiplayer society rest BuilderAI
+/aiplayer society socialize BuilderAI FarmerAI
+/aiplayer society trade BuilderAI FarmerAI 10
+/aiplayer society status BuilderAI
+/aiplayer society leaderboard
+```
+
+### 世界天气事件
+
+- 服务器一次只运行一个持久化自然事件：极光、流星雨、沙尘暴或增强雷暴。
+- 极光与流星雨只在主世界夜晚生效，日出自动结束；沙尘暴只影响沙漠群系内玩家。
+- 流星雨会在玩家附近掉落正式注册的 `ai_companion:star_shard` 星辰碎片；碎片可转换为原版紫水晶碎片。
+- 星辰碎片加入通用 `c:star_shards` 标签；1.20.1 Forge 版同时提供旧版 `forge:star_shards` 标签。
+- 增强雷暴驱动原版雷雨并增加电火花表现；事件效果不会在其他维度错误施加。
+- 无事件时服务器会以低概率自然生成 5～10 分钟事件；管理员也可手动启动 1～30 分钟事件。
+- 0.8.6 起可查询最近 32 次事件、下一次自动检查与当前候选事件；每名玩家可独立关闭事件通知。
+- 0.8.7 起可用 `/aiplayer weather stats [事件类型]` 汇总最近 32 次事件的自然/管理员次数与计划总时长。
+- 0.8.8 起四类自然事件拥有独立的 0～1000 自动生成权重；权重 0 会关闭该类型的自然生成，但管理员仍可手动启动。
+- 0.8.9 起自动事件默认有 30 分钟持久化冷却；存在多个合格候选时不会连续自然生成同一种事件。
+- 管理员可持久化修改自动生成开关、30～3600 秒检查间隔、1/1～1/10000 单次概率和 1～30 分钟时长范围。
+
+```text
+/aiplayer weather status
+/aiplayer weather start aurora 5
+/aiplayer weather start meteor 5
+/aiplayer weather start sandstorm 5
+/aiplayer weather start thunder 5
+/aiplayer weather stop
+/aiplayer weather forecast
+/aiplayer weather history [数量]
+/aiplayer weather stats [aurora|meteor|sandstorm|thunder]
+/aiplayer weather notify <on|off>
+/aiplayer weather config status
+/aiplayer weather config enabled <on|off>
+/aiplayer weather config interval <秒>
+/aiplayer weather config chance <概率分母>
+/aiplayer weather config duration <最短分钟> <最长分钟>
+/aiplayer weather config weight <aurora|meteor|sandstorm|thunder> <0-1000>
+/aiplayer weather config cooldown <0-1440分钟>
 ```
 
 ### AI 女仆
@@ -390,9 +457,9 @@ Windows PowerShell：
 
 构建产物位于 `build/libs/`：
 
-- `windowsdepcs-ai-companion-mc26.2-fabric-0.8.0.jar`：26.2 Fabric 正式模组。
-- `windowsdepcs-ai-companion-mc26.2-fabric-0.8.0-sources.jar`：本地源码包。
-- `windowsdepcs-ai-companion-mc26.2-fabric-0.8.0-javadoc.jar`：本地 Java API 文档包。
+- `windowsdepcs-ai-companion-mc26.2-fabric-0.8.2.jar`：26.2 Fabric 正式模组。
+- `windowsdepcs-ai-companion-mc26.2-fabric-0.8.2-sources.jar`：本地源码包。
+- `windowsdepcs-ai-companion-mc26.2-fabric-0.8.2-javadoc.jar`：本地 Java API 文档包。
 
 普通玩家只安装第一个正式模组 JAR；不要把 sources 或 Javadoc JAR 放进 `mods/`。
 从 v0.8.0 起，GitHub Release 同时附加三个平台的正式模组 JAR，不上传 Sources 或 Javadoc JAR。
