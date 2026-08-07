@@ -195,7 +195,12 @@ public final class LegacyFabricMod implements ModInitializer {
 	private static void start(MinecraftServer minecraftServer) {
 		server = minecraftServer;
 		load();
-		for (AgentData data : new ArrayList<>(state.agents.values())) restore(data);
+		for (AgentData data : new ArrayList<>(state.agents.values())) {
+			try { restore(data); }
+			catch (RuntimeException error) {
+				System.err.println("[AI Companion] 无法恢复 AI " + data.name + ": " + safeError(error));
+			}
+		}
 	}
 
 	private static int create(CommandContext<CommandSourceStack> context) {
@@ -211,11 +216,16 @@ public final class LegacyFabricMod implements ModInitializer {
 		}
 		UUID uuid = UUID.nameUUIDFromBytes(("ai_companion:" + key).getBytes(StandardCharsets.UTF_8));
 		AgentData data = new AgentData(name, uuid.toString(), owner.level().dimension().location().toString(),
-			owner.getX() + 1.0, owner.getY(), owner.getZ() + 1.0, "idle", "");
-		state.agents.put(key, data);
-		restore(data);
-		save();
-		return ok(context, "已创建 1.20.1 Fabric AI：" + name);
+			owner.getX() + 1.25, owner.getY(), owner.getZ(), "idle", "");
+		try {
+			restore(data);
+			state.agents.put(key, data);
+			save();
+			return ok(context, String.format(Locale.ROOT,
+				"已在你身边创建并验证可见 AI %s · X %.1f Y %.1f Z %.1f", name, data.x, data.y, data.z));
+		} catch (RuntimeException error) {
+			return fail(context, "AI 创建失败：" + safeError(error));
+		}
 	}
 
 	private static int createMany(CommandContext<CommandSourceStack> context) {
@@ -231,12 +241,21 @@ public final class LegacyFabricMod implements ModInitializer {
 			catch (Exception error) { return fail(context, "该命令需要由游戏内玩家执行"); }
 			String key = name.toLowerCase(Locale.ROOT);
 			UUID uuid = UUID.nameUUIDFromBytes(("ai_companion:" + key).getBytes(StandardCharsets.UTF_8));
+			double angle = Math.PI * 2.0 * created / Math.max(1, count);
 			AgentData data = new AgentData(name, uuid.toString(), owner.level().dimension().location().toString(),
-				owner.getX() + 1.0 + created, owner.getY(), owner.getZ() + 1.0, "idle", "");
-			state.agents.put(key, data); restore(data); created++;
+				owner.getX() + Math.cos(angle) * 1.5, owner.getY(), owner.getZ() + Math.sin(angle) * 1.5,
+				"idle", "");
+			try {
+				restore(data);
+				state.agents.put(key, data);
+				created++;
+			} catch (RuntimeException error) {
+				return fail(context, name + " 创建失败：" + safeError(error));
+			}
 		}
 		save();
-		return created == 0 ? fail(context, "没有可创建的名称") : ok(context, "已创建 " + created + " 个 AI");
+		return created == 0 ? fail(context, "没有可创建的名称")
+			: ok(context, "已在你身边创建并验证 " + created + " 个可见 AI；可用 /aiplayer positions 核对");
 	}
 
 	private static int remove(CommandContext<CommandSourceStack> context) {
@@ -244,7 +263,11 @@ public final class LegacyFabricMod implements ModInitializer {
 		AgentData removed = state.agents.remove(key);
 		RuntimeAgent runtime = AGENTS.remove(key);
 		if (removed == null) return fail(context, "未找到 AI");
-		if (runtime != null) runtime.player.remove(Entity.RemovalReason.DISCARDED);
+		if (runtime != null && server.getPlayerList().getPlayer(runtime.player.getUUID()) == runtime.player) {
+			server.getPlayerList().remove(runtime.player);
+		} else if (runtime != null) {
+			runtime.player.remove(Entity.RemovalReason.DISCARDED);
+		}
 		save();
 		return ok(context, "已移除 AI：" + removed.name);
 	}
@@ -703,18 +726,21 @@ public final class LegacyFabricMod implements ModInitializer {
 	}
 
 	private static void restore(AgentData data) {
-		try {
-			ResourceLocation id = new ResourceLocation(data.dimension);
-			ResourceKey<Level> key = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, id);
-			ServerLevel level = server.getLevel(key);
-			if (level == null) level = server.overworld();
-			FakePlayer fake = FakePlayer.get(level, new GameProfile(UUID.fromString(data.uuid), data.name));
-			fake.moveTo(data.x, data.y, data.z, 0, 0);
-			level.addNewPlayer(fake);
-			AGENTS.put(data.name.toLowerCase(Locale.ROOT), new RuntimeAgent(data, fake));
-		} catch (RuntimeException exception) {
-			System.err.println("[AI Companion] 无法恢复 AI " + data.name + ": " + safeError(exception));
+		ResourceLocation id = new ResourceLocation(data.dimension);
+		ResourceKey<Level> key = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, id);
+		ServerLevel level = server.getLevel(key);
+		if (level == null) level = server.overworld();
+		UUID uuid = UUID.fromString(data.uuid);
+		if (server.getPlayerList().getPlayer(uuid) != null) throw new IllegalStateException("相同 UUID 的 AI 已在线");
+		FakePlayer fake = new LegacyVisibleFakePlayer(level, new GameProfile(uuid, data.name));
+		fake.moveTo(data.x, data.y, data.z, 0, 0);
+		server.getPlayerList().placeNewPlayer(new LegacySilentConnection(), fake);
+		fake.teleportTo(level, data.x, data.y, data.z, 0.0F, 0.0F);
+		if (server.getPlayerList().getPlayer(uuid) != fake || level.getEntity(uuid) != fake) {
+			server.getPlayerList().remove(fake);
+			throw new IllegalStateException("AI 未进入玩家列表或当前世界");
 		}
+		AGENTS.put(data.name.toLowerCase(Locale.ROOT), new RuntimeAgent(data, fake));
 	}
 
 	private static JsonObject chat(String role, String content) {
