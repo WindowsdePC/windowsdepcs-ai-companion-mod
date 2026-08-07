@@ -33,14 +33,17 @@ import java.util.UUID;
 final class LegacyWeatherManager {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final int MAX_HISTORY = 32;
+	private static final int MAX_SCHEDULES = 32;
 	private final Path file;
 	private final SplittableRandom random = new SplittableRandom();
 	private final List<History> history = new ArrayList<>();
+	private final List<Scheduled> schedules = new ArrayList<>();
 	private final Set<UUID> unsubscribed = new HashSet<>();
 	private final EnumMap<Type, Integer> typeWeights = defaultTypeWeights();
 	private Policy policy = Policy.defaults();
 	private int automaticCooldownMinutes = 30;
 	private State active;
+	private int nextScheduleId = 1;
 	private long ticks;
 
 	LegacyWeatherManager(Path file) { this.file = file; load(); }
@@ -60,6 +63,15 @@ final class LegacyWeatherManager {
 	synchronized State active() { return active; }
 	synchronized Policy policy() { return policy.copy(); }
 	synchronized List<History> history(int limit) { return List.copyOf(history.subList(0, Math.min(Math.max(1, limit), history.size()))); }
+	synchronized Scheduled schedule(String rawType, int delayMinutes, int durationMinutes) {
+		if (schedules.size() >= MAX_SCHEDULES) throw new IllegalStateException("最多只能保存 32 个自然事件日程");
+		if (delayMinutes < 1 || delayMinutes > 10080) throw new IllegalArgumentException("延迟必须为 1～10080 分钟");
+		Scheduled event = new Scheduled(nextScheduleId++, Type.parse(rawType).name(),
+			Math.addExact(System.currentTimeMillis(), delayMinutes * 60_000L), durationMinutes);
+		schedules.add(event); schedules.sort(null); save(); return event;
+	}
+	synchronized List<Scheduled> schedules() { return List.copyOf(schedules); }
+	synchronized boolean cancelSchedule(int id) { boolean removed = schedules.removeIf(event -> event.id == id); if (removed) save(); return removed; }
 	synchronized Summary statistics(Type filter) {
 		int events = 0, automatic = 0; long seconds = 0;
 		for (History entry : history) {
@@ -113,7 +125,7 @@ final class LegacyWeatherManager {
 		ticks++;
 		State event;
 		synchronized (this) { event = active; }
-		if (event == null) { automatic(server); return; }
+		if (event == null) { if (!scheduled(server)) automatic(server); return; }
 		Type type = Type.valueOf(event.type);
 		if (type.nightOnly && !isNight(server.overworld())) { stop(); announce(server, type.label + "随日出结束"); return; }
 		if (ticks % 5 == 0) for (ServerPlayer player : server.getPlayerList().getPlayers()) apply(player, type);
@@ -123,6 +135,15 @@ final class LegacyWeatherManager {
 			if (active.remainingTicks <= 0) { active = null; announce(server, "自然事件已经结束"); }
 			if (ticks % 200 == 0 || active == null) save();
 		}
+	}
+
+	private boolean scheduled(MinecraftServer server) {
+		long now = System.currentTimeMillis(); boolean night = isNight(server.overworld()); Scheduled due;
+		synchronized (this) {
+			due = schedules.stream().filter(event -> event.due(now) && event.eligible(night)).findFirst().orElse(null);
+			if (due == null) return false; schedules.remove(due);
+		}
+		start(due.type, due.durationMinutes, false); announce(server, "预约事件开始：" + Type.valueOf(due.type).label + "（日程 #" + due.id + "）"); return true;
 	}
 
 	private void apply(ServerPlayer player, Type type) {
@@ -205,8 +226,10 @@ final class LegacyWeatherManager {
 				Type type = Type.valueOf(entry.getKey()); int weight = entry.getValue(); if (weight >= 0 && weight <= 1000) typeWeights.put(type, weight);
 			} catch (Exception ignored) { }
 			if (loaded.history != null) loaded.history.stream().filter(History::valid).limit(MAX_HISTORY).forEach(history::add);
+			if (loaded.schedules != null) loaded.schedules.stream().filter(event -> event != null && event.valid()).sorted().limit(MAX_SCHEDULES).forEach(schedules::add);
+			nextScheduleId = Math.max(1, schedules.stream().mapToInt(event -> event.id).max().orElse(0) + 1);
 			if (loaded.unsubscribed != null) for (String value : loaded.unsubscribed) try { unsubscribed.add(UUID.fromString(value)); } catch (IllegalArgumentException ignored) { }
-		} catch (Exception ignored) { active = null; policy = Policy.defaults(); automaticCooldownMinutes = 30; history.clear(); unsubscribed.clear(); typeWeights.clear(); typeWeights.putAll(defaultTypeWeights()); }
+		} catch (Exception ignored) { active = null; policy = Policy.defaults(); automaticCooldownMinutes = 30; history.clear(); schedules.clear(); nextScheduleId = 1; unsubscribed.clear(); typeWeights.clear(); typeWeights.putAll(defaultTypeWeights()); }
 	}
 
 	private synchronized void save() {
@@ -257,6 +280,18 @@ final class LegacyWeatherManager {
 		boolean valid() { try { Type.valueOf(type); return startedAtEpochMillis >= 0 && plannedDurationSeconds >= 60 && plannedDurationSeconds <= 1800; } catch (Exception error) { return false; } }
 	}
 
+	static final class Scheduled implements Comparable<Scheduled> {
+		int id; String type; long scheduledAtEpochMillis; int durationMinutes;
+		Scheduled(int id, String type, long scheduledAtEpochMillis, int durationMinutes) {
+			this.id = id; this.type = type; this.scheduledAtEpochMillis = scheduledAtEpochMillis; this.durationMinutes = durationMinutes;
+			if (!valid()) throw new IllegalArgumentException("自然事件日程无效");
+		}
+		boolean valid() { try { Type.valueOf(type); return id > 0 && scheduledAtEpochMillis > 0 && durationMinutes >= 1 && durationMinutes <= 30; } catch (Exception error) { return false; } }
+		boolean due(long now) { return now >= scheduledAtEpochMillis; }
+		boolean eligible(boolean night) { return night || !Type.valueOf(type).nightOnly; }
+		@Override public int compareTo(Scheduled other) { int time = Long.compare(scheduledAtEpochMillis, other.scheduledAtEpochMillis); return time != 0 ? time : Integer.compare(id, other.id); }
+	}
+
 	static final class Summary {
 		final int events, automaticEvents, administratorEvents; final long plannedDurationSeconds;
 		Summary(int events, int automaticEvents, int administratorEvents, long plannedDurationSeconds) {
@@ -270,11 +305,12 @@ final class LegacyWeatherManager {
 	}
 
 	private static final class Store {
-		State active; Policy policy; List<History> history; List<String> unsubscribed; Map<String, Integer> typeWeights; Integer automaticCooldownMinutes;
+		State active; Policy policy; List<History> history; List<Scheduled> schedules; List<String> unsubscribed; Map<String, Integer> typeWeights; Integer automaticCooldownMinutes;
 		String type; long remainingTicks, totalTicks; boolean automatic;
 		Store() { }
 		Store(LegacyWeatherManager manager) {
 			active = manager.active; policy = manager.policy.copy(); history = List.copyOf(manager.history);
+			schedules = List.copyOf(manager.schedules);
 			automaticCooldownMinutes = manager.automaticCooldownMinutes;
 			unsubscribed = manager.unsubscribed.stream().map(UUID::toString).sorted().toList();
 			typeWeights = new java.util.LinkedHashMap<>(); for (Type type : Type.values()) typeWeights.put(type.name(), manager.typeWeight(type));

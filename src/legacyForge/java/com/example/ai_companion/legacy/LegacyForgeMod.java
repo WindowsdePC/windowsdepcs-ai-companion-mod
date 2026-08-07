@@ -120,6 +120,15 @@ public final class LegacyForgeMod {
 						.executes(ctx -> weatherHistory(ctx, IntegerArgumentType.getInteger(ctx, "count")))))
 				.then(literal("notify").then(argument("enabled", StringArgumentType.word())
 					.executes(LegacyForgeMod::weatherNotify)))
+				.then(literal("schedule")
+					.executes(LegacyForgeMod::weatherScheduleList)
+					.then(literal("list").executes(LegacyForgeMod::weatherScheduleList))
+					.then(literal("add").requires(source -> source.hasPermission(2))
+						.then(argument("type", StringArgumentType.word())
+							.then(argument("delay_minutes", IntegerArgumentType.integer(1, 10080))
+								.then(argument("duration_minutes", IntegerArgumentType.integer(1, 30)).executes(LegacyForgeMod::weatherScheduleAdd)))))
+					.then(literal("cancel").requires(source -> source.hasPermission(2))
+						.then(argument("id", IntegerArgumentType.integer(1)).executes(LegacyForgeMod::weatherScheduleCancel))))
 				.then(literal("config")
 					.then(literal("status").executes(LegacyForgeMod::weatherConfigStatus))
 					.then(literal("enabled").requires(source -> source.hasPermission(2))
@@ -478,6 +487,29 @@ public final class LegacyForgeMod {
 			WEATHER.setNotifications(context.getSource().getPlayerOrException().getUUID(), enabled);
 			return ok(context, "自然事件通知已" + (enabled ? "开启" : "关闭")); }
 		catch (Exception error) { return fail(context, "通知设置失败：" + safeError(error)); }
+	}
+
+	private static int weatherScheduleAdd(CommandContext<CommandSourceStack> context) {
+		try {
+			var event = WEATHER.schedule(StringArgumentType.getString(context, "type"),
+				IntegerArgumentType.getInteger(context, "delay_minutes"), IntegerArgumentType.getInteger(context, "duration_minutes"));
+			return ok(context, "已创建自然事件日程 #" + event.id + "：" + LegacyWeatherManager.Type.valueOf(event.type).label
+				+ "，" + IntegerArgumentType.getInteger(context, "delay_minutes") + " 分钟后执行，持续 " + event.durationMinutes + " 分钟");
+		} catch (Exception error) { return fail(context, "创建日程失败：" + safeError(error)); }
+	}
+
+	private static int weatherScheduleList(CommandContext<CommandSourceStack> context) {
+		var entries = WEATHER.schedules(); if (entries.isEmpty()) return ok(context, "当前没有自然事件日程");
+		var formatter = java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm").withZone(java.time.ZoneId.systemDefault());
+		for (var event : entries) context.getSource().sendSuccess(() -> Component.literal("#" + event.id + " · "
+			+ formatter.format(java.time.Instant.ofEpochMilli(event.scheduledAtEpochMillis)) + " · "
+			+ LegacyWeatherManager.Type.valueOf(event.type).label + " · " + event.durationMinutes + " 分钟"), false);
+		return entries.size();
+	}
+
+	private static int weatherScheduleCancel(CommandContext<CommandSourceStack> context) {
+		int id = IntegerArgumentType.getInteger(context, "id");
+		return WEATHER.cancelSchedule(id) ? ok(context, "已取消自然事件日程 #" + id) : fail(context, "未找到自然事件日程 #" + id);
 	}
 
 	private static int weatherConfigStatus(CommandContext<CommandSourceStack> context) {
