@@ -42,6 +42,7 @@ public final class WeatherEventManager implements AutoCloseable {
 	private final Set<UUID> unsubscribed = new HashSet<>();
 	private final EnumMap<WeatherEventType, Integer> typeWeights = defaultTypeWeights();
 	private WeatherEventSettings settings = WeatherEventSettings.defaults();
+	private int automaticCooldownMinutes = 30;
 	private ActiveWeatherEvent active;
 	private long ticks;
 
@@ -74,6 +75,14 @@ public final class WeatherEventManager implements AutoCloseable {
 		saveQuietly();
 	}
 	public synchronized int typeWeight(WeatherEventType type) { return typeWeights.getOrDefault(type, 100); }
+	public synchronized int automaticCooldownMinutes() { return automaticCooldownMinutes; }
+	public synchronized void setAutomaticCooldownMinutes(int minutes) {
+		if (minutes < 0 || minutes > 1440) throw new IllegalArgumentException("自动事件冷却必须为 0～1440 分钟");
+		automaticCooldownMinutes = minutes; saveQuietly();
+	}
+	public synchronized int automaticCooldownRemainingSeconds() {
+		return WeatherAutomaticPolicy.remainingCooldownSeconds(history, automaticCooldownMinutes, System.currentTimeMillis());
+	}
 	public synchronized void setTypeWeight(WeatherEventType type, int weight) {
 		if (type == null) throw new IllegalArgumentException("事件类型不能为空");
 		if (weight < 0 || weight > 1000) throw new IllegalArgumentException("事件权重必须为 0～1000");
@@ -180,7 +189,8 @@ public final class WeatherEventManager implements AutoCloseable {
 		WeatherEventSettings policy;
 		synchronized (this) { policy = settings; }
 		long interval = policy.checkIntervalSeconds() * 20L;
-		if (!policy.automaticEnabled() || ticks % interval != 0 || random.nextInt(policy.chanceDenominator()) != 0) return;
+		if (!policy.automaticEnabled() || ticks % interval != 0 || automaticCooldownRemainingSeconds() > 0
+			|| random.nextInt(policy.chanceDenominator()) != 0) return;
 		WeatherEventType type = chooseAutomaticType(isNight(server.overworld()));
 		if (type == null) return;
 		int minutes = policy.minDurationMinutes() + random.nextInt(policy.maxDurationMinutes() - policy.minDurationMinutes() + 1);
@@ -189,15 +199,17 @@ public final class WeatherEventManager implements AutoCloseable {
 	}
 
 	private synchronized WeatherEventType chooseAutomaticType(boolean night) {
-		int total = 0;
+		List<WeatherEventType> candidates = new ArrayList<>();
 		for (WeatherEventType type : WeatherEventType.values())
-			if ((night || !type.nightOnly()) && typeWeight(type) > 0) total += typeWeight(type);
+			if ((night || !type.nightOnly()) && typeWeight(type) > 0) candidates.add(type);
+		candidates = WeatherAutomaticPolicy.avoidImmediateRepeat(candidates,
+			WeatherAutomaticPolicy.mostRecentAutomaticType(history));
+		int total = 0;
+		for (WeatherEventType type : candidates) total += typeWeight(type);
 		if (total <= 0) return null;
 		int roll = random.nextInt(total);
-		for (WeatherEventType type : WeatherEventType.values()) {
-			if (!night && type.nightOnly()) continue;
+		for (WeatherEventType type : candidates) {
 			int weight = typeWeight(type);
-			if (weight <= 0) continue;
 			if (roll < weight) return type;
 			roll -= weight;
 		}
@@ -229,6 +241,7 @@ public final class WeatherEventManager implements AutoCloseable {
 				active = new ActiveWeatherEvent(WeatherEventType.valueOf(stored.type.toUpperCase(Locale.ROOT)), stored.remainingTicks, total, stored.automatic);
 			}
 			settings = stored.settings == null ? WeatherEventSettings.defaults() : stored.settings;
+			automaticCooldownMinutes = stored.automaticCooldownMinutes == null ? 30 : Math.max(0, Math.min(1440, stored.automaticCooldownMinutes));
 			typeWeights.clear(); typeWeights.putAll(defaultTypeWeights());
 			if (stored.typeWeights != null) for (Map.Entry<String, Integer> entry : stored.typeWeights.entrySet()) try {
 				WeatherEventType type = WeatherEventType.valueOf(entry.getKey()); int weight = entry.getValue();
@@ -236,7 +249,7 @@ public final class WeatherEventManager implements AutoCloseable {
 			} catch (Exception ignored) { }
 			if (stored.history != null) stored.history.stream().filter(record -> record != null).limit(MAX_HISTORY).forEach(history::add);
 			if (stored.unsubscribed != null) for (String value : stored.unsubscribed) try { unsubscribed.add(UUID.fromString(value)); } catch (IllegalArgumentException ignored) { }
-		} catch (Exception ignored) { active = null; settings = WeatherEventSettings.defaults(); history.clear(); unsubscribed.clear(); typeWeights.clear(); typeWeights.putAll(defaultTypeWeights()); }
+		} catch (Exception ignored) { active = null; settings = WeatherEventSettings.defaults(); automaticCooldownMinutes = 30; history.clear(); unsubscribed.clear(); typeWeights.clear(); typeWeights.putAll(defaultTypeWeights()); }
 	}
 
 	private synchronized void saveQuietly() {
@@ -262,6 +275,7 @@ public final class WeatherEventManager implements AutoCloseable {
 		private long remainingTicks, totalTicks;
 		private boolean automatic;
 		private WeatherEventSettings settings;
+		private Integer automaticCooldownMinutes;
 		private Map<String, Integer> typeWeights;
 		private List<WeatherEventRecord> history;
 		private List<String> unsubscribed;
@@ -272,6 +286,7 @@ public final class WeatherEventManager implements AutoCloseable {
 				totalTicks = manager.active.totalTicks(); automatic = manager.active.automatic();
 			}
 			settings = manager.settings;
+			automaticCooldownMinutes = manager.automaticCooldownMinutes;
 			typeWeights = new java.util.LinkedHashMap<>();
 			for (WeatherEventType eventType : WeatherEventType.values()) typeWeights.put(eventType.name(), manager.typeWeight(eventType));
 			history = List.copyOf(manager.history);

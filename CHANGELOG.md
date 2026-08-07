@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.9
+
+- 为自然事件自动生成加入默认 30 分钟、可配置为 0～1440 分钟的持久化冷却。
+- 预报命令显示冷却剩余时间，自动检查在冷却结束前不会消耗随机概率。
+- 多个合格候选存在时避免连续自然生成同一种事件，同时保留权重与昼夜过滤。
+- 同步 Minecraft 26.2 Fabric、1.20.1 Fabric 与 1.20.1 Forge 的旧存档迁移和命令语义。
+
 ## 0.8.6
 
 - Added persistent automatic-event policy, bounded history, forecasts and per-player notification subscriptions.

@@ -54,6 +54,9 @@ public final class WeatherEventCommands {
 						.then(Commands.argument("minimum", IntegerArgumentType.integer(1, 30))
 							.then(Commands.argument("maximum", IntegerArgumentType.integer(1, 30)).executes(c -> configDuration(c.getSource(), manager,
 								IntegerArgumentType.getInteger(c, "minimum"), IntegerArgumentType.getInteger(c, "maximum"))))))
+					.then(Commands.literal("cooldown").requires(s -> s.permissions().hasPermission(admin))
+						.then(Commands.argument("minutes", IntegerArgumentType.integer(0, 1440))
+							.executes(c -> configCooldown(c.getSource(), manager, IntegerArgumentType.getInteger(c, "minutes")))))
 					.then(Commands.literal("weight").requires(s -> s.permissions().hasPermission(admin))
 						.then(Commands.argument("type", StringArgumentType.word())
 							.then(Commands.argument("weight", IntegerArgumentType.integer(0, 1000))
@@ -87,9 +90,11 @@ public final class WeatherEventCommands {
 
 	private static int forecast(CommandSourceStack source, WeatherEventManager manager) {
 		WeatherEventSettings settings = manager.settings();
+		int cooldown = manager.automaticCooldownRemainingSeconds();
 		long time = Math.floorMod(source.getLevel().getOverworldClockTime(), 24000L);
 		String eligible = manager.eligibleTypeLabels(time >= 13000L && time <= 23000L);
-		source.sendSuccess(() -> Component.literal("自然事件预报：" + (settings.automaticEnabled() ? manager.nextAutomaticCheckSeconds() + " 秒后检查，候选 " + eligible : "自动生成已关闭")), false); return 1;
+		String detail = cooldown > 0 ? "冷却剩余 " + cooldown + " 秒" : manager.nextAutomaticCheckSeconds() + " 秒后检查，候选 " + eligible;
+		source.sendSuccess(() -> Component.literal("自然事件预报：" + (settings.automaticEnabled() ? detail : "自动生成已关闭")), false); return 1;
 	}
 
 	private static int history(CommandSourceStack source, WeatherEventManager manager, int count) {
@@ -126,12 +131,13 @@ public final class WeatherEventCommands {
 		WeatherEventSettings value = manager.settings();
 		source.sendSuccess(() -> Component.literal("自动=" + value.automaticEnabled() + "，间隔=" + value.checkIntervalSeconds()
 			+ "秒，单次概率=1/" + value.chanceDenominator() + "，时长=" + value.minDurationMinutes() + "～" + value.maxDurationMinutes()
-			+ "分钟，权重：" + manager.typeWeightSummary()), false); return 1;
+			+ "分钟，自动冷却=" + manager.automaticCooldownMinutes() + "分钟，权重：" + manager.typeWeightSummary()), false); return 1;
 	}
 	private static int configEnabled(CommandSourceStack source, WeatherEventManager manager, String raw) { try { manager.updateSettings(manager.settings().withEnabled(parseBoolean(raw))); return configStatus(source, manager); } catch (Exception error) { return configFailure(source, error); } }
 	private static int configInterval(CommandSourceStack source, WeatherEventManager manager, int value) { try { manager.updateSettings(manager.settings().withInterval(value)); return configStatus(source, manager); } catch (Exception error) { return configFailure(source, error); } }
 	private static int configChance(CommandSourceStack source, WeatherEventManager manager, int value) { try { manager.updateSettings(manager.settings().withChance(value)); return configStatus(source, manager); } catch (Exception error) { return configFailure(source, error); } }
 	private static int configDuration(CommandSourceStack source, WeatherEventManager manager, int min, int max) { try { manager.updateSettings(manager.settings().withDuration(min, max)); return configStatus(source, manager); } catch (Exception error) { return configFailure(source, error); } }
+	private static int configCooldown(CommandSourceStack source, WeatherEventManager manager, int minutes) { try { manager.setAutomaticCooldownMinutes(minutes); return configStatus(source, manager); } catch (Exception error) { return configFailure(source, error); } }
 	private static int configWeight(CommandSourceStack source, WeatherEventManager manager, String rawType, int weight) { try { manager.setTypeWeight(WeatherEventType.parse(rawType), weight); return configStatus(source, manager); } catch (Exception error) { return configFailure(source, error); } }
 	private static int configFailure(CommandSourceStack source, Exception error) { source.sendFailure(Component.literal("自然事件配置失败：" + error.getMessage())); return 0; }
 	private static boolean parseBoolean(String raw) {

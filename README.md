@@ -4,15 +4,15 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：v0.8.8
+当前版本：v0.8.9
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.8.8.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.8.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.8.8.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.8.9.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.8.9.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.8.9.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
@@ -198,6 +198,7 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 - 0.8.6 起可查询最近 32 次事件、下一次自动检查与当前候选事件；每名玩家可独立关闭事件通知。
 - 0.8.7 起可用 `/aiplayer weather stats [事件类型]` 汇总最近 32 次事件的自然/管理员次数与计划总时长。
 - 0.8.8 起四类自然事件拥有独立的 0～1000 自动生成权重；权重 0 会关闭该类型的自然生成，但管理员仍可手动启动。
+- 0.8.9 起自动事件默认有 30 分钟持久化冷却；存在多个合格候选时不会连续自然生成同一种事件。
 - 管理员可持久化修改自动生成开关、30～3600 秒检查间隔、1/1～1/10000 单次概率和 1～30 分钟时长范围。
 
 ```text
@@ -217,6 +218,7 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 /aiplayer weather config chance <概率分母>
 /aiplayer weather config duration <最短分钟> <最长分钟>
 /aiplayer weather config weight <aurora|meteor|sandstorm|thunder> <0-1000>
+/aiplayer weather config cooldown <0-1440分钟>
 ```
 
 ### AI 女仆
