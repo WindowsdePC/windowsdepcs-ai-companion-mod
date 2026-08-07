@@ -1,14 +1,50 @@
 # Changelog
 
+## 0.8.9
+
+- 为自然事件自动生成加入默认 30 分钟、可配置为 0～1440 分钟的持久化冷却。
+- 预报命令显示冷却剩余时间，自动检查在冷却结束前不会消耗随机概率。
+- 多个合格候选存在时避免连续自然生成同一种事件，同时保留权重与昼夜过滤。
+- 同步 Minecraft 26.2 Fabric、1.20.1 Fabric 与 1.20.1 Forge 的旧存档迁移和命令语义。
+
+## 0.8.6
+
+- Added persistent automatic-event policy, bounded history, forecasts and per-player notification subscriptions.
+- Added `/aiplayer weather history`, `forecast`, `notify` and administrator `config` commands on all targets.
+
+## 0.8.5
+
+- Replaced the meteor shower's amethyst placeholder with the registered `ai_companion:star_shard` item.
+- Added translations, item model, common tags and a lossless amethyst conversion recipe on all release targets.
+
+## 0.8.4
+
+- 新增极光、流星雨、沙尘暴与增强雷暴四类服务器权威自然事件，并限制同时最多一个事件。
+- 新增主世界、夜晚、沙漠群系边界；极光/流星雨会在日出结束，沙尘暴只影响沙漠玩家。
+- 流星雨掉落以紫水晶碎片承载的星辰碎片；增强雷暴复用原版雷雨并增加电火花表现。
+- 新增事件剩余时间持久化、低概率自然生成，以及 `/aiplayer weather status|start|stop` 命令。
+- 三端同步事件规则，并新增事件别名、时长和倒计时边界测试。
+
+## 0.8.3
+
+- 重建两个 Minecraft 1.20.1 分支为独立旧版源码集，删除未参与构建的 26.2 包名、客户端渲染源码和金矛突进资源。
+- 使用 1.20.1 Mojang 官方映射 API 恢复 V+B 管理、F8 位置、按住 C 缩放和 G 导航入口，且不注册到原版“控制”列表。
+- 补齐批量创建、PvP 教练、身份、提示词和功能状态命令；修正 `config status` 被管理员根权限误挡的问题。
+- 为旧版分支加入新版符号与 lunge 资源回归检查。
+
 ## 0.8.2
 
-- 新增持久化 AI 模拟社会：住宅、六种职业、信用点经济、精力、声望和双向关系网。
-- 新增工作、休息、社交、交易、状态和社会排行榜命令。
+- 新增持久化 AI 模拟社会：居民住宅、六种职业、信用点经济、精力、声望与双向关系网。
+- 新增入驻、设置住宅/职业、工作、休息、社交、交易、状态和社会排行榜命令。
+- 工作加入住宅/职业/精力前置、60 秒冷却和固定工资；交易加入正金额、余额与同一主体保护。
+- 新增社会资料值域、关系上限、工作冷却和余额守恒测试，并在三端同步服务端核心。
 
 ## 0.8.1
 
-- 新增持久化 AI 宠物竞技系统，提供速度、力量、耐力、训练、竞速、战斗和排行榜。
-- README 增加三端必要依赖与可选依赖模组的名称、用途和网址。
+- 新增持久化 AI 宠物竞技系统，提供速度、力量、耐力、训练、所有权和每位玩家 8 只上限。
+- 新增竞速与战斗两种服务器权威结算；两种模式使用不同主属性并记录胜负、参赛和综合评分。
+- 新增宠物创建、训练、列表、竞速、战斗和排行榜命令，以及属性预算、冷却和规则测试。
+- README 增加按三端划分的必要依赖与可选依赖名称、用途和网址。
 
 ## 0.8.0
 

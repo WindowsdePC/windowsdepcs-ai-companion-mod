@@ -39,6 +39,7 @@ final class LegacyWeatherManager {
 	private final Set<UUID> unsubscribed = new HashSet<>();
 	private final EnumMap<Type, Integer> typeWeights = defaultTypeWeights();
 	private Policy policy = Policy.defaults();
+	private int automaticCooldownMinutes = 30;
 	private State active;
 	private long ticks;
 
@@ -68,6 +69,19 @@ final class LegacyWeatherManager {
 		return new Summary(events, automatic, events - automatic, seconds);
 	}
 	synchronized int typeWeight(Type type) { return typeWeights.getOrDefault(type, 100); }
+	synchronized int automaticCooldownMinutes() { return automaticCooldownMinutes; }
+	synchronized void setAutomaticCooldownMinutes(int minutes) {
+		if (minutes < 0 || minutes > 1440) throw new IllegalArgumentException("自动事件冷却必须为 0～1440 分钟");
+		automaticCooldownMinutes = minutes; save();
+	}
+	synchronized int automaticCooldownRemainingSeconds() {
+		if (automaticCooldownMinutes <= 0) return 0;
+		for (History entry : history) if (entry.automatic) {
+			long remaining = entry.startedAtEpochMillis + automaticCooldownMinutes * 60_000L - System.currentTimeMillis();
+			return remaining <= 0 ? 0 : (int) Math.min(Integer.MAX_VALUE, (remaining + 999L) / 1000L);
+		}
+		return 0;
+	}
 	synchronized void setTypeWeight(Type type, int weight) {
 		if (weight < 0 || weight > 1000) throw new IllegalArgumentException("事件权重必须为 0～1000");
 		typeWeights.put(type, weight); save();
@@ -145,7 +159,8 @@ final class LegacyWeatherManager {
 		Policy current;
 		synchronized (this) { current = policy.copy(); }
 		long interval = current.checkIntervalSeconds * 20L;
-		if (!current.automaticEnabled || ticks % interval != 0 || random.nextInt(current.chanceDenominator) != 0) return;
+		if (!current.automaticEnabled || ticks % interval != 0 || automaticCooldownRemainingSeconds() > 0
+			|| random.nextInt(current.chanceDenominator) != 0) return;
 		Type type = chooseAutomaticType(isNight(server.overworld()));
 		if (type == null) return;
 		int minutes = current.minDurationMinutes + random.nextInt(current.maxDurationMinutes - current.minDurationMinutes + 1);
@@ -153,13 +168,17 @@ final class LegacyWeatherManager {
 	}
 
 	private synchronized Type chooseAutomaticType(boolean night) {
+		List<Type> candidates = new ArrayList<>();
+		for (Type type : Type.values()) if ((night || !type.nightOnly) && typeWeight(type) > 0) candidates.add(type);
+		Type previous = null;
+		for (History entry : history) if (entry.automatic) { previous = Type.valueOf(entry.type); break; }
+		if (previous != null && candidates.size() > 1) candidates.remove(previous);
 		int total = 0;
-		for (Type type : Type.values()) if ((night || !type.nightOnly) && typeWeight(type) > 0) total += typeWeight(type);
+		for (Type type : candidates) total += typeWeight(type);
 		if (total <= 0) return null;
 		int roll = random.nextInt(total);
-		for (Type type : Type.values()) {
-			if (!night && type.nightOnly) continue;
-			int weight = typeWeight(type); if (weight <= 0) continue;
+		for (Type type : candidates) {
+			int weight = typeWeight(type);
 			if (roll < weight) return type; roll -= weight;
 		}
 		return null;
@@ -180,13 +199,14 @@ final class LegacyWeatherManager {
 			State candidate = loaded.active != null ? loaded.active : loaded.legacyState();
 			if (candidate != null && candidate.valid()) active = candidate;
 			if (loaded.policy != null && loaded.policy.valid()) policy = loaded.policy;
+			automaticCooldownMinutes = loaded.automaticCooldownMinutes == null ? 30 : Math.max(0, Math.min(1440, loaded.automaticCooldownMinutes));
 			typeWeights.clear(); typeWeights.putAll(defaultTypeWeights());
 			if (loaded.typeWeights != null) for (Map.Entry<String, Integer> entry : loaded.typeWeights.entrySet()) try {
 				Type type = Type.valueOf(entry.getKey()); int weight = entry.getValue(); if (weight >= 0 && weight <= 1000) typeWeights.put(type, weight);
 			} catch (Exception ignored) { }
 			if (loaded.history != null) loaded.history.stream().filter(History::valid).limit(MAX_HISTORY).forEach(history::add);
 			if (loaded.unsubscribed != null) for (String value : loaded.unsubscribed) try { unsubscribed.add(UUID.fromString(value)); } catch (IllegalArgumentException ignored) { }
-		} catch (Exception ignored) { active = null; policy = Policy.defaults(); history.clear(); unsubscribed.clear(); typeWeights.clear(); typeWeights.putAll(defaultTypeWeights()); }
+		} catch (Exception ignored) { active = null; policy = Policy.defaults(); automaticCooldownMinutes = 30; history.clear(); unsubscribed.clear(); typeWeights.clear(); typeWeights.putAll(defaultTypeWeights()); }
 	}
 
 	private synchronized void save() {
@@ -250,11 +270,12 @@ final class LegacyWeatherManager {
 	}
 
 	private static final class Store {
-		State active; Policy policy; List<History> history; List<String> unsubscribed; Map<String, Integer> typeWeights;
+		State active; Policy policy; List<History> history; List<String> unsubscribed; Map<String, Integer> typeWeights; Integer automaticCooldownMinutes;
 		String type; long remainingTicks, totalTicks; boolean automatic;
 		Store() { }
 		Store(LegacyWeatherManager manager) {
 			active = manager.active; policy = manager.policy.copy(); history = List.copyOf(manager.history);
+			automaticCooldownMinutes = manager.automaticCooldownMinutes;
 			unsubscribed = manager.unsubscribed.stream().map(UUID::toString).sorted().toList();
 			typeWeights = new java.util.LinkedHashMap<>(); for (Type type : Type.values()) typeWeights.put(type.name(), manager.typeWeight(type));
 		}
