@@ -3,6 +3,8 @@ name: Build and publish multiplatform release
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - "v*"
 
