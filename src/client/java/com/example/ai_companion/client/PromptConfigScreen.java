@@ -155,10 +155,9 @@ public final class PromptConfigScreen extends Screen {
 			case GAMEPLAY -> buildGameplayPanel(panelLeft, panelWidth);
 			case CLIENT -> buildClientPanel(panelLeft, panelWidth);
 			case MINIGAMES -> buildMinigamePanel(panelLeft, panelWidth);
-			case LEISURE -> buildPlaceholderPanel("休闲系统将在后续独立功能版本中逐项开放");
+			case LEISURE -> buildLeisurePanel(panelLeft, panelWidth);
 			case PERFORMANCE -> buildPerformancePanel(panelLeft, panelWidth);
-			case COMPATIBILITY -> buildPlaceholderPanel("当前 UI 后端：" + backend.displayName()
-				+ "；Simple Voice Chat 为可选兼容项");
+			case COMPATIBILITY -> buildCompatibilityPanel(panelLeft, panelWidth);
 			case ADVANCED -> buildAdvancedPanel(panelLeft, panelWidth);
 		}
 		addRenderableWidget(Button.builder(Component.literal("完成"), b -> onClose())
@@ -220,7 +219,43 @@ public final class PromptConfigScreen extends Screen {
 			if (minecraft != null) minecraft.setScreenAndShow(new RockPaperScissorsScreen(this,
 				minigameProgress));
 		}).bounds(left + panelWidth / 4, 112, panelWidth / 2, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("竞技宠物列表"), button ->
+			sendCommand("aiplayer pet list")).bounds(left, 140, cardWidth, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("竞技宠物排行榜"), button ->
+			sendCommand("aiplayer pet leaderboard")).bounds(left + cardWidth + 14, 140,
+			cardWidth, 20).build());
 		status = "0.5.9 已完成小游戏中心 5/5，分级奖励为真实物品；记录保存在客户端配置目录";
+	}
+
+	private void buildLeisurePanel(int left, int panelWidth) {
+		int cardWidth = (panelWidth - 14) / 2;
+		actionButton("打开相册列表", "aiplayer album list", left, 60, cardWidth);
+		actionButton("旅行日志统计", "aiplayer travel stats", left + cardWidth + 14, 60, cardWidth);
+		actionButton("生成今日 Minecraft 日报", "aiplayer news today", left, 88, cardWidth);
+		actionButton("查看 AI 直播状态", "aiplayer live status", left + cardWidth + 14, 88, cardWidth);
+		actionButton("查看 AI 合奏状态", "aiplayer music status", left, 116, cardWidth);
+		actionButton("模拟社会排行榜", "aiplayer society leaderboard",
+			left + cardWidth + 14, 116, cardWidth);
+		actionButton("自然事件状态", "aiplayer weather status", left, 144, cardWidth);
+		actionButton("AI 助手球探索", "aiplayer orb explore", left + cardWidth + 14, 144, cardWidth);
+		status = "休闲功能已提供真实入口；需要名称或参数的操作会继续使用对应命令补全参数";
+	}
+
+	private void buildCompatibilityPanel(int left, int panelWidth) {
+		int cardWidth = (panelWidth - 14) / 2;
+		actionButton("检查 API 配置状态", "aiplayer config status", left, 70, cardWidth);
+		actionButton("检查游戏增强状态", "aiplayer feature status", left + cardWidth + 14,
+			70, cardWidth);
+		actionButton("检查自然事件配置", "aiplayer weather config status", left, 98, cardWidth);
+		actionButton("刷新 AI 位置", "aiplayer positions", left + cardWidth + 14, 98, cardWidth);
+		status = "当前 UI 后端：" + backend.displayName() + "；Simple Voice Chat 与背包兼容均为可选";
+	}
+
+	private void actionButton(String label, String command, int x, int y, int width) {
+		addRenderableWidget(Button.builder(Component.literal(label), button -> {
+			sendCommand(command);
+			status = "已发送：/" + command;
+		}).bounds(x, y, width, 20).build());
 	}
 
 	private void buildApiPanel(int left, int panelWidth) {
@@ -481,7 +516,7 @@ public final class PromptConfigScreen extends Screen {
 				throw new IllegalArgumentException("名称前缀应为 1-13 位字母、数字或下划线");
 			}
 			sendCommand("aiplayer create-many " + baseName + " " + count);
-			status = "已请求生成 " + count + " 个 AI";
+			status = "创建请求已发送；请以服务器返回的已验证数量与坐标为准";
 		} catch (RuntimeException error) {
 			status = "生成失败: " + error.getMessage();
 		}

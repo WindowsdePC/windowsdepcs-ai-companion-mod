@@ -6,7 +6,7 @@ import net.minecraft.client.gui.screens.Screen;
 /** Selects exactly one installed UI library, preferring EclipseUI. */
 public enum UiBackend {
 	ECLIPSE_UI("EclipseUI 现代化 UI"),
-	CLOTH_CONFIG("Cloth Config 备用 UI");
+	CLOTH_CONFIG("Cloth Config · 完整九分类管理中心");
 
 	private final String displayName;
 
