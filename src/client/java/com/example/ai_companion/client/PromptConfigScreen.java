@@ -66,7 +66,10 @@ public final class PromptConfigScreen extends Screen {
 
 	private boolean rushEnabled;
 	private boolean flexibleEquipmentEnabled;
-	private boolean glowingHitboxesEnabled;
+	private boolean spyglassHighlightEnabled;
+	private String spyglassRadiusChunks;
+	private String spyglassHoldSeconds;
+	private String spyglassDurationSeconds;
 	private boolean screenZoomEnabled;
 	private String zoomKey;
 	private String zoomFactor;
@@ -102,7 +105,10 @@ public final class PromptConfigScreen extends Screen {
 		this.minigameProgress = MinigameProgress.load();
 		rushEnabled = settings.goldenSpearRushEnabled;
 		flexibleEquipmentEnabled = settings.flexibleEquipmentEnabled;
-		glowingHitboxesEnabled = settings.f3BGlowingHitboxesEnabled;
+		spyglassHighlightEnabled = settings.spyglassHighlightEnabled;
+		spyglassRadiusChunks = Integer.toString(settings.spyglassRadiusChunks);
+		spyglassHoldSeconds = Integer.toString(settings.spyglassHoldSeconds);
+		spyglassDurationSeconds = Integer.toString(settings.spyglassDurationSeconds);
 		screenZoomEnabled = settings.screenZoomEnabled;
 		zoomKey = settings.zoomKey;
 		zoomFactor = Double.toString(settings.zoomFactor);
@@ -462,21 +468,24 @@ public final class PromptConfigScreen extends Screen {
 	}
 
 	private void buildClientPanel(int left, int panelWidth) {
-		addRenderableWidget(Button.builder(Component.literal("F3+B 发光轮廓："
-				+ (glowingHitboxesEnabled ? "开启" : "关闭")), b -> {
-			glowingHitboxesEnabled = !glowingHitboxesEnabled;
+		addRenderableWidget(Button.builder(Component.literal("望远镜生物发光："
+				+ (spyglassHighlightEnabled ? "开启" : "关闭")), b -> {
+			spyglassHighlightEnabled = !spyglassHighlightEnabled;
 			rebuildPanel();
-		}).bounds(left, 75, 260, 20).build());
+		}).bounds(left, 65, 260, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("屏幕缩放："
 				+ (screenZoomEnabled ? "开启" : "关闭")), b -> {
 			screenZoomEnabled = !screenZoomEnabled;
 			rebuildPanel();
-		}).bounds(left + 270, 75, 220, 20).build());
-		numberBox(left, 135, zoomFactor, 5, value -> zoomFactor = value);
-		numberBox(left + 200, 135, zoomTransitionSeconds, 5,
+		}).bounds(left + 270, 65, 220, 20).build());
+		numberBox(left, 115, spyglassRadiusChunks, 2, value -> spyglassRadiusChunks = value);
+		numberBox(left + 150, 115, spyglassHoldSeconds, 2, value -> spyglassHoldSeconds = value);
+		numberBox(left + 300, 115, spyglassDurationSeconds, 3, value -> spyglassDurationSeconds = value);
+		numberBox(left, 170, zoomFactor, 5, value -> zoomFactor = value);
+		numberBox(left + 200, 170, zoomTransitionSeconds, 5,
 			value -> zoomTransitionSeconds = value);
 		addRenderableWidget(Button.builder(Component.literal("保存客户端增强设置"), b -> saveClientEnhancements())
-			.bounds(left, 190, 220, 20).build());
+			.bounds(left, 215, 220, 20).build());
 	}
 
 	private void buildPerformancePanel(int left, int panelWidth) {
@@ -769,13 +778,20 @@ public final class PromptConfigScreen extends Screen {
 
 	private void saveClientEnhancements() {
 		try {
-			settings.f3BGlowingHitboxesEnabled = glowingHitboxesEnabled;
+			settings.spyglassHighlightEnabled = spyglassHighlightEnabled;
+			settings.spyglassRadiusChunks = parseInt(spyglassRadiusChunks, 1, 32, "望远镜半径");
+			settings.spyglassHoldSeconds = parseInt(spyglassHoldSeconds, 1, 10, "望远镜观察时间");
+			settings.spyglassDurationSeconds = parseInt(spyglassDurationSeconds, 1, 600, "发光持续时间");
 			settings.screenZoomEnabled = screenZoomEnabled;
 			settings.zoomKey = ClientSettings.normalizeKey(zoomKey, "C");
 			settings.zoomFactor = parseDouble(zoomFactor, 1.5, 12.0, "缩放倍率");
 			settings.zoomTransitionSeconds = parseDouble(zoomTransitionSeconds, 0.0, 1.0, "过渡时间");
 			settings.save();
-			status = "已保存客户端增强设置；按住 " + settings.zoomKey + " 使用缩放";
+			sendCommand("aiplayer spyglass enabled " + settings.spyglassHighlightEnabled);
+			sendCommand("aiplayer spyglass radius-chunks " + settings.spyglassRadiusChunks);
+			sendCommand("aiplayer spyglass hold-seconds " + settings.spyglassHoldSeconds);
+			sendCommand("aiplayer spyglass duration-seconds " + settings.spyglassDurationSeconds);
+			status = "已保存望远镜发光与缩放设置";
 		} catch (RuntimeException | IOException error) {
 			status = "保存失败: " + error.getMessage();
 		}
@@ -879,10 +895,13 @@ public final class PromptConfigScreen extends Screen {
 			case SHORTCUTS -> graphics.text(font, "打开 UI 双键与屏幕缩放键（仅支持 A-Z）", left, 62, 0xA0A0A0);
 			case CLIENT -> {
 				graphics.text(font,
-					"F3+B 轮廓与屏幕缩放均只影响当前客户端；缩放默认关闭",
+					"望远镜连续观察后由服务器施加原版发光效果；缩放默认关闭",
 					left, 55, 0xA0A0A0);
-				graphics.text(font, "缩放倍率（1.5-12）", left, 111, 0xA0A0A0);
-				graphics.text(font, "过渡秒数（0-1）", left + 200, 111, 0xA0A0A0);
+				graphics.text(font, "半径区块（1-32）", left, 101, 0xA0A0A0);
+				graphics.text(font, "观察秒数（1-10）", left + 150, 101, 0xA0A0A0);
+				graphics.text(font, "持续秒数（1-600）", left + 300, 101, 0xA0A0A0);
+				graphics.text(font, "缩放倍率（1.5-12）", left, 156, 0xA0A0A0);
+				graphics.text(font, "过渡秒数（0-1）", left + 200, 156, 0xA0A0A0);
 			}
 			case COMPATIBILITY -> graphics.text(font, "UI 后端：" + backend.displayName(), left, 55, 0xA0A0A0);
 			case MINIGAMES -> {
@@ -900,7 +919,7 @@ public final class PromptConfigScreen extends Screen {
 					left, 175, 0xFFFFD54F);
 			}
 			case PERFORMANCE -> {
-				graphics.text(font, "只限制本模组的 F3+B 轮廓和装备位附加 3D 模型；默认关闭",
+				graphics.text(font, "只限制本模组的装备位附加 3D 模型；默认关闭",
 					left, 55, 0xA0A0A0);
 				graphics.text(font, "目标 FPS（30-240）", left, 106, 0xA0A0A0);
 				graphics.text(font, "最大距离（16-256）", left + 200, 106, 0xA0A0A0);

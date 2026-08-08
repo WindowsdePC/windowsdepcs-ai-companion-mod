@@ -17,7 +17,6 @@ public final class AiCompanionClient implements ClientModInitializer {
 		PromptStore localPrompts = PromptStore.loadClient();
 		ClientSettings settings = ClientSettings.load();
 		FlexibleEquipmentMode.configureClient(() -> settings.flexibleEquipmentEnabled);
-		F3BHighlightController.initialize(settings);
 		ScreenZoomController.initialize(settings);
 		ClientPerformanceController.initialize(settings);
 		AgentPositionHud.initialize();

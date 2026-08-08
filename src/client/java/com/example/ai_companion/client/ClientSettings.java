@@ -30,7 +30,10 @@ public final class ClientSettings {
 	public int hungerCost = 2;
 	public double rushStrength = 0.916;
 	public boolean flexibleEquipmentEnabled = false;
-	public boolean f3BGlowingHitboxesEnabled = true;
+	public boolean spyglassHighlightEnabled = true;
+	public int spyglassRadiusChunks = 10;
+	public int spyglassHoldSeconds = 1;
+	public int spyglassDurationSeconds = 120;
 	public boolean screenZoomEnabled = false;
 	public String zoomKey = "C";
 	public double zoomFactor = 4.0;
@@ -55,9 +58,6 @@ public final class ClientSettings {
 			String json = Files.readString(PATH, StandardCharsets.UTF_8);
 			JsonObject root = JsonParser.parseString(json).getAsJsonObject();
 			ClientSettings loaded = GSON.fromJson(root, ClientSettings.class);
-			if (loaded != null && !root.has("f3BGlowingHitboxesEnabled")) {
-				loaded.f3BGlowingHitboxesEnabled = true;
-			}
 			if (loaded != null && !root.has("defaultAgentMode")) {
 				loaded.defaultAgentMode = AgentMode.HUNTER.name();
 			}
@@ -82,6 +82,9 @@ public final class ClientSettings {
 		hungerEvery = Math.clamp(hungerEvery, 1, 1000);
 		hungerCost = Math.clamp(hungerCost, 0, 20);
 		rushStrength = Math.clamp(rushStrength, 0.1, 4.0);
+		spyglassRadiusChunks = Math.clamp(spyglassRadiusChunks, 1, 32);
+		spyglassHoldSeconds = Math.clamp(spyglassHoldSeconds, 1, 10);
+		spyglassDurationSeconds = Math.clamp(spyglassDurationSeconds, 1, 600);
 		zoomKey = normalizeKey(zoomKey, "C");
 		zoomFactor = Math.clamp(zoomFactor, 1.5, 12.0);
 		zoomTransitionSeconds = Math.clamp(zoomTransitionSeconds, 0.0, 1.0);

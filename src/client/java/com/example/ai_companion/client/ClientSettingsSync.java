@@ -31,5 +31,9 @@ final class ClientSettingsSync {
 		minecraft.getConnection().sendCommand("aiplayer feature strength " + settings.rushStrength);
 		minecraft.getConnection().sendCommand("aiplayer feature flexible-equipment "
 			+ settings.flexibleEquipmentEnabled);
+		minecraft.getConnection().sendCommand("aiplayer spyglass enabled " + settings.spyglassHighlightEnabled);
+		minecraft.getConnection().sendCommand("aiplayer spyglass radius-chunks " + settings.spyglassRadiusChunks);
+		minecraft.getConnection().sendCommand("aiplayer spyglass hold-seconds " + settings.spyglassHoldSeconds);
+		minecraft.getConnection().sendCommand("aiplayer spyglass duration-seconds " + settings.spyglassDurationSeconds);
 	}
 }

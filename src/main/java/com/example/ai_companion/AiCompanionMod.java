@@ -16,6 +16,7 @@ import com.example.ai_companion.command.AiMusicCommands;
 import com.example.ai_companion.command.PetCompetitionCommands;
 import com.example.ai_companion.command.AiSocietyCommands;
 import com.example.ai_companion.command.WeatherEventCommands;
+import com.example.ai_companion.command.SpyglassHighlightCommands;
 import com.example.ai_companion.config.GameplayConfig;
 import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
@@ -43,6 +44,7 @@ import com.example.ai_companion.weather.WeatherItems;
 import com.example.ai_companion.world.WorldFeatureCommands;
 import com.example.ai_companion.world.WorldFeatureConfig;
 import com.example.ai_companion.world.WorldFeatureManager;
+import com.example.ai_companion.spyglass.SpyglassHighlightManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -75,6 +77,7 @@ public final class AiCompanionMod implements ModInitializer {
 	private WeatherEventManager weatherEvents;
 	private WorldFeatureConfig worldFeatures;
 	private WorldFeatureManager worldFeatureManager;
+	private SpyglassHighlightManager spyglassHighlights;
 
 	@Override
 	public void onInitialize() {
@@ -99,6 +102,7 @@ public final class AiCompanionMod implements ModInitializer {
 		weatherEvents = new WeatherEventManager();
 		worldFeatures = WorldFeatureConfig.load();
 		worldFeatureManager = new WorldFeatureManager(() -> worldFeatures);
+		spyglassHighlights = new SpyglassHighlightManager();
 		AgentPositionNetworking.registerServer(agents);
 		MaidNetworking.registerServer(maids);
 		NavigationNetworking.registerServer(() -> worldFeatures);
@@ -125,6 +129,7 @@ public final class AiCompanionMod implements ModInitializer {
 		WeatherEventCommands.register(weatherEvents);
 		MaidCommands.register(maids);
 		WorldFeatureCommands.register(() -> worldFeatures, updated -> worldFeatures = updated);
+		SpyglassHighlightCommands.register(spyglassHighlights);
 		ServerTickEvents.END_SERVER_TICK.register(agents::tick);
 		ServerTickEvents.END_SERVER_TICK.register(arena::tick);
 		ServerTickEvents.END_SERVER_TICK.register(assistantOrb::tick);
@@ -135,6 +140,7 @@ public final class AiCompanionMod implements ModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(music::tick);
 		ServerTickEvents.END_SERVER_TICK.register(worldFeatureManager::tick);
 		ServerTickEvents.END_SERVER_TICK.register(weatherEvents::tick);
+		ServerTickEvents.END_SERVER_TICK.register(spyglassHighlights::tick);
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			agents.restore(server);
 			maids.restore(server);
@@ -156,6 +162,7 @@ public final class AiCompanionMod implements ModInitializer {
 			weatherEvents.close();
 			maids.close();
 			worldFeatureManager.close();
+			spyglassHighlights.close();
 		});
 		LOGGER.info("WindowsdePC's AI Companion Mod initialized. API key present: {}", config.hasApiKey());
 	}

@@ -69,11 +69,20 @@ final class EclipseUiApiBridge {
 					value -> settings.rushStrength = value).defaultValue(0.916)))
 			.category(category -> category.name(Component.literal("客户端增强"))
 				.icon(icon("spectral_arrow"))
-				.description(Component.literal("只影响当前客户端的画面功能"))
-				.toggle(toggle -> toggle.name(Component.literal("F3+B 使用原版发光轮廓"))
-					.description(Component.literal("替代实体碰撞箱线框；仅本地生效"))
-					.binding(() -> settings.f3BGlowingHitboxesEnabled,
-						value -> settings.f3BGlowingHitboxesEnabled = value).defaultValue(true))
+				.description(Component.literal("望远镜发光与本地画面功能"))
+				.toggle(toggle -> toggle.name(Component.literal("望远镜生物发光"))
+					.description(Component.literal("连续观察后由服务器施加原版光灵箭发光效果"))
+					.binding(() -> settings.spyglassHighlightEnabled,
+						value -> settings.spyglassHighlightEnabled = value).defaultValue(true))
+				.slider(slider -> slider.name(Component.literal("望远镜半径（区块）"))
+					.range(1, 32, 1).bindingInt(() -> settings.spyglassRadiusChunks,
+						value -> settings.spyglassRadiusChunks = value).defaultValue(10))
+				.slider(slider -> slider.name(Component.literal("观察时间（秒）"))
+					.range(1, 10, 1).bindingInt(() -> settings.spyglassHoldSeconds,
+						value -> settings.spyglassHoldSeconds = value).defaultValue(1))
+				.slider(slider -> slider.name(Component.literal("发光持续时间（秒）"))
+					.range(1, 600, 1).bindingInt(() -> settings.spyglassDurationSeconds,
+						value -> settings.spyglassDurationSeconds = value).defaultValue(120))
 				.toggle(toggle -> toggle.name(Component.literal("按键屏幕缩放"))
 					.description(Component.literal("按住设置的快捷键平滑缩放；默认关闭"))
 					.binding(() -> settings.screenZoomEnabled,
@@ -94,7 +103,7 @@ final class EclipseUiApiBridge {
 				.icon(icon("redstone_torch"))
 				.description(Component.literal("限制本模组的客户端附加渲染距离"))
 				.toggle(toggle -> toggle.name(Component.literal("客户端附加渲染优化"))
-					.description(Component.literal("仅影响 F3+B 轮廓与装备位附加 3D 模型；默认关闭"))
+					.description(Component.literal("仅影响装备位附加 3D 模型；默认关闭"))
 					.binding(() -> settings.clientPerformanceOptimizerEnabled,
 						value -> settings.clientPerformanceOptimizerEnabled = value).defaultValue(false))
 				.toggle(toggle -> toggle.name(Component.literal("自适应距离"))
