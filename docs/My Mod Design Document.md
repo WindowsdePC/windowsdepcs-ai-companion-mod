@@ -13,7 +13,7 @@ WindowsdePC's AI Companion Mod
 
 当前版本：
 
-0.9.10-beta.2
+0.9.10-beta.3
 
 
 目标版本：
