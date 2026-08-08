@@ -4,15 +4,15 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：v0.9.8.1
+当前版本：v0.9.8.2
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.8.1.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.8.1.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.8.1.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.8.2.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.8.2.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.8.2.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
@@ -73,7 +73,7 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 - V+B 现在直接打开可操作的九分类中心；检测到 EclipseUI 时可从“兼容设置”进入现代化数值页，不再把小游戏、AI 宠物和 AI 竞技入口藏在返回页。
 - AI 管理页会实时列出 AI 的当前维度与 XYZ，并提供“传送至该 AI”按钮；传送属于服务器管理操作，需要管理员权限。F8 改为接近原版 Tab 玩家列表的居中面板，同样显示每个 AI 的当前维度与位置。
 - 新创建的 AI 不再在半径内随机选点，而是从发起创建的玩家当前位置加入世界，并继续执行 PlayerList/世界实体双重可见性校验。
-- “客户端增强”新增默认开启的疾跑跳跃保持，可让已经进入疾跑状态的玩家在跳跃腾空期间继续保持疾跑；服务器仍负责碰撞与移动校验。
+- “游戏增强”提供默认开启的疾跑跳跃保持，可让已经进入疾跑状态的玩家在跳跃腾空期间继续保持疾跑；服务器仍负责碰撞与移动校验。
 - 0.9.1 起 AI 通过原版玩家列表生命周期加入世界；命令只有在玩家列表与当前世界均验证成功后才报告创建成功。
 - 单个和批量 AI 都以实际发起创建的玩家当前位置为生成锚点；不再从半径内随机挑选落点。
 - 创建、批量创建、列出和移除具有独立名称与 UUID 的可见 `FakePlayer`。
