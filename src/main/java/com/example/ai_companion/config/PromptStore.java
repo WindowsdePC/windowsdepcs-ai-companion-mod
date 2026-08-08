@@ -17,7 +17,7 @@ import java.util.Map;
 /** Persistent named prompt presets shared by commands and the client editor. */
 public final class PromptStore {
 	public static final int MAX_ID_LENGTH = 32;
-	// Sent through a URL-safe Base64 command by the client UI; keep below the vanilla command packet limit.
+	// Sent through the bounded direct UI payload; commands remain an optional compatibility path.
 	public static final int MAX_PROMPT_LENGTH = 6_000;
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 

@@ -1,6 +1,6 @@
 package com.example.ai_companion.client.minigame;
 
-import com.mojang.blaze3d.platform.InputConstants;
+import com.example.ai_companion.client.ClientSettings;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -11,15 +11,17 @@ import net.minecraft.network.chat.Component;
 public final class Game2048Screen extends Screen {
 	private final Screen parent;
 	private final MinigameProgress progress;
+	private final ClientSettings settings;
 	private final Game2048 game = new Game2048();
 	private Button pauseButton;
 	private boolean resultRecorded;
 	private String status = "方向键或 WASD 移动数字方块";
 
-	public Game2048Screen(Screen parent, MinigameProgress progress) {
+	public Game2048Screen(Screen parent, MinigameProgress progress, ClientSettings settings) {
 		super(Component.literal("Minecraft 2048"));
 		this.parent = parent;
 		this.progress = progress;
+		this.settings = settings;
 	}
 
 	@Override
@@ -42,23 +44,23 @@ public final class Game2048Screen extends Screen {
 	@Override
 	public boolean keyPressed(KeyEvent event) {
 		int key = event.key();
-		if (key == InputConstants.KEY_LEFT || key == InputConstants.KEY_A) return move(Game2048.Direction.LEFT);
-		if (key == InputConstants.KEY_RIGHT || key == InputConstants.KEY_D) return move(Game2048.Direction.RIGHT);
-		if (key == InputConstants.KEY_UP || key == InputConstants.KEY_W) return move(Game2048.Direction.UP);
-		if (key == InputConstants.KEY_DOWN || key == InputConstants.KEY_S) return move(Game2048.Direction.DOWN);
-		if (key == InputConstants.KEY_P || key == InputConstants.KEY_SPACE) {
+		if (key == settings.minigameLeftCode()) return move(Game2048.Direction.LEFT);
+		if (key == settings.minigameRightCode()) return move(Game2048.Direction.RIGHT);
+		if (key == settings.minigameUpCode()) return move(Game2048.Direction.UP);
+		if (key == settings.minigameDownCode()) return move(Game2048.Direction.DOWN);
+		if (key == settings.minigamePauseCode()) {
 			togglePause();
 			return true;
 		}
-		if (key == InputConstants.KEY_R) {
+		if (key == settings.minigameRestartCode()) {
 			restart();
 			return true;
 		}
-		if (key == InputConstants.KEY_U) {
+		if (key == settings.minigameSecondaryCode()) {
 			undo();
 			return true;
 		}
-		if (key == InputConstants.KEY_C && game.state() == Game2048.State.WON) {
+		if (key == settings.minigameActionCode() && game.state() == Game2048.State.WON) {
 			continueGame();
 			return true;
 		}

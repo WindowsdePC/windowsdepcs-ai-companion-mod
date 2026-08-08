@@ -15,6 +15,8 @@ public record AgentPositionsPayload(List<AgentPosition> positions) implements Cu
 	public static final int MAX_POSITIONS = 128;
 	private static final int MAX_NAME_LENGTH = 16;
 	private static final int MAX_DIMENSION_LENGTH = 128;
+	private static final int MAX_MODE_LENGTH = 24;
+	private static final int MAX_MESSAGE_LENGTH = 512;
 
 	public static final Type<AgentPositionsPayload> TYPE = new Type<>(
 		Identifier.fromNamespaceAndPath(AiCompanionMod.MOD_ID, "agent_positions"));
@@ -33,7 +35,9 @@ public record AgentPositionsPayload(List<AgentPosition> positions) implements Cu
 						buffer.readUtf(MAX_DIMENSION_LENGTH),
 						buffer.readDouble(),
 						buffer.readDouble(),
-						buffer.readDouble()));
+						buffer.readDouble(),
+						com.example.ai_companion.agent.AgentMode.valueOf(buffer.readUtf(MAX_MODE_LENGTH)),
+						buffer.readUtf(MAX_MESSAGE_LENGTH)));
 				}
 				return new AgentPositionsPayload(positions);
 			}
@@ -50,6 +54,8 @@ public record AgentPositionsPayload(List<AgentPosition> positions) implements Cu
 					buffer.writeDouble(position.x());
 					buffer.writeDouble(position.y());
 					buffer.writeDouble(position.z());
+					buffer.writeUtf(position.mode().name(), MAX_MODE_LENGTH);
+					buffer.writeUtf(position.lastMessage(), MAX_MESSAGE_LENGTH);
 				}
 			}
 		};

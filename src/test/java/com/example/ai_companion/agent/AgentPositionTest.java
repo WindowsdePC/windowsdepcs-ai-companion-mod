@@ -15,7 +15,7 @@ final class AgentPositionTest {
 			Locale.setDefault(Locale.GERMANY);
 			AgentPosition position = new AgentPosition("Builder_AI", "minecraft:overworld",
 				12.25, 64.0, -8.75);
-			assertEquals("Builder_AI · minecraft:overworld · X 12.3, Y 64.0, Z -8.8",
+			assertEquals("Builder_AI [survival] · minecraft:overworld · X 12.3, Y 64.0, Z -8.8",
 				position.displayText());
 		} finally {
 			Locale.setDefault(previous);
@@ -30,5 +30,13 @@ final class AgentPositionTest {
 			() -> new AgentPosition("AI_1", " ", 0, 0, 0));
 		assertThrows(IllegalArgumentException.class,
 			() -> new AgentPosition("AI_1", "minecraft:overworld", Double.NaN, 0, 0));
+	}
+
+	@Test
+	void snapshotCarriesModeAndBoundsPopupMessage() {
+		AgentPosition position = new AgentPosition("AI_1", "minecraft:overworld", 0, 64, 0,
+			AgentMode.HUNTER, "x".repeat(600));
+		assertEquals(AgentMode.HUNTER, position.mode());
+		assertEquals(512, position.lastMessage().length());
 	}
 }

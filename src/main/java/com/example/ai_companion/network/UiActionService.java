@@ -112,8 +112,10 @@ public final class UiActionService {
 				case "pet.compete" -> competePets(player, PetCompetitionMode.valueOf(arg(request, 0)),
 					arg(request, 1), arg(request, 2));
 				case "config.save" -> saveApi(player, request);
-				case "config.status" -> reply(player, "API=" + config.get().apiBase() + "，模型="
-					+ config.get().model() + "，令牌=" + (config.get().hasApiKey() ? "已配置" : "未配置"));
+				case "config.status" -> {
+					sendApiSnapshot(player);
+					reply(player, "已从服务器刷新 API 配置");
+				}
 				case "gameplay.save" -> saveGameplay(player, request);
 				case "inventory.shuffle" -> shuffle(player);
 				case "spyglass.save" -> saveSpyglass(player, request);
@@ -175,11 +177,16 @@ public final class UiActionService {
 
 	private void setMode(ServerPlayer player, String name, AgentMode mode, String target) {
 		requireAdmin(player);
-		if (mode != AgentMode.IDLE && player.level().getServer().getPlayerList().getPlayerByName(target) == null) {
+		if (requiresTarget(mode)
+				&& player.level().getServer().getPlayerList().getPlayerByName(target) == null) {
 			throw new IllegalArgumentException("目标玩家当前不在线");
 		}
 		agents.setMode(name, mode, target, player.level().getServer().getTickCount());
 		reply(player, name + " 的模式已设为 " + mode.name().toLowerCase());
+	}
+
+	private static boolean requiresTarget(AgentMode mode) {
+		return mode == AgentMode.HUNTER || mode == AgentMode.TEAMMATE || mode == AgentMode.PVP_COACH;
 	}
 
 	private void ask(ServerPlayer player, String name, String instruction) {
@@ -256,7 +263,14 @@ public final class UiActionService {
 		if (request.arguments().size() > 2 && !arg(request, 2).isBlank()) changed = changed.withApiKey(arg(request, 2));
 		changed.save();
 		updateConfig.accept(changed);
+		sendApiSnapshot(player);
 		reply(player, "API 配置已直接保存到服务器；令牌不会返回客户端");
+	}
+
+	public void sendApiSnapshot(ServerPlayer player) {
+		ModConfig current = config.get();
+		ServerPlayNetworking.send(player, new ApiConfigSnapshotPayload(
+			current.apiBase(), current.model(), current.hasApiKey()));
 	}
 
 	private void saveGameplay(ServerPlayer player, UiActionPayload request) throws IOException {

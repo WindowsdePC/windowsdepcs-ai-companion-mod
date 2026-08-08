@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.GameType;
 
 import java.util.Set;
 
@@ -38,6 +39,12 @@ final class VisibleAgentSpawner {
 		server.getPlayerList().placeNewPlayer(new SilentAiConnection(), player,
 			new CommonListenerCookie(player.getGameProfile(), 0, player.clientInformation(), false));
 		player.teleportTo(level, position.x, position.y, position.z, Set.of(), yaw, pitch, true);
+		player.setGameMode(GameType.SURVIVAL);
+		player.setInvulnerable(false);
+		player.getAbilities().invulnerable = false;
+		player.getAbilities().flying = false;
+		player.getAbilities().mayfly = false;
+		player.setHealth(player.getMaxHealth());
 		player.setCustomNameVisible(true);
 		if (server.getPlayerList().getPlayer(player.getUUID()) != player || level.getEntity(player.getUUID()) != player) {
 			server.getPlayerList().remove(player);

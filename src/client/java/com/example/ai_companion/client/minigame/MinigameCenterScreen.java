@@ -4,16 +4,19 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import com.example.ai_companion.client.ClientSettings;
 
 /** A real local popup that launches every bundled, offline-capable minigame. */
 public final class MinigameCenterScreen extends Screen {
 	private final Screen parent;
 	private final MinigameProgress progress;
+	private final ClientSettings settings;
 
-	public MinigameCenterScreen(Screen parent, MinigameProgress progress) {
+	public MinigameCenterScreen(Screen parent, MinigameProgress progress, ClientSettings settings) {
 		super(Component.literal("小游戏中心 · 纯本地运行"));
 		this.parent = parent;
 		this.progress = progress;
+		this.settings = settings;
 	}
 
 	@Override
@@ -22,15 +25,15 @@ public final class MinigameCenterScreen extends Screen {
 		int left = (this.width - width) / 2;
 		int half = (width - 10) / 2;
 		addRenderableWidget(Button.builder(Component.literal("贪吃蛇"), b ->
-			minecraft.setScreenAndShow(new SnakeScreen(this, progress))).bounds(left, 62, half, 22).build());
+			minecraft.setScreenAndShow(new SnakeScreen(this, progress, settings))).bounds(left, 62, half, 22).build());
 		addRenderableWidget(Button.builder(Component.literal("Minecraft 俄罗斯方块"), b ->
-			minecraft.setScreenAndShow(new TetrisScreen(this, progress))).bounds(left + half + 10, 62, half, 22).build());
+			minecraft.setScreenAndShow(new TetrisScreen(this, progress, settings))).bounds(left + half + 10, 62, half, 22).build());
 		addRenderableWidget(Button.builder(Component.literal("Minecraft 方块扫雷"), b ->
-			minecraft.setScreenAndShow(new MinesweeperScreen(this, progress))).bounds(left, 94, half, 22).build());
+			minecraft.setScreenAndShow(new MinesweeperScreen(this, progress, settings))).bounds(left, 94, half, 22).build());
 		addRenderableWidget(Button.builder(Component.literal("2048"), b ->
-			minecraft.setScreenAndShow(new Game2048Screen(this, progress))).bounds(left + half + 10, 94, half, 22).build());
+			minecraft.setScreenAndShow(new Game2048Screen(this, progress, settings))).bounds(left + half + 10, 94, half, 22).build());
 		addRenderableWidget(Button.builder(Component.literal("AI 猜拳"), b ->
-			minecraft.setScreenAndShow(new RockPaperScissorsScreen(this, progress)))
+			minecraft.setScreenAndShow(new RockPaperScissorsScreen(this, progress, settings)))
 			.bounds(left + width / 4, 126, width / 2, 22).build());
 		addRenderableWidget(Button.builder(Component.literal("返回"), b -> onClose())
 			.bounds(left + width / 2 - 55, 176, 110, 20).build());

@@ -64,6 +64,9 @@ public final class AiPlayerCommands {
 				.then(Commands.literal("idle").then(Commands.argument("name", StringArgumentType.word())
 					.executes(c -> mode(c.getSource(), agents, StringArgumentType.getString(c, "name"),
 						AgentMode.IDLE, ""))))
+				.then(Commands.literal("survival").then(Commands.argument("name", StringArgumentType.word())
+					.executes(c -> mode(c.getSource(), agents, StringArgumentType.getString(c, "name"),
+						AgentMode.SURVIVAL, ""))))
 				.then(Commands.literal("hunt").then(Commands.argument("name", StringArgumentType.word())
 					.then(Commands.argument("target", StringArgumentType.word())
 						.executes(c -> mode(c.getSource(), agents, StringArgumentType.getString(c, "name"),

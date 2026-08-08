@@ -4,6 +4,8 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.client.input.KeyEvent;
+import com.example.ai_companion.client.ClientSettings;
 
 import java.util.List;
 
@@ -11,13 +13,15 @@ import java.util.List;
 public final class RockPaperScissorsScreen extends Screen {
 	private final Screen parent;
 	private final MinigameProgress progress;
+	private final ClientSettings settings;
 	private final RockPaperScissorsGame game = new RockPaperScissorsGame();
 	private RockPaperScissorsGame.Round lastRound;
 
-	public RockPaperScissorsScreen(Screen parent, MinigameProgress progress) {
+	public RockPaperScissorsScreen(Screen parent, MinigameProgress progress, ClientSettings settings) {
 		super(Component.literal("AI 猜拳"));
 		this.parent = parent;
 		this.progress = progress;
+		this.settings = settings;
 	}
 
 	@Override
@@ -42,6 +46,22 @@ public final class RockPaperScissorsScreen extends Screen {
 	private Button choiceButton(RockPaperScissorsGame.Choice choice, int x, int y, int width) {
 		return Button.builder(Component.literal(choice.symbol() + "  " + choice.displayName()),
 			button -> play(choice)).bounds(x, y, width, 26).build();
+	}
+
+	@Override public boolean keyPressed(KeyEvent event) {
+		if (event.key() == settings.minigameLeftCode()) {
+			play(RockPaperScissorsGame.Choice.ROCK);
+			return true;
+		}
+		if (event.key() == settings.minigameUpCode() || event.key() == settings.minigameActionCode()) {
+			play(RockPaperScissorsGame.Choice.SCISSORS);
+			return true;
+		}
+		if (event.key() == settings.minigameRightCode()) {
+			play(RockPaperScissorsGame.Choice.PAPER);
+			return true;
+		}
+		return super.keyPressed(event);
 	}
 
 	private void play(RockPaperScissorsGame.Choice choice) {

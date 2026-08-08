@@ -4,15 +4,15 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.9.9](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.9.9)
+当前测试版本：[v0.9.10-beta.1](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.9.10-beta.1)（预发行版；稳定版仍为 `v0.9.9`）
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.9.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.9.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.9.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.10-beta.1.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.10-beta.1.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.10-beta.1.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
@@ -71,18 +71,18 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 - 0.9.7 起完整 UI 使用带边界校验的自定义网络操作通道直接调用服务端管理器；创建、模式、提示词、API、游戏增强、望远镜、AI 宠物与 AI 竞技按钮不再发送聊天命令。命令仍保留给服务器控制台、脚本和无客户端场景。
 - 0.9.8 将相册、旅行日志、日报、直播、音乐、模拟社会、自然事件、助手球等 UI 查询也改为直接调用服务端 Java 管理器；UI 操作结果显示在模组界面内，不再刷聊天栏，旧客户端连接时才回退为系统消息。
 - V+B 现在直接打开可操作的九分类中心；检测到 EclipseUI 时可从“兼容设置”进入现代化数值页，不再把小游戏、AI 宠物和 AI 竞技入口藏在返回页。
-- AI 管理页会实时列出 AI 的当前维度与 XYZ，并提供“传送至该 AI”按钮；传送属于服务器管理操作，需要管理员权限。F8 改为接近原版 Tab 玩家列表的居中面板，同样显示每个 AI 的当前维度与位置。
+- AI 管理页会实时列出 AI 的当前维度与 XYZ，并提供“传送至该 AI”按钮；传送属于服务器管理操作，需要管理员权限。`F8` 现在打开独立“AI 控制与消息”窗口，位置、请求状态和 AI 回复都留在该窗口内，不写入聊天栏。
 - 新创建的 AI 不再在半径内随机选点，而是从发起创建的玩家当前位置加入世界，并继续执行 PlayerList/世界实体双重可见性校验。
 - “游戏增强”提供默认开启的疾跑跳跃保持，可让已经进入疾跑状态的玩家在跳跃腾空期间继续保持疾跑；服务器仍负责碰撞与移动校验。
 - 0.9.1 起 AI 通过原版玩家列表生命周期加入世界；命令只有在玩家列表与当前世界均验证成功后才报告创建成功。
 - 单个和批量 AI 都以实际发起创建的玩家当前位置为生成锚点；不再从半径内随机挑选落点。
 - 创建、批量创建、列出和移除具有独立名称与 UUID 的可见 `FakePlayer`。
-- 猎人、队友、PvP 教练和空闲四种任务模式。
+- 生存、猎人、队友、PvP 教练和空闲五种任务模式；新 AI 默认为可受伤的生存模式，并会巡查附近环境、被敌对生物选为目标。
 - 选择当前在线玩家作为目标，并为指定 AI 分配提示词预设。
 - 通过异步 OpenAI 兼容 API 请求取得 `say`、`move`、`wait` 白名单动作。
 - 天眼快照记录目标当时的维度、坐标与采集时间，不传送 AI。
 - `/aiplayer positions` 从服务器查询所有已登记 AI 当前所在维度与 XYZ 坐标。
-- 按住 `F8` 显示 AI 位置 HUD；每次重新按下都会向服务器刷新一次，松开立即关闭。
+- 按一下 `F8` 打开 AI 控制与消息窗口，再按一次关闭；窗口可直接选择 AI、发送任务、查看回复，并进入提示词分配弹窗。
 - 支持 Mojang 纹理值与签名形式的自定义皮肤数据。
 - AI 身份会按稳定 UUID 持久化；服务器重启后恢复名称、位置、模式、目标、提示词与皮肤。
 - 0.9.9 起 AI 身份存放在各世界存档自己的 `data` 目录；新建或切换世界不会加载其他世界的 AI 名称。恢复失败、实体已消失或未同时存在于玩家列表和当前维度实体表中的记录会被清除，不再出现在列表、F8 HUD 或传送入口中。

@@ -58,7 +58,7 @@ public final class PromptConfigScreen extends Screen {
 	private String agentName = "";
 	private String selectedPlayer = "";
 	private String instruction = "根据当前模式和观察决定下一步";
-	private AgentMode selectedMode = AgentMode.HUNTER;
+	private AgentMode selectedMode = AgentMode.SURVIVAL;
 	private boolean playersExpanded;
 
 	private List<String> promptIds = new ArrayList<>();
@@ -97,13 +97,26 @@ public final class PromptConfigScreen extends Screen {
 	private String primaryKey;
 	private String secondaryKey;
 	private String positionsKey;
+	private String minigameMenuKey;
+	private String minigameUpKey;
+	private String minigameDownKey;
+	private String minigameLeftKey;
+	private String minigameRightKey;
+	private String minigameActionKey;
+	private String minigamePauseKey;
+	private String minigameRestartKey;
+	private String minigameSecondaryKey;
 	private String apiBase;
 	private String apiModel;
 	private String apiToken = "";
+	private boolean apiKeyConfigured;
+	private long apiConfigRevision = -1;
 
 	private EditBox idBox;
 	private EditBox agentBox;
 	private MultiLineEditBox promptBox;
+	private EditBox endpointBox;
+	private EditBox modelBox;
 
 	public PromptConfigScreen(PromptStore promptStore, ClientSettings settings, UiBackend backend) {
 		this(promptStore, settings, backend, null);
@@ -147,6 +160,15 @@ public final class PromptConfigScreen extends Screen {
 		primaryKey = settings.primaryKey;
 		secondaryKey = settings.secondaryKey;
 		positionsKey = settings.positionsKey;
+		minigameMenuKey = settings.minigameMenuKey;
+		minigameUpKey = settings.minigameUpKey;
+		minigameDownKey = settings.minigameDownKey;
+		minigameLeftKey = settings.minigameLeftKey;
+		minigameRightKey = settings.minigameRightKey;
+		minigameActionKey = settings.minigameActionKey;
+		minigamePauseKey = settings.minigamePauseKey;
+		minigameRestartKey = settings.minigameRestartKey;
+		minigameSecondaryKey = settings.minigameSecondaryKey;
 		apiBase = settings.apiBase;
 		apiModel = settings.model;
 		selectedMode = settings.defaultAgentMode();
@@ -163,6 +185,7 @@ public final class PromptConfigScreen extends Screen {
 	@Override
 	protected void init() {
 		rebuildPanel();
+		UiActionClient.requestApiConfig();
 	}
 
 	@Override
@@ -171,6 +194,21 @@ public final class PromptConfigScreen extends Screen {
 		if (uiResultRevision != UiActionClient.revision()) {
 			uiResultRevision = UiActionClient.revision();
 			status = UiActionClient.lastMessage();
+		}
+		if (apiConfigRevision != UiActionClient.apiConfigRevision()
+				&& UiActionClient.apiConfig() != null) {
+			apiConfigRevision = UiActionClient.apiConfigRevision();
+			var snapshot = UiActionClient.apiConfig();
+			apiBase = snapshot.apiBase();
+			apiModel = snapshot.model();
+			apiKeyConfigured = snapshot.apiKeyConfigured();
+			settings.apiBase = apiBase;
+			settings.model = apiModel;
+			try { settings.save(); }
+			catch (IOException ignored) { }
+			if (endpointBox != null) endpointBox.setValue(apiBase);
+			if (modelBox != null) modelBox.setValue(apiModel);
+			status = "服务器 API 配置已同步；令牌=" + (apiKeyConfigured ? "已配置" : "未配置");
 		}
 		if (tab == Tab.AI_SYSTEM && aiSection == AiSection.MANAGEMENT
 				&& positionRevision != AgentPositionHud.revision()) {
@@ -248,7 +286,7 @@ public final class PromptConfigScreen extends Screen {
 	private void buildMinigamePanel(int left, int panelWidth) {
 		int cardWidth = (panelWidth - 14) / 2;
 		addRenderableWidget(Button.builder(Component.literal("打开小游戏弹窗（5 个纯本地游戏）"), button -> {
-			if (minecraft != null) minecraft.setScreenAndShow(new MinigameCenterScreen(this, minigameProgress));
+			if (minecraft != null) minecraft.setScreenAndShow(new MinigameCenterScreen(this, minigameProgress, settings));
 		}).bounds(left, 62, panelWidth, 24).build());
 		addRenderableWidget(Button.builder(Component.literal("打开 AI 宠物竞技"), button -> {
 			if (minecraft != null) minecraft.setScreenAndShow(new PetCompetitionScreen(this));
@@ -303,17 +341,17 @@ public final class PromptConfigScreen extends Screen {
 	}
 
 	private void buildApiPanel(int left, int panelWidth) {
-		EditBox endpoint = addRenderableWidget(new EditBox(font, left, 75, panelWidth, 20,
+		endpointBox = addRenderableWidget(new EditBox(font, left, 75, panelWidth, 20,
 			Component.literal("API 地址")));
-		endpoint.setMaxLength(300);
-		endpoint.setValue(apiBase);
-		endpoint.setResponder(value -> apiBase = value);
+		endpointBox.setMaxLength(300);
+		endpointBox.setValue(apiBase);
+		endpointBox.setResponder(value -> apiBase = value);
 
-		EditBox model = addRenderableWidget(new EditBox(font, left, 125, panelWidth, 20,
+		modelBox = addRenderableWidget(new EditBox(font, left, 125, panelWidth, 20,
 			Component.literal("模型")));
-		model.setMaxLength(100);
-		model.setValue(apiModel);
-		model.setResponder(value -> apiModel = value);
+		modelBox.setMaxLength(100);
+		modelBox.setValue(apiModel);
+		modelBox.setResponder(value -> apiModel = value);
 
 		EditBox token = addRenderableWidget(new EditBox(font, left, 175, panelWidth, 20,
 			Component.literal("API 令牌")));
@@ -325,6 +363,7 @@ public final class PromptConfigScreen extends Screen {
 			.bounds(left, 220, 180, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("查询服务器状态"), b ->
 			UiActionClient.send("config.status")).bounds(left + 190, 220, 180, 20).build());
+		status = "服务器令牌：" + (apiKeyConfigured ? "已配置（不会回传明文）" : "未配置");
 	}
 
 	private void switchTab(Tab next) {
@@ -359,7 +398,7 @@ public final class PromptConfigScreen extends Screen {
 		agent.setValue(agentName);
 		agent.setResponder(value -> agentName = value);
 
-		addRenderableWidget(Button.builder(Component.literal("模式：" + modeLabel()), b -> cycleMode())
+		addRenderableWidget(Button.builder(Component.literal("修改 AI 模式：" + modeLabel()), b -> cycleMode())
 			.bounds(left + 190, 120, 150, 20).build());
 		addRenderableWidget(Button.builder(Component.literal(selectedPlayer.isBlank()
 				? "选择当前玩家 ▼" : "目标：" + selectedPlayer + " ▼"), b -> togglePlayers())
@@ -460,6 +499,11 @@ public final class PromptConfigScreen extends Screen {
 			.bounds(left + (buttonWidth + gap) * 5, y, buttonWidth, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("分配"), b -> assignPrompt())
 			.bounds(left + (buttonWidth + gap) * 6, y, buttonWidth, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("打开 AI 提示词分配弹窗"), b -> {
+			capturePromptDraft();
+			if (minecraft != null) minecraft.setScreenAndShow(
+				new PromptAssignmentScreen(this, promptStore, settings));
+		}).bounds(left, y + 24, panelWidth, 20).build());
 	}
 
 	private void buildGameplayPanel(int left, int panelWidth) {
@@ -490,32 +534,32 @@ public final class PromptConfigScreen extends Screen {
 	}
 
 	private void buildShortcutPanel(int left, int panelWidth) {
-		EditBox primary = addRenderableWidget(new EditBox(font, left, 85, 120, 20,
-			Component.literal("快捷键一")));
-		primary.setMaxLength(1);
-		primary.setValue(primaryKey);
-		primary.setResponder(value -> primaryKey = value);
-		EditBox secondary = addRenderableWidget(new EditBox(font, left + 135, 85, 120, 20,
-			Component.literal("快捷键二")));
-		secondary.setMaxLength(1);
-		secondary.setValue(secondaryKey);
-		secondary.setResponder(value -> secondaryKey = value);
-		EditBox zoom = addRenderableWidget(new EditBox(font, left + 270, 85, 120, 20,
-			Component.literal("缩放快捷键")));
-		zoom.setMaxLength(1);
-		zoom.setValue(zoomKey);
-		zoom.setResponder(value -> zoomKey = value);
-		EditBox navigator = addRenderableWidget(new EditBox(font, left + 405, 85, 120, 20,
-			Component.literal("导航快捷键")));
-		navigator.setMaxLength(1);
-		navigator.setValue(navigatorKey);
-		navigator.setResponder(value -> navigatorKey = value);
-		EditBox positions = addRenderableWidget(new EditBox(font, left + 540, 85, 90, 20, Component.literal("AI 菜单键")));
-		positions.setMaxLength(3); positions.setValue(positionsKey); positions.setResponder(value -> positionsKey = value);
+		int column = Math.max(86, (panelWidth - 18) / 4);
+		shortcutBox(left, 66, column, "设置键1", primaryKey, v -> primaryKey = v, 1);
+		shortcutBox(left + column + 6, 66, column, "设置键2", secondaryKey, v -> secondaryKey = v, 1);
+		shortcutBox(left + (column + 6) * 2, 66, column, "F8 AI窗", positionsKey, v -> positionsKey = v, 3);
+		shortcutBox(left + (column + 6) * 3, 66, column, "小游戏中心", minigameMenuKey, v -> minigameMenuKey = v, 1);
+		shortcutBox(left, 116, column, "缩放", zoomKey, v -> zoomKey = v, 1);
+		shortcutBox(left + column + 6, 116, column, "导航", navigatorKey, v -> navigatorKey = v, 1);
+		shortcutBox(left + (column + 6) * 2, 116, column, "小游戏上", minigameUpKey, v -> minigameUpKey = v, 1);
+		shortcutBox(left + (column + 6) * 3, 116, column, "小游戏下", minigameDownKey, v -> minigameDownKey = v, 1);
+		shortcutBox(left, 166, column, "小游戏左", minigameLeftKey, v -> minigameLeftKey = v, 1);
+		shortcutBox(left + column + 6, 166, column, "小游戏右", minigameRightKey, v -> minigameRightKey = v, 1);
+		shortcutBox(left + (column + 6) * 2, 166, column, "动作/硬降", minigameActionKey, v -> minigameActionKey = v, 5);
+		shortcutBox(left + (column + 6) * 3, 166, column, "暂停", minigamePauseKey, v -> minigamePauseKey = v, 1);
+		shortcutBox(left, 216, column, "重新开始", minigameRestartKey, v -> minigameRestartKey = v, 1);
+		shortcutBox(left + column + 6, 216, column, "插旗/撤销", minigameSecondaryKey, v -> minigameSecondaryKey = v, 1);
+		addRenderableWidget(Button.builder(Component.literal("保存全部快捷键"), b -> saveShortcuts())
+			.bounds(left + (column + 6) * 2, 216, column * 2 + 6, 20).build());
+		status = "小游戏方向、动作、暂停、重开和辅助键均可修改；不注册到原版控制列表";
+	}
 
-		addRenderableWidget(Button.builder(Component.literal("保存快捷键"), b -> saveShortcuts())
-			.bounds(left, 130, 180, 20).build());
-		if (backend == UiBackend.CLOTH_CONFIG) addRenderableWidget(Button.builder(Component.literal("Cloth 快捷栏：" + (clothNavigationTop ? "顶部" : "左侧")), b -> { clothNavigationTop = !clothNavigationTop; rebuildPanel(); }).bounds(left + 190, 130, 210, 20).build());
+	private void shortcutBox(int x, int y, int width, String label, String value,
+			java.util.function.Consumer<String> responder, int maxLength) {
+		EditBox box = addRenderableWidget(new EditBox(font, x, y, width, 20, Component.literal(label)));
+		box.setMaxLength(maxLength);
+		box.setValue(value);
+		box.setResponder(responder);
 	}
 
 	private void buildAdvancedPanel(int left, int panelWidth) {
@@ -616,15 +660,18 @@ public final class PromptConfigScreen extends Screen {
 
 	private void cycleMode() {
 		selectedMode = switch (selectedMode) {
+			case SURVIVAL -> AgentMode.HUNTER;
 			case HUNTER -> AgentMode.TEAMMATE;
 			case TEAMMATE -> AgentMode.PVP_COACH;
-			case PVP_COACH, IDLE -> AgentMode.HUNTER;
+			case PVP_COACH -> AgentMode.IDLE;
+			case IDLE -> AgentMode.SURVIVAL;
 		};
 		rebuildPanel();
 	}
 
 	private String modeLabel() {
 		return switch (selectedMode) {
+			case SURVIVAL -> "生存";
 			case HUNTER -> "追杀";
 			case TEAMMATE -> "队友";
 			case PVP_COACH -> "PvP 教练";
@@ -661,7 +708,9 @@ public final class PromptConfigScreen extends Screen {
 			validateAgent();
 			settings.setDefaultAgentMode(selectedMode);
 			settings.save();
-			if (selectedPlayer.isBlank()) throw new IllegalArgumentException("请展开并选择当前世界玩家");
+			if (requiresTarget(selectedMode) && selectedPlayer.isBlank()) {
+				throw new IllegalArgumentException("此模式需要选择当前世界玩家");
+			}
 			UiActionClient.send("agent.mode", agentName, selectedMode.name(), selectedPlayer);
 			if (!promptId.isBlank()) UiActionClient.send("prompt.assign", agentName, promptId);
 			status = "已应用 " + modeLabel() + "，目标 " + selectedPlayer + "，提示词 " + promptId;
@@ -792,13 +841,31 @@ public final class PromptConfigScreen extends Screen {
 			settings.clothNavigationTop = clothNavigationTop;
 			settings.zoomKey = ClientSettings.normalizeKey(zoomKey, "C");
 			settings.navigatorKey = ClientSettings.normalizeKey(navigatorKey, "G");
+			settings.minigameMenuKey = ClientSettings.normalizeKey(minigameMenuKey, "M");
+			settings.minigameUpKey = ClientSettings.normalizeKey(minigameUpKey, "W");
+			settings.minigameDownKey = ClientSettings.normalizeKey(minigameDownKey, "S");
+			settings.minigameLeftKey = ClientSettings.normalizeKey(minigameLeftKey, "A");
+			settings.minigameRightKey = ClientSettings.normalizeKey(minigameRightKey, "D");
+			settings.minigameActionKey = ClientSettings.normalizeGameplayKey(minigameActionKey, "SPACE");
+			settings.minigamePauseKey = ClientSettings.normalizeKey(minigamePauseKey, "P");
+			settings.minigameRestartKey = ClientSettings.normalizeKey(minigameRestartKey, "R");
+			settings.minigameSecondaryKey = ClientSettings.normalizeKey(minigameSecondaryKey, "F");
 			settings.save();
 			primaryKey = settings.primaryKey;
 			secondaryKey = settings.secondaryKey;
 			positionsKey = settings.positionsKey;
 			zoomKey = settings.zoomKey;
 			navigatorKey = settings.navigatorKey;
-			status = "已保存；界面 " + primaryKey + "+" + secondaryKey + "，AI 菜单 " + positionsKey + "，缩放 " + zoomKey + "，导航 " + navigatorKey;
+			minigameMenuKey = settings.minigameMenuKey;
+			minigameUpKey = settings.minigameUpKey;
+			minigameDownKey = settings.minigameDownKey;
+			minigameLeftKey = settings.minigameLeftKey;
+			minigameRightKey = settings.minigameRightKey;
+			minigameActionKey = settings.minigameActionKey;
+			minigamePauseKey = settings.minigamePauseKey;
+			minigameRestartKey = settings.minigameRestartKey;
+			minigameSecondaryKey = settings.minigameSecondaryKey;
+			status = "全部快捷键已保存；小游戏中心=" + minigameMenuKey + "，AI 窗口=" + positionsKey;
 		} catch (RuntimeException | IOException error) {
 			status = "保存失败: " + error.getMessage();
 		}
@@ -922,6 +989,10 @@ public final class PromptConfigScreen extends Screen {
 		double parsed = Double.parseDouble(value);
 		if (parsed < min || parsed > max) throw new IllegalArgumentException(label + "超出范围");
 		return parsed;
+	}
+
+	private static boolean requiresTarget(AgentMode mode) {
+		return mode == AgentMode.HUNTER || mode == AgentMode.TEAMMATE || mode == AgentMode.PVP_COACH;
 	}
 
 	@Override

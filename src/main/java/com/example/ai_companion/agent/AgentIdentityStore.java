@@ -76,7 +76,7 @@ public final class AgentIdentityStore {
 			}
 			AgentMode parsedMode;
 			try { parsedMode = AgentMode.valueOf(mode); }
-			catch (RuntimeException ignored) { parsedMode = AgentMode.IDLE; }
+			catch (RuntimeException ignored) { parsedMode = AgentMode.SURVIVAL; }
 			return new StoredAgent(safeName, parsed.toString(),
 				dimension == null || dimension.isBlank() ? "minecraft:overworld" : dimension,
 				x, y, z, parsedMode.name(), bounded(targetName, 16), bounded(promptId, 64),

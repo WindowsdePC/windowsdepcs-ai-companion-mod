@@ -1,6 +1,6 @@
 package com.example.ai_companion.client.minigame;
 
-import com.mojang.blaze3d.platform.InputConstants;
+import com.example.ai_companion.client.ClientSettings;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -19,6 +19,7 @@ public final class MinesweeperScreen extends Screen {
 
 	private final Screen parent;
 	private final MinigameProgress progress;
+	private final ClientSettings settings;
 	private MinesweeperGame.Difficulty difficulty = MinesweeperGame.Difficulty.BEGINNER;
 	private MinesweeperGame game = new MinesweeperGame(difficulty);
 	private boolean flagMode;
@@ -30,10 +31,11 @@ public final class MinesweeperScreen extends Screen {
 	private int boardY;
 	private int cellSize;
 
-	public MinesweeperScreen(Screen parent, MinigameProgress progress) {
+	public MinesweeperScreen(Screen parent, MinigameProgress progress, ClientSettings settings) {
 		super(Component.literal("Minecraft 方块扫雷"));
 		this.parent = parent;
 		this.progress = progress;
+		this.settings = settings;
 	}
 
 	@Override
@@ -76,11 +78,11 @@ public final class MinesweeperScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
-		if (event.key() == InputConstants.KEY_R) {
+		if (event.key() == settings.minigameRestartCode()) {
 			restart();
 			return true;
 		}
-		if (event.key() == InputConstants.KEY_F) {
+		if (event.key() == settings.minigameSecondaryCode()) {
 			flagMode = !flagMode;
 			status = flagMode ? "当前操作：插旗" : "当前操作：翻开";
 			return true;

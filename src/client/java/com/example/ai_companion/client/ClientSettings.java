@@ -23,7 +23,7 @@ public final class ClientSettings {
 	public String secondaryKey = "B";
 	public String positionsKey = "F8";
 	public boolean clothNavigationTop = true;
-	public String defaultAgentMode = AgentMode.HUNTER.name();
+	public String defaultAgentMode = AgentMode.SURVIVAL.name();
 	public String apiBase = "https://api.openai.com/v1";
 	public String model = "gpt-5-mini";
 	public boolean goldenSpearRushEnabled = true;
@@ -51,6 +51,15 @@ public final class ClientSettings {
 	public int minimumExtraRenderDistance = 24;
 	public boolean worldNavigatorEnabled = false;
 	public String navigatorKey = "G";
+	public String minigameMenuKey = "M";
+	public String minigameUpKey = "W";
+	public String minigameDownKey = "S";
+	public String minigameLeftKey = "A";
+	public String minigameRightKey = "D";
+	public String minigameActionKey = "SPACE";
+	public String minigamePauseKey = "P";
+	public String minigameRestartKey = "R";
+	public String minigameSecondaryKey = "F";
 	public boolean mercifulVoidEnabled = false;
 	public boolean maximumWorldBorderEnabled = false;
 
@@ -65,7 +74,7 @@ public final class ClientSettings {
 			JsonObject root = JsonParser.parseString(json).getAsJsonObject();
 			ClientSettings loaded = GSON.fromJson(root, ClientSettings.class);
 			if (loaded != null && !root.has("defaultAgentMode")) {
-				loaded.defaultAgentMode = AgentMode.HUNTER.name();
+				loaded.defaultAgentMode = AgentMode.SURVIVAL.name();
 			}
 			return loaded == null ? new ClientSettings() : loaded.normalized();
 		} catch (Exception error) {
@@ -81,7 +90,7 @@ public final class ClientSettings {
 		try {
 			defaultAgentMode = AgentMode.valueOf(defaultAgentMode).name();
 		} catch (RuntimeException ignored) {
-			defaultAgentMode = AgentMode.HUNTER.name();
+			defaultAgentMode = AgentMode.SURVIVAL.name();
 		}
 		apiBase = apiBase == null || apiBase.isBlank() ? "https://api.openai.com/v1" : apiBase.strip();
 		model = model == null || model.isBlank() ? "gpt-5-mini" : model.strip();
@@ -104,6 +113,15 @@ public final class ClientSettings {
 		minimumExtraRenderDistance = Math.clamp(minimumExtraRenderDistance, 16,
 			extraRenderDistance);
 		navigatorKey = normalizeKey(navigatorKey, "G");
+		minigameMenuKey = normalizeKey(minigameMenuKey, "M");
+		minigameUpKey = normalizeKey(minigameUpKey, "W");
+		minigameDownKey = normalizeKey(minigameDownKey, "S");
+		minigameLeftKey = normalizeKey(minigameLeftKey, "A");
+		minigameRightKey = normalizeKey(minigameRightKey, "D");
+		minigameActionKey = normalizeGameplayKey(minigameActionKey, "SPACE");
+		minigamePauseKey = normalizeKey(minigamePauseKey, "P");
+		minigameRestartKey = normalizeKey(minigameRestartKey, "R");
+		minigameSecondaryKey = normalizeKey(minigameSecondaryKey, "F");
 		return this;
 	}
 
@@ -111,12 +129,12 @@ public final class ClientSettings {
 		try {
 			return AgentMode.valueOf(defaultAgentMode);
 		} catch (RuntimeException ignored) {
-			return AgentMode.HUNTER;
+			return AgentMode.SURVIVAL;
 		}
 	}
 
 	public void setDefaultAgentMode(AgentMode mode) {
-		defaultAgentMode = (mode == null ? AgentMode.HUNTER : mode).name();
+		defaultAgentMode = (mode == null ? AgentMode.SURVIVAL : mode).name();
 	}
 
 	public int primaryCode() {
@@ -134,6 +152,15 @@ public final class ClientSettings {
 	public int navigatorCode() {
 		return keyCode(navigatorKey);
 	}
+	public int minigameMenuCode() { return keyCode(minigameMenuKey); }
+	public int minigameUpCode() { return keyCode(minigameUpKey); }
+	public int minigameDownCode() { return keyCode(minigameDownKey); }
+	public int minigameLeftCode() { return keyCode(minigameLeftKey); }
+	public int minigameRightCode() { return keyCode(minigameRightKey); }
+	public int minigameActionCode() { return gameplayKeyCode(minigameActionKey); }
+	public int minigamePauseCode() { return keyCode(minigamePauseKey); }
+	public int minigameRestartCode() { return keyCode(minigameRestartKey); }
+	public int minigameSecondaryCode() { return keyCode(minigameSecondaryKey); }
 	public int positionsCode() { return com.mojang.blaze3d.platform.InputConstants.KEY_F1 + Integer.parseInt(positionsKey.substring(1)) - 1; }
 
 	public void save() throws IOException {
@@ -150,8 +177,18 @@ public final class ClientSettings {
 		String normalized = value == null ? "" : value.strip().toUpperCase();
 		return normalized.matches("F([1-9]|1[0-2])") ? normalized : fallback;
 	}
+	public static String normalizeGameplayKey(String value, String fallback) {
+		String normalized = value == null ? "" : value.strip().toUpperCase();
+		return normalized.equals("SPACE") || normalized.matches("[A-Z]") ? normalized : fallback;
+	}
 
 	private static int keyCode(String key) {
 		return normalizeKey(key, "B").charAt(0);
+	}
+
+	private static int gameplayKeyCode(String key) {
+		String normalized = normalizeGameplayKey(key, "SPACE");
+		return normalized.equals("SPACE") ? com.mojang.blaze3d.platform.InputConstants.KEY_SPACE
+			: normalized.charAt(0);
 	}
 }

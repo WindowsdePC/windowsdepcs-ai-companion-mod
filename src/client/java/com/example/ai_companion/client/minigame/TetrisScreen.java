@@ -1,6 +1,6 @@
 package com.example.ai_companion.client.minigame;
 
-import com.mojang.blaze3d.platform.InputConstants;
+import com.example.ai_companion.client.ClientSettings;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -14,6 +14,7 @@ import java.util.UUID;
 public final class TetrisScreen extends Screen {
 	private final Screen parent;
 	private final MinigameProgress progress;
+	private final ClientSettings settings;
 	private final TetrisGame game = new TetrisGame();
 	private Button pauseButton;
 	private int dropCounter;
@@ -22,10 +23,11 @@ public final class TetrisScreen extends Screen {
 	private String sessionId = newSessionId();
 	private String rewardStatus = "消除至少一行，结束后可获得随机矿物";
 
-	public TetrisScreen(Screen parent, MinigameProgress progress) {
+	public TetrisScreen(Screen parent, MinigameProgress progress, ClientSettings settings) {
 		super(Component.literal("Minecraft 俄罗斯方块"));
 		this.parent = parent;
 		this.progress = progress;
+		this.settings = settings;
 	}
 
 	@Override
@@ -52,31 +54,31 @@ public final class TetrisScreen extends Screen {
 	@Override
 	public boolean keyPressed(KeyEvent event) {
 		int key = event.key();
-		if (key == InputConstants.KEY_LEFT || key == InputConstants.KEY_A) {
+		if (key == settings.minigameLeftCode()) {
 			game.moveLeft();
 			return true;
 		}
-		if (key == InputConstants.KEY_RIGHT || key == InputConstants.KEY_D) {
+		if (key == settings.minigameRightCode()) {
 			game.moveRight();
 			return true;
 		}
-		if (key == InputConstants.KEY_DOWN || key == InputConstants.KEY_S) {
+		if (key == settings.minigameDownCode()) {
 			handleStep(game.softDrop());
 			return true;
 		}
-		if (key == InputConstants.KEY_UP || key == InputConstants.KEY_W || key == InputConstants.KEY_X) {
+		if (key == settings.minigameUpCode()) {
 			game.rotateClockwise();
 			return true;
 		}
-		if (key == InputConstants.KEY_SPACE) {
+		if (key == settings.minigameActionCode()) {
 			handleStep(game.hardDrop());
 			return true;
 		}
-		if (key == InputConstants.KEY_P) {
+		if (key == settings.minigamePauseCode()) {
 			togglePause();
 			return true;
 		}
-		if (key == InputConstants.KEY_R) {
+		if (key == settings.minigameRestartCode()) {
 			restart();
 			return true;
 		}

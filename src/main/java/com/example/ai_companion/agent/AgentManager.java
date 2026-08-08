@@ -18,6 +18,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.LevelResource;
@@ -49,7 +53,7 @@ public final class AgentManager implements AutoCloseable {
 		final String textureSignature;
 		final long createdAtEpochMillis;
 		final AtomicBoolean thinking = new AtomicBoolean();
-		AgentMode mode = AgentMode.IDLE;
+		AgentMode mode = AgentMode.SURVIVAL;
 		String targetName = "";
 		String promptId = "";
 		long nextEyeTick;
@@ -61,6 +65,9 @@ public final class AgentManager implements AutoCloseable {
 		boolean furnitureSeated;
 		int automaticIntervalTicks = DEFAULT_AUTOMATIC_INTERVAL_TICKS;
 		long nextAutomaticTick;
+		long nextWanderTick;
+		long lastAttackTick;
+		String lastMessage = "已生成，正在以生存模式观察附近环境";
 
 		Agent(String name, FakePlayer player, String textureValue, String textureSignature,
 				long createdAtEpochMillis) {
@@ -204,7 +211,7 @@ public final class AgentManager implements AutoCloseable {
 			agent.player.level().dimension().identifier().toString(),
 			agent.player.getX(),
 			agent.player.getY(),
-			agent.player.getZ()
+			agent.player.getZ(), agent.mode, agent.lastMessage
 		)).toList();
 	}
 
@@ -306,7 +313,7 @@ public final class AgentManager implements AutoCloseable {
 		agent.furnitureSeated = false;
 		agent.player.setShiftKeyDown(false);
 		agent.mode = mode;
-		agent.targetName = mode == AgentMode.IDLE ? "" : targetName;
+		agent.targetName = requiresTarget(mode) ? targetName : "";
 		agent.eyeSnapshot = null;
 		agent.nextEyeTick = currentTick + EYE_COOLDOWN_TICKS;
 		saveIdentities();
@@ -378,7 +385,8 @@ public final class AgentManager implements AutoCloseable {
 						return;
 					}
 					apply(server, agent, decision);
-					result.accept("AI " + agent.name + " 已执行: " + decision.action());
+					String detail = decision.say().isBlank() ? "" : " · " + decision.say();
+					result.accept("AI " + agent.name + " 已执行: " + decision.action() + detail);
 				}));
 		} catch (RuntimeException error) {
 			agent.thinking.set(false);
@@ -394,7 +402,7 @@ public final class AgentManager implements AutoCloseable {
 			saveIdentities();
 		}
 		for (Agent agent : agents.values()) {
-			if (agent.mode != AgentMode.IDLE && now >= agent.nextEyeTick) {
+			if (requiresTarget(agent.mode) && now >= agent.nextEyeTick) {
 				captureEye(server, agent, now);
 			}
 			if (agent.arenaLocked) continue;
@@ -403,6 +411,7 @@ public final class AgentManager implements AutoCloseable {
 				startAutomaticDecision(server, agent);
 			}
 			if (agent.furnitureSeated) continue;
+			tickBuiltInBehaviour(server, agent, now);
 			double distance = Math.hypot(agent.remainingX, agent.remainingZ);
 			if (distance < 0.01) continue;
 			double step = Math.min(0.18, distance);
@@ -420,6 +429,7 @@ public final class AgentManager implements AutoCloseable {
 	private void startAutomaticDecision(MinecraftServer server, Agent agent) {
 		if (!config.get().hasApiKey() || !agent.thinking.compareAndSet(false, true)) return;
 		String instruction = switch (agent.mode) {
+			case SURVIVAL -> "像普通生存玩家一样，根据当前环境自主决定下一步非作弊行动。";
 			case HUNTER -> "根据追杀目标、当前观察和天眼快照自主决定下一步；优先正常移动与侦察。";
 			case TEAMMATE -> "根据队友位置、当前观察和风险自主决定下一步；优先跟随、保护或报告。";
 			case PVP_COACH -> "根据训练对象和当前状态自主决定下一步安全训练动作或建议。";
@@ -455,6 +465,7 @@ public final class AgentManager implements AutoCloseable {
 				PromptTemplates.applyTargets(prompts.get(agent.promptId), agent.targetName));
 		}
 		String prompt = switch (agent.mode) {
+			case SURVIVAL -> PromptTemplates.applyTargets(prompts.get("survival"), "");
 			case HUNTER -> PromptTemplates.applyTargets(prompts.get("hunter"), agent.targetName);
 			case TEAMMATE -> PromptTemplates.applyTargets(prompts.get("teammate"), agent.targetName);
 			case PVP_COACH -> PromptTemplates.applyTargets(prompts.get("pvp_coach"), agent.targetName);
@@ -473,10 +484,8 @@ public final class AgentManager implements AutoCloseable {
 	private void apply(MinecraftServer server, Agent agent, AiDecision decision) {
 		BiConsumer<String, AiDecision> observer;
 		synchronized (this) {
-			if (!decision.say().isBlank()) {
-				server.getPlayerList().broadcastSystemMessage(
-					Component.literal("<" + agent.name + "> " + decision.say()), false);
-			}
+			agent.lastMessage = decision.say().isBlank()
+				? "已执行动作：" + decision.action() : decision.say();
 			if (decision.action().equals("move") && !agent.furnitureSeated) {
 				agent.remainingX = decision.dx();
 				agent.remainingZ = decision.dz();
@@ -485,6 +494,54 @@ public final class AgentManager implements AutoCloseable {
 		}
 		// Do not call feature modules while holding the agent lock: maid operations call back into us.
 		observer.accept(agent.name, decision);
+	}
+
+	private void tickBuiltInBehaviour(MinecraftServer server, Agent agent, long now) {
+		if (agent.mode == AgentMode.IDLE) return;
+		if (agent.mode == AgentMode.SURVIVAL) {
+			if (Math.hypot(agent.remainingX, agent.remainingZ) < 0.05 && now >= agent.nextWanderTick) {
+				double angle = agent.player.getRandom().nextDouble() * Math.PI * 2.0;
+				double distance = 2.0 + agent.player.getRandom().nextDouble() * 4.0;
+				agent.remainingX = Math.cos(angle) * distance;
+				agent.remainingZ = Math.sin(angle) * distance;
+				agent.nextWanderTick = now + 50 + agent.player.getRandom().nextInt(90);
+				agent.lastMessage = "生存巡查：正在观察附近环境";
+			}
+		} else {
+			ServerPlayer target = server.getPlayerList().getPlayerByName(agent.targetName);
+			if (target != null && target.level() == agent.player.level() && target.isAlive()) {
+				double dx = target.getX() - agent.player.getX();
+				double dz = target.getZ() - agent.player.getZ();
+				double distance = Math.hypot(dx, dz);
+				double desired = agent.mode == AgentMode.TEAMMATE ? 3.0 : 2.2;
+				if (distance > desired) {
+					double travel = Math.min(4.0, distance - desired);
+					agent.remainingX = dx / distance * travel;
+					agent.remainingZ = dz / distance * travel;
+				}
+				boolean mayAttack = agent.mode == AgentMode.HUNTER
+					|| (agent.mode == AgentMode.PVP_COACH && target.getHealth() > 6.0F);
+				if (mayAttack && distance <= 3.0 && now - agent.lastAttackTick >= 12) {
+					agent.player.attack(target);
+					agent.player.swing(InteractionHand.MAIN_HAND);
+					agent.lastAttackTick = now;
+					agent.lastMessage = agent.mode == AgentMode.HUNTER
+						? "正在追击目标 " + target.getScoreboardName()
+						: "正在与 " + target.getScoreboardName() + " 进行安全 PvP 训练";
+				}
+			}
+		}
+		if (now % 20L == 0L && agent.player.level() instanceof ServerLevel level) {
+			AABB area = agent.player.getBoundingBox().inflate(16.0);
+			level.getEntitiesOfClass(Mob.class, area, mob -> mob instanceof Enemy && mob.isAlive()
+				&& mob.getTarget() == null).stream()
+				.min(java.util.Comparator.comparingDouble(mob -> mob.distanceToSqr(agent.player)))
+				.ifPresent(mob -> mob.setTarget(agent.player));
+		}
+	}
+
+	private static boolean requiresTarget(AgentMode mode) {
+		return mode == AgentMode.HUNTER || mode == AgentMode.TEAMMATE || mode == AgentMode.PVP_COACH;
 	}
 
 	private static String rootMessage(Throwable throwable) {

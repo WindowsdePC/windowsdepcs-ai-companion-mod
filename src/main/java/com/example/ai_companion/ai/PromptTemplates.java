@@ -28,6 +28,14 @@ public final class PromptTemplates {
 		不得攻击未被列为目标的玩家，除非为了立即自卫。
 		""";
 
+	public static final String SURVIVAL_PRESET = BASE + """
+
+		模式：生存。像普通生存玩家一样观察环境并自主活动。
+		优先保证生命安全，按需探索、收集资源、制作工具、建造庇护所，并对敌对生物进行正常防卫。
+		没有明确任务时可以在附近走动和侦察，但不要破坏其他玩家的建筑、容器或农场。
+		遇到无法完成的长任务时，把它拆成连续的小步骤；所有移动、战斗和资源获取都必须遵守非作弊规则。
+		""";
+
 	public static final String TEAMMATE_PRESET = BASE + """
 
 		模式：队友。你的队友是：{targets}。
@@ -78,6 +86,7 @@ public final class PromptTemplates {
 
 	public static Map<String, String> defaults() {
 		Map<String, String> values = new LinkedHashMap<>();
+		values.put("survival", SURVIVAL_PRESET);
 		values.put("idle", BASE);
 		values.put("hunter", HUNTER_PRESET);
 		values.put("teammate", TEAMMATE_PRESET);

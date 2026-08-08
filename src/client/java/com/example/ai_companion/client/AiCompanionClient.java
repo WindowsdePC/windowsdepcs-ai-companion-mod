@@ -9,6 +9,8 @@ import net.minecraft.client.gui.screens.Screen;
 import com.example.ai_companion.client.navigation.NavigationClientController;
 import com.example.ai_companion.client.navigation.NavigationHud;
 import com.example.ai_companion.client.maid.MaidClientRegistry;
+import com.example.ai_companion.client.minigame.MinigameCenterScreen;
+import com.example.ai_companion.client.minigame.MinigameProgress;
 
 /** Opens the unified settings screen with a configurable two-key chord. */
 public final class AiCompanionClient implements ClientModInitializer {
@@ -27,6 +29,7 @@ public final class AiCompanionClient implements ClientModInitializer {
 		MaidClientRegistry.initialize();
 		boolean[] chordHeld = {false};
 		boolean[] navigatorHeld = {false};
+		boolean[] minigameHeld = {false};
 		boolean[] sprintJumpLatch = {false};
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			if (settings.sprintJumpEnabled && client.player != null && client.options.keyUp.isDown()
@@ -43,6 +46,12 @@ public final class AiCompanionClient implements ClientModInitializer {
 				NavigationClientController.open(client, client.gui.screen());
 			}
 			navigatorHeld[0] = navigatorPressed;
+			boolean minigamePressed = InputConstants.isKeyDown(client.getWindow(), settings.minigameMenuCode());
+			if (minigamePressed && !minigameHeld[0] && client.getConnection() != null
+					&& client.gui.screen() == null) {
+				client.setScreenAndShow(new MinigameCenterScreen(null, MinigameProgress.load(), settings));
+			}
+			minigameHeld[0] = minigamePressed;
 			if (client.player != null) {
 				if (client.player.onGround()) {
 					sprintJumpLatch[0] = settings.sprintJumpEnabled && client.player.isSprinting();

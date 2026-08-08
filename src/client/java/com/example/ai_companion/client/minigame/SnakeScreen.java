@@ -1,6 +1,6 @@
 package com.example.ai_companion.client.minigame;
 
-import com.mojang.blaze3d.platform.InputConstants;
+import com.example.ai_companion.client.ClientSettings;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -13,16 +13,18 @@ import java.util.List;
 public final class SnakeScreen extends Screen {
 	private final Screen parent;
 	private final MinigameProgress progress;
+	private final ClientSettings settings;
 	private final SnakeGame game = new SnakeGame();
 	private Button pauseButton;
 	private int tickCounter;
 	private boolean resultRecorded;
 	private String unlockMessage = "";
 
-	public SnakeScreen(Screen parent, MinigameProgress progress) {
+	public SnakeScreen(Screen parent, MinigameProgress progress, ClientSettings settings) {
 		super(Component.literal("贪吃蛇"));
 		this.parent = parent;
 		this.progress = progress;
+		this.settings = settings;
 	}
 
 	@Override
@@ -53,27 +55,27 @@ public final class SnakeScreen extends Screen {
 	@Override
 	public boolean keyPressed(KeyEvent event) {
 		int key = event.key();
-		if (key == InputConstants.KEY_UP || key == InputConstants.KEY_W) {
+		if (key == settings.minigameUpCode()) {
 			game.queueDirection(SnakeGame.Direction.UP);
 			return true;
 		}
-		if (key == InputConstants.KEY_DOWN || key == InputConstants.KEY_S) {
+		if (key == settings.minigameDownCode()) {
 			game.queueDirection(SnakeGame.Direction.DOWN);
 			return true;
 		}
-		if (key == InputConstants.KEY_LEFT || key == InputConstants.KEY_A) {
+		if (key == settings.minigameLeftCode()) {
 			game.queueDirection(SnakeGame.Direction.LEFT);
 			return true;
 		}
-		if (key == InputConstants.KEY_RIGHT || key == InputConstants.KEY_D) {
+		if (key == settings.minigameRightCode()) {
 			game.queueDirection(SnakeGame.Direction.RIGHT);
 			return true;
 		}
-		if (key == InputConstants.KEY_SPACE || key == InputConstants.KEY_P) {
+		if (key == settings.minigamePauseCode() || key == settings.minigameActionCode()) {
 			togglePause();
 			return true;
 		}
-		if (key == InputConstants.KEY_R) {
+		if (key == settings.minigameRestartCode()) {
 			restart();
 			return true;
 		}
