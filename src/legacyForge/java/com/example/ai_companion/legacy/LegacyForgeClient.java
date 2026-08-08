@@ -56,6 +56,7 @@ public final class LegacyForgeClient {
 		private String spyglassDuration = "120";
 		private String spyglassTarget = "all_living";
 		private String spyglassCooldown = "10";
+		private String spyglassMaxTargets = "256";
 		private String status = "所有按钮都会向服务器发送真实命令";
 		private CompanionScreen(boolean navigation) { super(Component.literal(navigation ? "AI 导航" : "WindowsdePC's AI Companion Mod")); this.navigation = navigation; }
 		@Override protected void init() {
@@ -141,8 +142,10 @@ public final class LegacyForgeClient {
 				button -> { spyglassTarget = switch (spyglassTarget) {
 					case "all_living" -> "non_players"; case "non_players" -> "hostile_only"; default -> "all_living"; }; rebuild();
 				}).bounds(left, 105, panelWidth, 20).build());
-			EditBox cooldown = new EditBox(font, left, 133, panelWidth, 20, Component.literal("触发冷却秒数"));
+			EditBox cooldown = new EditBox(font, left, 133, (panelWidth - 8) / 2, 20, Component.literal("触发冷却秒数"));
 			cooldown.setValue(spyglassCooldown); cooldown.setResponder(value -> spyglassCooldown = value); addRenderableWidget(cooldown);
+			EditBox maxTargets = new EditBox(font, left + (panelWidth + 8) / 2, 133, (panelWidth - 8) / 2, 20, Component.literal("单次命中上限"));
+			maxTargets.setValue(spyglassMaxTargets); maxTargets.setResponder(value -> spyglassMaxTargets = value); addRenderableWidget(maxTargets);
 			addRenderableWidget(Button.builder(Component.literal("保存望远镜设置"), button -> {
 				command("aiplayer spyglass enabled " + spyglassEnabled);
 				command("aiplayer spyglass radius-chunks " + spyglassRadius);
@@ -150,9 +153,10 @@ public final class LegacyForgeClient {
 				command("aiplayer spyglass duration-seconds " + spyglassDuration);
 				command("aiplayer spyglass target " + spyglassTarget);
 				command("aiplayer spyglass cooldown-seconds " + spyglassCooldown);
+				command("aiplayer spyglass max-targets " + spyglassMaxTargets);
 			}).bounds(left, 161, (panelWidth - 8) / 2, 20).build());
 			button("查看望远镜设置", "aiplayer spyglass status", left + (panelWidth + 8) / 2, 161, (panelWidth - 8) / 2);
-			status = "默认：观察1秒，半径10区块，发光120秒，冷却10秒";
+			status = "默认：观察1秒，10区块，发光120秒，冷却10秒，单次最多256个";
 		}
 
 		private void button(String label, String command, int x, int y, int buttonWidth) {

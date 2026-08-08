@@ -62,7 +62,10 @@ final class LegacySpyglassManager {
 					.withTarget(StringArgumentType.getString(c, "value"))))))
 			.then(literal("cooldown-seconds").then(argument("value", IntegerArgumentType.integer(1, 600))
 				.executes(c -> update(c.getSource().getPlayerOrException(), settings(c.getSource().getPlayerOrException())
-					.withCooldownSeconds(IntegerArgumentType.getInteger(c, "value"))))));
+					.withCooldownSeconds(IntegerArgumentType.getInteger(c, "value"))))))
+			.then(literal("max-targets").then(argument("value", IntegerArgumentType.integer(1, 1024))
+				.executes(c -> update(c.getSource().getPlayerOrException(), settings(c.getSource().getPlayerOrException())
+					.withMaxTargets(IntegerArgumentType.getInteger(c, "value"))))));
 	}
 
 	void tick(MinecraftServer server) {
@@ -107,24 +110,29 @@ final class LegacySpyglassManager {
 		Settings value = settings(player);
 		player.sendSystemMessage(Component.literal("望远镜发光=" + value.enabled + "，半径=" + value.radiusChunks
 			+ "区块，观察=" + value.holdTicks / 20 + "秒，持续=" + value.effectTicks / 20
-			+ "秒，目标=" + value.targetCondition + "，冷却=" + value.cooldownTicks / 20 + "秒"));
+			+ "秒，目标=" + value.targetCondition + "，冷却=" + value.cooldownTicks / 20
+			+ "秒，单次上限=" + value.maxTargets));
 		return 1;
 	}
 
 	private static void apply(ServerPlayer player, Settings settings) {
 		double radius = settings.radiusChunks * 16.0;
 		AABB area = player.getBoundingBox().inflate(radius);
-		int affected = 0;
-		for (LivingEntity entity : player.level().getEntitiesOfClass(LivingEntity.class, area,
+		var targets = player.level().getEntitiesOfClass(LivingEntity.class, area,
 				entity -> entity != player && entity.isAlive() && matches(settings.targetCondition, entity)
-					&& player.distanceToSqr(entity) <= radius * radius)) {
+					&& player.distanceToSqr(entity) <= radius * radius);
+		targets.sort(java.util.Comparator.comparingDouble(player::distanceToSqr));
+		int totalMatches = targets.size();
+		int affected = Math.min(totalMatches, settings.maxTargets);
+		for (int index = 0; index < affected; index++) {
+			LivingEntity entity = targets.get(index);
 			entity.addEffect(new MobEffectInstance(MobEffects.GLOWING, settings.effectTicks, 0, false, false, true));
-			affected++;
 		}
 		player.displayClientMessage(Component.literal("望远镜标记了 " + affected + " 个生物 · 半径 "
 			+ settings.radiusChunks + " 区块 · " + settings.targetCondition
 			+ " · 持续 " + settings.effectTicks / 20 + " 秒 · 冷却 "
-			+ settings.cooldownTicks / 20 + " 秒"), true);
+			+ settings.cooldownTicks / 20 + " 秒"
+			+ (totalMatches > affected ? " · 符合条件 " + totalMatches + " 个，按距离取最近 " + affected + " 个" : "")), true);
 	}
 
 	private static boolean matches(String condition, LivingEntity entity) {
@@ -168,22 +176,25 @@ final class LegacySpyglassManager {
 		int effectTicks = 2400;
 		String targetCondition = "all_living";
 		int cooldownTicks = 200;
+		int maxTargets = 256;
 		static Settings defaults() { return new Settings(); }
 		Settings normalized() {
 			enabled = enabled; radiusChunks = Math.max(1, Math.min(32, radiusChunks));
 			holdTicks = Math.max(20, Math.min(200, holdTicks));
 			effectTicks = Math.max(20, Math.min(12000, effectTicks));
 			cooldownTicks = cooldownTicks <= 0 ? 200 : Math.max(20, Math.min(12000, cooldownTicks));
+			maxTargets = maxTargets <= 0 ? 256 : Math.max(1, Math.min(1024, maxTargets));
 			if (!targetCondition.equals("all_living") && !targetCondition.equals("non_players")
 					&& !targetCondition.equals("hostile_only")) targetCondition = "all_living";
 			return this;
 		}
-		Settings copy() { Settings value = new Settings(); value.enabled = enabled; value.radiusChunks = radiusChunks; value.holdTicks = holdTicks; value.effectTicks = effectTicks; value.targetCondition = targetCondition; value.cooldownTicks = cooldownTicks; return value; }
+		Settings copy() { Settings value = new Settings(); value.enabled = enabled; value.radiusChunks = radiusChunks; value.holdTicks = holdTicks; value.effectTicks = effectTicks; value.targetCondition = targetCondition; value.cooldownTicks = cooldownTicks; value.maxTargets = maxTargets; return value; }
 		Settings withEnabled(boolean value) { Settings next = copy(); next.enabled = value; return next.normalized(); }
 		Settings withRadius(int value) { Settings next = copy(); next.radiusChunks = value; return next.normalized(); }
 		Settings withHoldSeconds(int value) { Settings next = copy(); next.holdTicks = value * 20; return next.normalized(); }
 		Settings withDurationSeconds(int value) { Settings next = copy(); next.effectTicks = value * 20; return next.normalized(); }
 		Settings withTarget(String value) { Settings next = copy(); next.targetCondition = value.toLowerCase(java.util.Locale.ROOT); return next.normalized(); }
 		Settings withCooldownSeconds(int value) { Settings next = copy(); next.cooldownTicks = value * 20; return next.normalized(); }
+		Settings withMaxTargets(int value) { Settings next = copy(); next.maxTargets = value; return next.normalized(); }
 	}
 }
