@@ -17,7 +17,7 @@ public final class LegacyFabricClient implements ClientModInitializer {
 	private static boolean navigationTop = true;
 	private static boolean sprintJumpEnabled = true;
 	private static boolean positionsVisible;
-	private boolean comboDown, positionsDown, zoomDown, navigationDown;
+	private boolean comboDown, positionsDown, zoomDown, navigationDown, sprintJumpLatched;
 	private Integer savedFov;
 
 	@Override public void onInitializeClient() {
@@ -39,6 +39,11 @@ public final class LegacyFabricClient implements ClientModInitializer {
 		if (g && !navigationDown && client.screen == null) client.setScreen(new CompanionScreen(true, null));
 		if (c && !zoomDown) { savedFov = client.options.fov().get(); client.options.fov().set(Math.max(30, savedFov / 4)); }
 		if (!c && zoomDown && savedFov != null) { client.options.fov().set(savedFov); savedFov = null; }
+		if (client.player != null) {
+			if (client.player.onGround()) sprintJumpLatched = sprintJumpEnabled && client.player.isSprinting();
+			else if (sprintJumpEnabled && sprintJumpLatched) client.player.setSprinting(true);
+			else if (!sprintJumpEnabled) sprintJumpLatched = false;
+		}
 		comboDown = v && b; positionsDown = f8; zoomDown = c; navigationDown = g;
 	}
 	private static void renderPositions(GuiGraphics graphics) {
@@ -73,6 +78,9 @@ public final class LegacyFabricClient implements ClientModInitializer {
 		private String spyglassTarget = "all_living";
 		private String spyglassCooldown = "10";
 		private String spyglassMaxTargets = "256";
+		private String apiEndpoint = "https://api.openai.com/v1";
+		private String apiModel = "gpt-5-mini";
+		private String apiToken = "";
 		private String status = "小游戏纯本地运行；1.20.1 服务端操作使用兼容回退";
 		private CompanionScreen(boolean navigation, Screen parent) {
 			super(Component.literal(navigation ? "AI 导航" : "WindowsdePC's AI Companion Mod"));
@@ -87,7 +95,7 @@ public final class LegacyFabricClient implements ClientModInitializer {
 			clearWidgets();
 			int fullWidth = Math.min(760, width - 20);
 			int left = (width - fullWidth) / 2;
-			int sidebar = 122;
+			int sidebar = 0;
 			if (navigation) {
 				button("查询 AI 位置作为导航目标", "aiplayer positions", width / 2 - 130,
 					height / 2 - 10, 260);
@@ -121,10 +129,7 @@ public final class LegacyFabricClient implements ClientModInitializer {
 					button("自然事件历史", "aiplayer weather history 5", left, 121, panelWidth);
 				}
 				case PERFORMANCE -> status = "1.20.1 兼容版不混入 26.2 客户端渲染优化 API";
-				case COMPATIBILITY -> {
-					button("检查兼容状态", "aiplayer compatibility", left, 65, panelWidth);
-					button("检查 API 配置", "aiplayer config status", left, 93, panelWidth);
-				}
+				case COMPATIBILITY -> buildCompatibility(left, panelWidth);
 				case ADVANCED -> {
 					button("自然事件配置", "aiplayer weather config status", left, 65, panelWidth);
 					button("自然事件日程", "aiplayer weather schedule list", left, 93, panelWidth);
@@ -145,6 +150,24 @@ public final class LegacyFabricClient implements ClientModInitializer {
 				.bounds(left + panelWidth - 115, 83, 115, 20).build());
 			button("AI 列表", "aiplayer list", left, 111, (panelWidth - 8) / 2);
 			button("AI 位置", "aiplayer positions", left + (panelWidth + 8) / 2, 111, (panelWidth - 8) / 2);
+			button("传送至 " + agentName + "（管理员）", "aiplayer teleport-to " + agentName, left, 139, panelWidth);
+		}
+
+		private void buildCompatibility(int left, int panelWidth) {
+			EditBox endpoint = new EditBox(font, left, 58, panelWidth, 20, Component.literal("API 地址"));
+			endpoint.setMaxLength(300); endpoint.setValue(apiEndpoint); endpoint.setResponder(value -> apiEndpoint = value); addRenderableWidget(endpoint);
+			EditBox model = new EditBox(font, left, 86, panelWidth / 2 - 4, 20, Component.literal("模型"));
+			model.setMaxLength(100); model.setValue(apiModel); model.setResponder(value -> apiModel = value); addRenderableWidget(model);
+			EditBox token = new EditBox(font, left + panelWidth / 2 + 4, 86, panelWidth / 2 - 4, 20, Component.literal("API 令牌"));
+			token.setMaxLength(500); token.setValue(apiToken); token.setResponder(value -> apiToken = value); addRenderableWidget(token);
+			addRenderableWidget(Button.builder(Component.literal("保存 API 配置"), button -> {
+				command("aiplayer config endpoint " + apiEndpoint);
+				command("aiplayer config model " + apiModel);
+				if (!apiToken.isBlank()) command("aiplayer config token " + apiToken);
+				apiToken = "";
+			}).bounds(left, 114, (panelWidth - 8) / 2, 20).build());
+			button("检查 API 配置", "aiplayer config status", left + (panelWidth + 8) / 2, 114, (panelWidth - 8) / 2);
+			status = "1.20.1 优先使用 Cloth Config/Mod Menu 入口；旧服务器不支持UI包时回退到兼容命令";
 		}
 
 		private void buildSpyglass(int left, int panelWidth) {
