@@ -4,20 +4,20 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：[v0.9.9](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.9.9)
+当前测试版本：`v0.9.10-beta.1`（预发行版；稳定版仍为 `v0.9.9`）
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.9.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.9.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.9.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.10-beta.1.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.10-beta.1.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.10-beta.1.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
-0.8.3 起修复两个 1.20.1 版本的客户端入口与命令树：V+B、F8、C、G 采用 1.20.1 API
-直接轮询且不写入原版“控制”列表；旧版分支不再保留 26.2 包名、渲染源码或金矛突进资源。
+`0.9.10-beta.1` 起，1.20.1 模组内快捷键页可保存并立即应用 UI、F8 AI 控制台、缩放、
+导航和小游戏中心按键；默认 `M` 打开包含五个游戏的中心。实现只使用 Java 17 与 1.20.1 API。
 
 ## 依赖模组
 
@@ -77,7 +77,8 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 - 通过异步 OpenAI 兼容 API 请求取得 `say`、`move`、`wait` 白名单动作。
 - 天眼快照记录目标当时的维度、坐标与采集时间，不传送 AI。
 - `/aiplayer positions` 从服务器查询所有已登记 AI 当前所在维度与 XYZ 坐标。
-- 按住 `F8` 显示 AI 位置 HUD；每次重新按下都会向服务器刷新一次，松开立即关闭。
+- 按 `F8` 打开/关闭 AI 控制台；位置、AI 请求与服务器返回直接显示在弹窗内，不再写入聊天栏。
+- API 地址、模型与全部快捷键写入客户端配置并立即应用，重新进入界面不会恢复默认值；令牌仍只保存到服务器。
 - 支持 Mojang 纹理值与签名形式的自定义皮肤数据。
 - AI 身份会按稳定 UUID 持久化；服务器重启后恢复名称、位置、模式、目标、提示词与皮肤。
 - 0.9.9 起 AI 身份按世界存档隔离；恢复失败或未同时存在于玩家列表和当前维度实体表中的记录会被清除，不再出现在列表、F8 HUD 或传送入口中。
@@ -270,7 +271,8 @@ EclipseUI 模式提供分类卡片、图标、开关、滑块、下拉菜单和�
 
 ### 小游戏中心
 
-`0.5.9` 已完成设计文档中的五个小游戏。打开完整管理中心并选择“小游戏中心”即可游玩。
+`0.5.9` 已完成设计文档中的五个小游戏。打开完整管理中心并选择“小游戏中心”即可游玩；
+`0.9.10-beta.1` 起也可使用默认 `M`（可修改）直接打开五游戏入口。
 
 #### 贪吃蛇
 
