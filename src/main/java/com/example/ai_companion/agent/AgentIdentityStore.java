@@ -3,7 +3,6 @@ package com.example.ai_companion.agent;
 import com.example.ai_companion.AiCompanionMod;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -16,16 +15,23 @@ import java.util.UUID;
 /** Durable AI player identities, modes and last known world positions. */
 public final class AgentIdentityStore {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-	private static final Path PATH = FabricLoader.getInstance().getConfigDir()
-		.resolve("windowsdepcs-ai-companion-agent-identities.json");
+	private static final String FILE_NAME = "windowsdepcs-ai-companion-agent-identities.json";
+	private transient Path path;
 	private List<StoredAgent> agents = new ArrayList<>();
 
-	public static AgentIdentityStore load() {
+	private AgentIdentityStore(Path path) {
+		this.path = path;
+	}
+
+	/** Loads identities from one save directory; identities are never shared between worlds. */
+	public static AgentIdentityStore loadForWorld(Path worldRoot) {
+		Path path = worldFile(worldRoot);
 		try {
-			if (Files.notExists(PATH)) return new AgentIdentityStore();
-			AgentIdentityStore loaded = GSON.fromJson(Files.readString(PATH, StandardCharsets.UTF_8),
+			if (Files.notExists(path)) return new AgentIdentityStore(path);
+			AgentIdentityStore loaded = GSON.fromJson(Files.readString(path, StandardCharsets.UTF_8),
 				AgentIdentityStore.class);
-			if (loaded == null || loaded.agents == null) return new AgentIdentityStore();
+			if (loaded == null || loaded.agents == null) return new AgentIdentityStore(path);
+			loaded.path = path;
 			List<StoredAgent> valid = new ArrayList<>();
 			for (StoredAgent entry : loaded.agents) {
 				try { valid.add(entry.normalized()); }
@@ -36,9 +42,14 @@ public final class AgentIdentityStore {
 			loaded.agents = valid;
 			return loaded;
 		} catch (Exception error) {
-			AiCompanionMod.LOGGER.error("Cannot read {}; starting with no persistent AI identities", PATH, error);
-			return new AgentIdentityStore();
+			AiCompanionMod.LOGGER.error("Cannot read {}; starting with no persistent AI identities", path, error);
+			return new AgentIdentityStore(path);
 		}
+	}
+
+	static Path worldFile(Path worldRoot) {
+		if (worldRoot == null) throw new IllegalArgumentException("World root is required");
+		return worldRoot.toAbsolutePath().normalize().resolve("data").resolve(FILE_NAME);
 	}
 
 	public synchronized List<StoredAgent> entries() {
@@ -46,9 +57,10 @@ public final class AgentIdentityStore {
 	}
 
 	public synchronized void replace(List<StoredAgent> next) throws IOException {
+		if (path == null) throw new IllegalStateException("AI identity store is not bound to a world");
 		agents = new ArrayList<>(next.stream().map(StoredAgent::normalized).toList());
-		Files.createDirectories(PATH.getParent());
-		Files.writeString(PATH, GSON.toJson(this) + System.lineSeparator(), StandardCharsets.UTF_8);
+		Files.createDirectories(path.getParent());
+		Files.writeString(path, GSON.toJson(this) + System.lineSeparator(), StandardCharsets.UTF_8);
 	}
 
 	public record StoredAgent(String name, String uuid, String dimension, double x, double y, double z,

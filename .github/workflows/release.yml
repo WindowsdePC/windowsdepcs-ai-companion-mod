@@ -20,15 +20,15 @@ jobs:
           - target: mc26.2-fabric
             ref: main
             java: "25"
-            artifact: windowsdepcs-ai-companion-mc26.2-fabric-0.9.8.2.jar
+            artifact: windowsdepcs-ai-companion-mc26.2-fabric-0.9.9.jar
           - target: mc1.20.1-fabric
             ref: mc-1.20.1-fabric
             java: "17"
-            artifact: windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.8.2.jar
+            artifact: windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.9.jar
           - target: mc1.20.1-forge
             ref: mc-1.20.1-forge
             java: "17"
-            artifact: windowsdepcs-ai-companion-mc1.20.1-forge-0.9.8.2.jar
+            artifact: windowsdepcs-ai-companion-mc1.20.1-forge-0.9.9.jar
     runs-on: ubuntu-latest
     steps:
       - name: Check out ${{ matrix.target }} source
@@ -85,9 +85,9 @@ jobs:
         shell: bash
         run: |
           test "$(find release-assets -maxdepth 1 -name '*.jar' | wc -l)" -eq 3
-          unzip -t release-assets/windowsdepcs-ai-companion-mc26.2-fabric-0.9.8.2.jar
-          unzip -t release-assets/windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.8.2.jar
-          unzip -t release-assets/windowsdepcs-ai-companion-mc1.20.1-forge-0.9.8.2.jar
+          unzip -t release-assets/windowsdepcs-ai-companion-mc26.2-fabric-0.9.9.jar
+          unzip -t release-assets/windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.9.jar
+          unzip -t release-assets/windowsdepcs-ai-companion-mc1.20.1-forge-0.9.9.jar
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2

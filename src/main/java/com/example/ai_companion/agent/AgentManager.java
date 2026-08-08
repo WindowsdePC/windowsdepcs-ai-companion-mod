@@ -20,8 +20,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.LevelResource;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -74,7 +76,8 @@ public final class AgentManager implements AutoCloseable {
 	private final OpenAiCompatibleClient client = new OpenAiCompatibleClient();
 	private final Supplier<ModConfig> config;
 	private final PromptStore prompts;
-	private final AgentIdentityStore identityStore = AgentIdentityStore.load();
+	private AgentIdentityStore identityStore;
+	private Path boundWorldRoot;
 	private Function<String, String> collaborationContext = ignored -> "";
 	private BiFunction<String, String, String> promptDecorator = (ignored, prompt) -> prompt;
 	private BiConsumer<String, AiDecision> actionObserver = (ignored, decision) -> { };
@@ -115,6 +118,7 @@ public final class AgentManager implements AutoCloseable {
 
 	public synchronized FakePlayer create(ServerPlayer owner, String name,
 										  String textureValue, String textureSignature) {
+		bindStore(owner.level().getServer());
 		String key = name.toLowerCase();
 		if (agents.containsKey(key)) throw new IllegalArgumentException("AI 名称已存在: " + name);
 		UUID uuid = UUID.nameUUIDFromBytes(("ai-companion:" + name).getBytes(StandardCharsets.UTF_8));
@@ -132,13 +136,15 @@ public final class AgentManager implements AutoCloseable {
 
 	/** Restores durable AI identities after all server levels and advancement data are available. */
 	public synchronized void restore(MinecraftServer server) {
+		bindStore(server);
+		if (!agents.isEmpty()) throw new IllegalStateException("AI manager already contains runtime entities");
 		for (AgentIdentityStore.StoredAgent stored : identityStore.entries()) {
 			if (agents.containsKey(stored.name().toLowerCase())) continue;
 			try {
 				ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION,
 					Identifier.parse(stored.dimension()));
 				ServerLevel level = server.getLevel(dimension);
-				if (level == null) level = server.overworld();
+				if (level == null) throw new IllegalStateException("Saved AI dimension is unavailable: " + stored.dimension());
 				GameProfile profile = new GameProfile(UUID.fromString(stored.uuid()), stored.name());
 				if (!stored.textureValue().isBlank()) {
 					profile.properties().put("textures", new Property("textures", stored.textureValue(),
@@ -161,6 +167,8 @@ public final class AgentManager implements AutoCloseable {
 				AiCompanionMod.LOGGER.error("Cannot restore AI identity {}", stored.name(), error);
 			}
 		}
+		// Remove identities that could not be restored so lists and teleport targets cannot become ghosts.
+		saveIdentities();
 		AiCompanionMod.LOGGER.info("Restored {} persistent AI player identities", agents.size());
 	}
 
@@ -179,6 +187,7 @@ public final class AgentManager implements AutoCloseable {
 	}
 
 	public synchronized Collection<AgentView> views(long currentTick) {
+		pruneStaleAgents();
 		return agents.values().stream().map(agent -> new AgentView(
 			agent.name, agent.mode, agent.targetName, agent.thinking.get(),
 			agent.promptId,
@@ -189,6 +198,7 @@ public final class AgentManager implements AutoCloseable {
 
 	/** Captures the current server-authoritative location of every managed AI player. */
 	public synchronized Collection<AgentPosition> positions() {
+		pruneStaleAgents();
 		return agents.values().stream().map(agent -> new AgentPosition(
 			agent.name,
 			agent.player.level().dimension().identifier().toString(),
@@ -204,6 +214,7 @@ public final class AgentManager implements AutoCloseable {
 	}
 
 	public synchronized boolean hasAgent(String name) {
+		pruneStaleAgents();
 		return name != null && agents.containsKey(name.toLowerCase());
 	}
 
@@ -376,6 +387,7 @@ public final class AgentManager implements AutoCloseable {
 	}
 
 	public synchronized void tick(MinecraftServer server) {
+		pruneStaleAgents();
 		long now = server.getTickCount();
 		if (now >= nextIdentitySaveTick) {
 			nextIdentitySaveTick = now + 200;
@@ -452,6 +464,7 @@ public final class AgentManager implements AutoCloseable {
 	}
 
 	private Agent requireAgent(String name) {
+		pruneStaleAgents();
 		Agent agent = agents.get(name.toLowerCase());
 		if (agent == null) throw new IllegalArgumentException("找不到 AI: " + name);
 		return agent;
@@ -480,7 +493,36 @@ public final class AgentManager implements AutoCloseable {
 		return current.getMessage() == null ? current.getClass().getSimpleName() : current.getMessage();
 	}
 
+	private void bindStore(MinecraftServer server) {
+		Path worldRoot = server.getWorldPath(LevelResource.ROOT).toAbsolutePath().normalize();
+		if (boundWorldRoot != null && !boundWorldRoot.equals(worldRoot)) {
+			if (!agents.isEmpty()) throw new IllegalStateException("Cannot reuse AI runtime state across worlds");
+			identityStore = null;
+		}
+		if (identityStore == null) {
+			boundWorldRoot = worldRoot;
+			identityStore = AgentIdentityStore.loadForWorld(worldRoot);
+		}
+	}
+
+	private boolean isLiveAgent(Agent agent) {
+		MinecraftServer server = agent.player.level().getServer();
+		if (server == null || agent.player.isRemoved()) return false;
+		if (server.getPlayerList().getPlayer(agent.player.getUUID()) != agent.player) return false;
+		return agent.player.level() instanceof ServerLevel level
+			&& level.getEntity(agent.player.getUUID()) == agent.player;
+	}
+
+	private void pruneStaleAgents() {
+		boolean removed = agents.entrySet().removeIf(entry -> !isLiveAgent(entry.getValue()));
+		if (removed) {
+			AiCompanionMod.LOGGER.warn("Removed stale AI runtime identities that no longer have live entities");
+			saveIdentities();
+		}
+	}
+
 	private synchronized void saveIdentities() {
+		if (identityStore == null) return;
 		try {
 			identityStore.replace(agents.values().stream().map(agent -> new AgentIdentityStore.StoredAgent(
 				agent.name, agent.player.getUUID().toString(),
@@ -499,5 +541,8 @@ public final class AgentManager implements AutoCloseable {
 		agents.values().forEach(agent -> agent.player.getAdvancements().save());
 		agents.values().forEach(agent -> agent.player.discard());
 		agents.clear();
+		identityStore = null;
+		boundWorldRoot = null;
+		nextIdentitySaveTick = 0;
 	}
 }
