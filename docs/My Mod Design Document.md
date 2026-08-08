@@ -13,7 +13,7 @@ WindowsdePC's AI Companion Mod
 
 当前版本：
 
-0.9.10-beta.1
+0.9.10-beta.2
 
 
 目标版本：
@@ -28,7 +28,7 @@ WindowsdePC's AI Companion Mod
 - Minecraft 1.20.1 / Forge / JDK 17
 
 
-0.9.10-beta.1 交互与 AI 行为修复状态：
+0.9.10-beta.2 交互与 AI 行为修复状态：
 
 - API 设置由服务器权威保存并回传地址、模型和令牌是否已配置，客户端不保存或回传令牌明文。
 - F8 改为可开关的独立 AI 控制与消息窗口；类型化网络操作的结果和 AI 回复留在窗口内，不写入聊天栏。
@@ -127,7 +127,7 @@ WindowsdePC's AI Companion Mod
 - Minecraft 1.20.1 Fabric 与 Forge 分支使用各自旧版 `LevelResource`、生命周期事件和 Java 17 命名实现同一语义。
 
 
-0.9.10-beta.1 配置、快捷键与 F8 交互修复状态：
+0.9.10-beta.2 配置、快捷键与 F8 交互修复状态：
 
 - API 配置页面以服务器持久化快照为准，保存后回传并刷新客户端镜像，重新打开不会恢复旧值。
 - 模组内快捷键页可保存并立即应用 UI、F8 控制台、缩放、导航和小游戏中心按键；默认 M 打开五游戏中心。
