@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
@@ -12,6 +13,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 
@@ -52,7 +55,10 @@ final class LegacySpyglassManager {
 					.withHoldSeconds(IntegerArgumentType.getInteger(c, "value"))))))
 			.then(literal("duration-seconds").then(argument("value", IntegerArgumentType.integer(1, 600))
 				.executes(c -> update(c.getSource().getPlayerOrException(), settings(c.getSource().getPlayerOrException())
-					.withDurationSeconds(IntegerArgumentType.getInteger(c, "value"))))));
+					.withDurationSeconds(IntegerArgumentType.getInteger(c, "value"))))))
+			.then(literal("target").then(argument("value", StringArgumentType.word())
+				.executes(c -> update(c.getSource().getPlayerOrException(), settings(c.getSource().getPlayerOrException())
+					.withTarget(StringArgumentType.getString(c, "value"))))));
 	}
 
 	void tick(MinecraftServer server) {
@@ -85,7 +91,8 @@ final class LegacySpyglassManager {
 	private int status(ServerPlayer player) {
 		Settings value = settings(player);
 		player.sendSystemMessage(Component.literal("望远镜发光=" + value.enabled + "，半径=" + value.radiusChunks
-			+ "区块，观察=" + value.holdTicks / 20 + "秒，持续=" + value.effectTicks / 20 + "秒"));
+			+ "区块，观察=" + value.holdTicks / 20 + "秒，持续=" + value.effectTicks / 20
+			+ "秒，目标=" + value.targetCondition));
 		return 1;
 	}
 
@@ -94,12 +101,22 @@ final class LegacySpyglassManager {
 		AABB area = player.getBoundingBox().inflate(radius);
 		int affected = 0;
 		for (LivingEntity entity : player.level().getEntitiesOfClass(LivingEntity.class, area,
-				entity -> entity != player && entity.isAlive() && player.distanceToSqr(entity) <= radius * radius)) {
+				entity -> entity != player && entity.isAlive() && matches(settings.targetCondition, entity)
+					&& player.distanceToSqr(entity) <= radius * radius)) {
 			entity.addEffect(new MobEffectInstance(MobEffects.GLOWING, settings.effectTicks, 0, false, false, true));
 			affected++;
 		}
 		player.displayClientMessage(Component.literal("望远镜标记了 " + affected + " 个生物 · 半径 "
-			+ settings.radiusChunks + " 区块 · 持续 " + settings.effectTicks / 20 + " 秒"), true);
+			+ settings.radiusChunks + " 区块 · " + settings.targetCondition
+			+ " · 持续 " + settings.effectTicks / 20 + " 秒"), true);
+	}
+
+	private static boolean matches(String condition, LivingEntity entity) {
+		return switch (condition) {
+			case "non_players" -> !(entity instanceof Player);
+			case "hostile_only" -> entity instanceof Monster;
+			default -> true;
+		};
 	}
 
 	private void load() {
@@ -133,18 +150,21 @@ final class LegacySpyglassManager {
 		int radiusChunks = 10;
 		int holdTicks = 20;
 		int effectTicks = 2400;
+		String targetCondition = "all_living";
 		static Settings defaults() { return new Settings(); }
 		Settings normalized() {
 			enabled = enabled; radiusChunks = Math.max(1, Math.min(32, radiusChunks));
 			holdTicks = Math.max(20, Math.min(200, holdTicks));
 			effectTicks = Math.max(20, Math.min(12000, effectTicks));
+			if (!targetCondition.equals("all_living") && !targetCondition.equals("non_players")
+					&& !targetCondition.equals("hostile_only")) targetCondition = "all_living";
 			return this;
 		}
-		Settings copy() { Settings value = new Settings(); value.enabled = enabled; value.radiusChunks = radiusChunks; value.holdTicks = holdTicks; value.effectTicks = effectTicks; return value; }
+		Settings copy() { Settings value = new Settings(); value.enabled = enabled; value.radiusChunks = radiusChunks; value.holdTicks = holdTicks; value.effectTicks = effectTicks; value.targetCondition = targetCondition; return value; }
 		Settings withEnabled(boolean value) { Settings next = copy(); next.enabled = value; return next.normalized(); }
 		Settings withRadius(int value) { Settings next = copy(); next.radiusChunks = value; return next.normalized(); }
 		Settings withHoldSeconds(int value) { Settings next = copy(); next.holdTicks = value * 20; return next.normalized(); }
 		Settings withDurationSeconds(int value) { Settings next = copy(); next.effectTicks = value * 20; return next.normalized(); }
+		Settings withTarget(String value) { Settings next = copy(); next.targetCondition = value.toLowerCase(java.util.Locale.ROOT); return next.normalized(); }
 	}
 }
-

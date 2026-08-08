@@ -53,6 +53,7 @@ public final class LegacyFabricClient implements ClientModInitializer {
 		private String spyglassRadius = "10";
 		private String spyglassHold = "1";
 		private String spyglassDuration = "120";
+		private String spyglassTarget = "all_living";
 		private String status = "所有按钮都会向服务器发送真实命令";
 		private CompanionScreen(boolean navigation) { super(Component.literal(navigation ? "AI 导航" : "WindowsdePC's AI Companion Mod")); this.navigation = navigation; }
 		@Override protected void init() {
@@ -133,13 +134,19 @@ public final class LegacyFabricClient implements ClientModInitializer {
 			hold.setValue(spyglassHold); hold.setResponder(value -> spyglassHold = value); addRenderableWidget(hold);
 			EditBox duration = new EditBox(font, left + 2 * (panelWidth + 8) / 3, 73, (panelWidth - 16) / 3, 20, Component.literal("持续秒数"));
 			duration.setValue(spyglassDuration); duration.setResponder(value -> spyglassDuration = value); addRenderableWidget(duration);
+			addRenderableWidget(Button.builder(Component.literal("目标：" + switch (spyglassTarget) {
+				case "non_players" -> "仅非玩家生物"; case "hostile_only" -> "仅敌对生物"; default -> "全部生物"; }),
+				button -> { spyglassTarget = switch (spyglassTarget) {
+					case "all_living" -> "non_players"; case "non_players" -> "hostile_only"; default -> "all_living"; }; rebuild();
+				}).bounds(left, 105, panelWidth, 20).build());
 			addRenderableWidget(Button.builder(Component.literal("保存望远镜设置"), button -> {
 				command("aiplayer spyglass enabled " + spyglassEnabled);
 				command("aiplayer spyglass radius-chunks " + spyglassRadius);
 				command("aiplayer spyglass hold-seconds " + spyglassHold);
 				command("aiplayer spyglass duration-seconds " + spyglassDuration);
-			}).bounds(left, 105, (panelWidth - 8) / 2, 20).build());
-			button("查看望远镜设置", "aiplayer spyglass status", left + (panelWidth + 8) / 2, 105, (panelWidth - 8) / 2);
+				command("aiplayer spyglass target " + spyglassTarget);
+			}).bounds(left, 133, (panelWidth - 8) / 2, 20).build());
+			button("查看望远镜设置", "aiplayer spyglass status", left + (panelWidth + 8) / 2, 133, (panelWidth - 8) / 2);
 			status = "默认：观察1秒，半径10区块，发光120秒；每次举镜只触发一次";
 		}
 
