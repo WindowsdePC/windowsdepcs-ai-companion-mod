@@ -4,15 +4,15 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：v0.9.3
+当前版本：v0.9.4
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.3.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.3.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.3.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.4.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.4.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.4.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
@@ -316,6 +316,7 @@ EclipseUI 模式提供分类卡片、图标、开关、滑块、下拉菜单和�
 - 默认半径 10 区块、持续 120 秒、默认开启；每次举镜只触发一次，放下后重新计时。
 - 完整 UI 可修改开关、半径（1～32 区块）、观察时间（1～10 秒）和持续时间（1～600 秒）。
 - 设置按玩家 UUID 在服务器持久化；命令入口为 `/aiplayer spyglass status`。
+- 0.9.4 新增“全部生物 / 仅非玩家生物 / 仅敌对生物”三种目标条件；默认仍为全部生物。
 
 ### 平滑屏幕缩放
 
