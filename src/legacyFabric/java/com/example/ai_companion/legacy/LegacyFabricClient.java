@@ -3,6 +3,7 @@ package com.example.ai_companion.legacy;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -13,10 +14,14 @@ import org.lwjgl.glfw.GLFW;
 
 /** Directly-polled 1.20.1 shortcuts. They intentionally stay out of the vanilla Controls list. */
 public final class LegacyFabricClient implements ClientModInitializer {
+	private static boolean navigationTop = true;
+	private static boolean sprintJumpEnabled = true;
+	private static boolean positionsVisible;
 	private boolean comboDown, positionsDown, zoomDown, navigationDown;
 	private Integer savedFov;
 
 	@Override public void onInitializeClient() {
+		HudRenderCallback.EVENT.register((graphics, tickDelta) -> renderPositions(graphics));
 		ClientTickEvents.END_CLIENT_TICK.register(this::tick);
 	}
 
@@ -29,10 +34,19 @@ public final class LegacyFabricClient implements ClientModInitializer {
 		boolean g = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_G);
 		if (v && b && !comboDown && client.screen == null) client.setScreen(new CompanionScreen(false, null));
 		if (f8 && !positionsDown && client.player != null && client.getConnection() != null) client.getConnection().sendCommand("aiplayer positions");
+		positionsVisible = f8;
+		if (sprintJumpEnabled && client.player != null && client.options.keyUp.isDown() && !client.player.isShiftKeyDown()) client.player.setSprinting(true);
 		if (g && !navigationDown && client.screen == null) client.setScreen(new CompanionScreen(true, null));
 		if (c && !zoomDown) { savedFov = client.options.fov().get(); client.options.fov().set(Math.max(30, savedFov / 4)); }
 		if (!c && zoomDown && savedFov != null) { client.options.fov().set(savedFov); savedFov = null; }
 		comboDown = v && b; positionsDown = f8; zoomDown = c; navigationDown = g;
+	}
+	private static void renderPositions(GuiGraphics graphics) {
+		if (!positionsVisible) return; Minecraft client = Minecraft.getInstance();
+		int panelWidth = Math.min(520, client.getWindow().getGuiScaledWidth() - 30); int left = (client.getWindow().getGuiScaledWidth() - panelWidth) / 2;
+		graphics.fill(left, 8, left + panelWidth, 48, 0xD010151B);
+		graphics.drawCenteredString(client.font, "AI 玩家列表 · 松开 F8 关闭", client.getWindow().getGuiScaledWidth() / 2, 14, 0xFFFFFF);
+		graphics.drawCenteredString(client.font, "已刷新服务器位置；完整坐标由服务器返回", client.getWindow().getGuiScaledWidth() / 2, 31, 0xB3E5FC);
 	}
 
 	public static Screen configScreen(Screen parent) { return new CompanionScreen(false, parent); }
@@ -78,14 +92,9 @@ public final class LegacyFabricClient implements ClientModInitializer {
 				button("查询 AI 位置作为导航目标", "aiplayer positions", width / 2 - 130,
 					height / 2 - 10, 260);
 			} else {
-				int y = 28;
-				for (Tab value : Tab.values()) {
-					addRenderableWidget(Button.builder(Component.literal((value == tab ? "▶ " : "  ") + value.label),
-						button -> { tab = value; rebuild(); }).bounds(left, y, sidebar, 20).build());
-					y += 22;
-				}
-				int panel = left + sidebar + 10;
-				int panelWidth = fullWidth - sidebar - 10;
+				int panel; int panelWidth;
+				if (navigationTop) { int tabWidth = Math.max(64, (fullWidth - 16) / Tab.values().length); int x = left; for (Tab value : Tab.values()) { addRenderableWidget(Button.builder(Component.literal((value == tab ? "●" : "") + value.label), button -> { tab = value; rebuild(); }).bounds(x, 25, tabWidth, 20).build()); x += tabWidth + 2; } panel = left; panelWidth = fullWidth; }
+				else { int y = 28; for (Tab value : Tab.values()) { addRenderableWidget(Button.builder(Component.literal((value == tab ? "▶ " : "  ") + value.label), button -> { tab = value; rebuild(); }).bounds(left, y, sidebar, 20).build()); y += 22; } panel = left + sidebar + 10; panelWidth = fullWidth - sidebar - 10; }
 				buildTab(panel, panelWidth);
 			}
 			addRenderableWidget(Button.builder(Component.literal("完成"), button -> onClose())
@@ -95,8 +104,8 @@ public final class LegacyFabricClient implements ClientModInitializer {
 		private void buildTab(int left, int panelWidth) {
 			switch (tab) {
 				case AI -> buildAi(left, panelWidth);
-				case SHORTCUTS -> status = "V+B 打开管理；F8 查询位置；按住 C 缩放；G 打开导航";
-				case GAMEPLAY -> button("查看 1.20.1 可用功能", "aiplayer feature status", left, 65, panelWidth);
+				case SHORTCUTS -> { addRenderableWidget(Button.builder(Component.literal("UI：V+B · AI菜单：F8 · 缩放：C · 导航：G"), b -> {}).bounds(left, 65, panelWidth, 20).build()); addRenderableWidget(Button.builder(Component.literal("Cloth 快捷栏：" + (navigationTop ? "顶部" : "左侧")), b -> { navigationTop = !navigationTop; rebuild(); }).bounds(left, 93, panelWidth, 20).build()); status = "快捷键项目已显示；1.20.1 使用直接按键轮询"; }
+				case GAMEPLAY -> { addRenderableWidget(Button.builder(Component.literal("持续疾跑跳跃：" + (sprintJumpEnabled ? "开启" : "关闭")), b -> { sprintJumpEnabled = !sprintJumpEnabled; rebuild(); }).bounds(left, 65, panelWidth, 20).build()); button("查看 1.20.1 可用功能", "aiplayer feature status", left, 93, panelWidth); }
 				case CLIENT -> buildSpyglass(left, panelWidth);
 				case MINIGAMES -> {
 					addRenderableWidget(Button.builder(Component.literal("打开本地反应训练小游戏"), value ->
