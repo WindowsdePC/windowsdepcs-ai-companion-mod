@@ -37,6 +37,7 @@ final class LegacySpyglassManager {
 	private final Path file;
 	private final Map<String, Settings> saved = new HashMap<>();
 	private final Map<UUID, Integer> useTicks = new HashMap<>();
+	private final Map<UUID, Integer> cooldownTicks = new HashMap<>();
 	private final Set<UUID> triggered = new HashSet<>();
 
 	LegacySpyglassManager(Path file) { this.file = file; load(); }
@@ -58,7 +59,10 @@ final class LegacySpyglassManager {
 					.withDurationSeconds(IntegerArgumentType.getInteger(c, "value"))))))
 			.then(literal("target").then(argument("value", StringArgumentType.word())
 				.executes(c -> update(c.getSource().getPlayerOrException(), settings(c.getSource().getPlayerOrException())
-					.withTarget(StringArgumentType.getString(c, "value"))))));
+					.withTarget(StringArgumentType.getString(c, "value"))))))
+			.then(literal("cooldown-seconds").then(argument("value", IntegerArgumentType.integer(1, 600))
+				.executes(c -> update(c.getSource().getPlayerOrException(), settings(c.getSource().getPlayerOrException())
+					.withCooldownSeconds(IntegerArgumentType.getInteger(c, "value"))))));
 	}
 
 	void tick(MinecraftServer server) {
@@ -66,17 +70,28 @@ final class LegacySpyglassManager {
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 			UUID id = player.getUUID();
 			online.add(id);
+			cooldownTicks.computeIfPresent(id, (ignored, remaining) -> remaining <= 1 ? null : remaining - 1);
 			Settings settings = settings(player);
 			boolean observing = settings.enabled && player.isUsingItem() && player.getUseItem().is(Items.SPYGLASS);
 			if (!observing) { useTicks.remove(id); triggered.remove(id); continue; }
 			int ticks = useTicks.merge(id, 1, Integer::sum);
-			if (ticks >= settings.holdTicks && triggered.add(id)) apply(player, settings);
+			if (ticks >= settings.holdTicks && triggered.add(id)) {
+				int remaining = cooldownTicks.getOrDefault(id, 0);
+				if (remaining > 0) {
+					player.displayClientMessage(Component.literal("望远镜发光冷却中：还需 "
+						+ (remaining + 19) / 20 + " 秒"), true);
+				} else {
+					apply(player, settings);
+					cooldownTicks.put(id, settings.cooldownTicks);
+				}
+			}
 		}
 		useTicks.keySet().retainAll(online);
+		cooldownTicks.keySet().retainAll(online);
 		triggered.retainAll(online);
 	}
 
-	void close() { save(); useTicks.clear(); triggered.clear(); }
+	void close() { save(); useTicks.clear(); cooldownTicks.clear(); triggered.clear(); }
 
 	private Settings settings(ServerPlayer player) {
 		return saved.getOrDefault(player.getUUID().toString(), Settings.defaults()).normalized();
@@ -92,7 +107,7 @@ final class LegacySpyglassManager {
 		Settings value = settings(player);
 		player.sendSystemMessage(Component.literal("望远镜发光=" + value.enabled + "，半径=" + value.radiusChunks
 			+ "区块，观察=" + value.holdTicks / 20 + "秒，持续=" + value.effectTicks / 20
-			+ "秒，目标=" + value.targetCondition));
+			+ "秒，目标=" + value.targetCondition + "，冷却=" + value.cooldownTicks / 20 + "秒"));
 		return 1;
 	}
 
@@ -108,7 +123,8 @@ final class LegacySpyglassManager {
 		}
 		player.displayClientMessage(Component.literal("望远镜标记了 " + affected + " 个生物 · 半径 "
 			+ settings.radiusChunks + " 区块 · " + settings.targetCondition
-			+ " · 持续 " + settings.effectTicks / 20 + " 秒"), true);
+			+ " · 持续 " + settings.effectTicks / 20 + " 秒 · 冷却 "
+			+ settings.cooldownTicks / 20 + " 秒"), true);
 	}
 
 	private static boolean matches(String condition, LivingEntity entity) {
@@ -151,20 +167,23 @@ final class LegacySpyglassManager {
 		int holdTicks = 20;
 		int effectTicks = 2400;
 		String targetCondition = "all_living";
+		int cooldownTicks = 200;
 		static Settings defaults() { return new Settings(); }
 		Settings normalized() {
 			enabled = enabled; radiusChunks = Math.max(1, Math.min(32, radiusChunks));
 			holdTicks = Math.max(20, Math.min(200, holdTicks));
 			effectTicks = Math.max(20, Math.min(12000, effectTicks));
+			cooldownTicks = cooldownTicks <= 0 ? 200 : Math.max(20, Math.min(12000, cooldownTicks));
 			if (!targetCondition.equals("all_living") && !targetCondition.equals("non_players")
 					&& !targetCondition.equals("hostile_only")) targetCondition = "all_living";
 			return this;
 		}
-		Settings copy() { Settings value = new Settings(); value.enabled = enabled; value.radiusChunks = radiusChunks; value.holdTicks = holdTicks; value.effectTicks = effectTicks; value.targetCondition = targetCondition; return value; }
+		Settings copy() { Settings value = new Settings(); value.enabled = enabled; value.radiusChunks = radiusChunks; value.holdTicks = holdTicks; value.effectTicks = effectTicks; value.targetCondition = targetCondition; value.cooldownTicks = cooldownTicks; return value; }
 		Settings withEnabled(boolean value) { Settings next = copy(); next.enabled = value; return next.normalized(); }
 		Settings withRadius(int value) { Settings next = copy(); next.radiusChunks = value; return next.normalized(); }
 		Settings withHoldSeconds(int value) { Settings next = copy(); next.holdTicks = value * 20; return next.normalized(); }
 		Settings withDurationSeconds(int value) { Settings next = copy(); next.effectTicks = value * 20; return next.normalized(); }
 		Settings withTarget(String value) { Settings next = copy(); next.targetCondition = value.toLowerCase(java.util.Locale.ROOT); return next.normalized(); }
+		Settings withCooldownSeconds(int value) { Settings next = copy(); next.cooldownTicks = value * 20; return next.normalized(); }
 	}
 }
