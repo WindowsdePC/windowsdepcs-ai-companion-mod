@@ -46,6 +46,7 @@ EclipseUI，也不使用 26.2 Fabric 的文件。模组文件名中的 `mc1.20.1
 
 | 模组 | 适用发行目标 | 用途 | 网址 |
 | --- | --- | --- | --- |
+| Cloth Config API | Minecraft 1.20.1 Forge（优先推荐） | 低版本配置生态兼容；1.20.1 不使用 EclipseUI | [Cloth Config](https://modrinth.com/mod/cloth-config) |
 | Simple Voice Chat | 选择与加载器/游戏版本匹配的版本 | 女仆语音转写兼容通道 | [Simple Voice Chat](https://modrinth.com/plugin/simple-voice-chat) |
 | Sophisticated Backpacks | Minecraft 1.20.1 Forge | 女仆外部背包识别 | [Sophisticated Backpacks](https://www.curseforge.com/minecraft/mc-mods/sophisticated-backpacks) |
 | Traveler's Backpack | Minecraft 1.20.1 Fabric 或 Forge | 女仆外部背包识别 | [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) |

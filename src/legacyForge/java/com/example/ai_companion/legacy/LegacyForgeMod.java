@@ -83,6 +83,8 @@ public final class LegacyForgeMod {
 				.then(argument("name", StringArgumentType.word()).executes(LegacyForgeMod::remove)))
 			.then(literal("list").executes(LegacyForgeMod::list))
 			.then(literal("positions").executes(LegacyForgeMod::positions))
+			.then(literal("teleport-to").requires(source -> source.hasPermission(2))
+				.then(argument("name", StringArgumentType.word()).executes(LegacyForgeMod::teleportToAgent)))
 			.then(literal("idle").requires(source -> source.hasPermission(2))
 				.then(argument("name", StringArgumentType.word()).executes(ctx -> mode(ctx, "idle"))))
 			.then(literal("hunt").requires(source -> source.hasPermission(2))
@@ -232,7 +234,7 @@ public final class LegacyForgeMod {
 		}
 		UUID uuid = UUID.nameUUIDFromBytes(("ai_companion:" + key).getBytes(StandardCharsets.UTF_8));
 		AgentData data = new AgentData(name, uuid.toString(), owner.level().dimension().location().toString(),
-			owner.getX() + 1.25, owner.getY(), owner.getZ(), "idle", "");
+			owner.getX(), owner.getY(), owner.getZ(), "idle", "");
 		try {
 			restore(data);
 			state.agents.put(key, data);
@@ -257,9 +259,8 @@ public final class LegacyForgeMod {
 			catch (Exception error) { return fail(context, "该命令需要由游戏内玩家执行"); }
 			String key = name.toLowerCase(Locale.ROOT);
 			UUID uuid = UUID.nameUUIDFromBytes(("ai_companion:" + key).getBytes(StandardCharsets.UTF_8));
-			double angle = Math.PI * 2.0 * created / Math.max(1, count);
 			AgentData data = new AgentData(name, uuid.toString(), owner.level().dimension().location().toString(),
-				owner.getX() + Math.cos(angle) * 1.5, owner.getY(), owner.getZ() + Math.sin(angle) * 1.5,
+				owner.getX(), owner.getY(), owner.getZ(),
 				"idle", "");
 			try {
 				restore(data);
@@ -303,6 +304,21 @@ public final class LegacyForgeMod {
 				player.level().dimension().location(), player.getX(), player.getY(), player.getZ())), false);
 		}
 		return AGENTS.size();
+	}
+
+	private static int teleportToAgent(CommandContext<CommandSourceStack> context) {
+		String name = StringArgumentType.getString(context, "name");
+		RuntimeAgent runtime = AGENTS.get(name.toLowerCase(Locale.ROOT));
+		if (runtime == null) return fail(context, "未找到已加载 AI：" + name);
+		try {
+			ServerPlayer player = context.getSource().getPlayerOrException();
+			ServerPlayer target = runtime.player;
+			player.teleportTo((ServerLevel) target.level(), target.getX(), target.getY(), target.getZ(),
+				target.getYRot(), target.getXRot());
+			return ok(context, "已传送至 " + runtime.data.name + " · " + target.level().dimension().location());
+		} catch (Exception error) {
+			return fail(context, "传送失败：" + safeError(error));
+		}
 	}
 
 	private static int mode(CommandContext<CommandSourceStack> context, String selected) {
