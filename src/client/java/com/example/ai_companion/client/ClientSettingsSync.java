@@ -12,6 +12,7 @@ final class ClientSettingsSync {
 		settings.primaryKey = ClientSettings.normalizeKey(settings.primaryKey, "V");
 		settings.secondaryKey = ClientSettings.normalizeKey(settings.secondaryKey, "B");
 		settings.zoomKey = ClientSettings.normalizeKey(settings.zoomKey, "C");
+		settings.minigameKey = ClientSettings.normalizeKey(settings.minigameKey, "M");
 		settings.normalized();
 		try {
 			settings.save();

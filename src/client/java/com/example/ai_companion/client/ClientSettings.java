@@ -18,10 +18,12 @@ public final class ClientSettings {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Path PATH = FabricLoader.getInstance().getConfigDir()
 		.resolve("windowsdepcs-ai-companion-client-settings.json");
+	private static ClientSettings shared;
 
 	public String primaryKey = "V";
 	public String secondaryKey = "B";
 	public String positionsKey = "F8";
+	public String minigameKey = "M";
 	public boolean clothNavigationTop = true;
 	public String defaultAgentMode = AgentMode.HUNTER.name();
 	public String apiBase = "https://api.openai.com/v1";
@@ -74,10 +76,17 @@ public final class ClientSettings {
 		}
 	}
 
+	/** One live settings object is shared by V+B, Mod Menu and EclipseUI. */
+	public static synchronized ClientSettings shared() {
+		if (shared == null) shared = load();
+		return shared;
+	}
+
 	public ClientSettings normalized() {
 		primaryKey = normalizeKey(primaryKey, "V");
 		secondaryKey = normalizeKey(secondaryKey, "B");
 		positionsKey = normalizeFunctionKey(positionsKey, "F8");
+		minigameKey = normalizeKey(minigameKey, "M");
 		try {
 			defaultAgentMode = AgentMode.valueOf(defaultAgentMode).name();
 		} catch (RuntimeException ignored) {
@@ -134,6 +143,7 @@ public final class ClientSettings {
 	public int navigatorCode() {
 		return keyCode(navigatorKey);
 	}
+	public int minigameCode() { return keyCode(minigameKey); }
 	public int positionsCode() { return com.mojang.blaze3d.platform.InputConstants.KEY_F1 + Integer.parseInt(positionsKey.substring(1)) - 1; }
 
 	public void save() throws IOException {

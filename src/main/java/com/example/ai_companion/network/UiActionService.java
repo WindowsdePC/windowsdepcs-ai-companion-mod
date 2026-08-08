@@ -112,6 +112,7 @@ public final class UiActionService {
 				case "pet.compete" -> competePets(player, PetCompetitionMode.valueOf(arg(request, 0)),
 					arg(request, 1), arg(request, 2));
 				case "config.save" -> saveApi(player, request);
+				case "config.read" -> sendApiSnapshot(player);
 				case "config.status" -> reply(player, "API=" + config.get().apiBase() + "，模型="
 					+ config.get().model() + "，令牌=" + (config.get().hasApiKey() ? "已配置" : "未配置"));
 				case "gameplay.save" -> saveGameplay(player, request);
@@ -256,7 +257,15 @@ public final class UiActionService {
 		if (request.arguments().size() > 2 && !arg(request, 2).isBlank()) changed = changed.withApiKey(arg(request, 2));
 		changed.save();
 		updateConfig.accept(changed);
-		reply(player, "API 配置已直接保存到服务器；令牌不会返回客户端");
+		sendApiSnapshot(player);
+	}
+
+	private void sendApiSnapshot(ServerPlayer player) {
+		ModConfig current = config.get();
+		var encoder = java.util.Base64.getUrlEncoder().withoutPadding();
+		String base = encoder.encodeToString(current.apiBase().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		String model = encoder.encodeToString(current.model().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		reply(player, "@config\t" + base + "\t" + model + "\t" + current.hasApiKey());
 	}
 
 	private void saveGameplay(ServerPlayer player, UiActionPayload request) throws IOException {

@@ -52,6 +52,8 @@ public final class PromptConfigScreen extends Screen {
 	private String status = "修改服务器设置和分配 AI 需要管理员权限";
 	private long positionRevision = -1;
 	private long uiResultRevision = UiActionClient.revision();
+	private long apiConfigRevision = UiActionClient.configRevision();
+	private boolean apiConfigRequested;
 
 	private String baseName = "AI_";
 	private String createCount = "2";
@@ -97,6 +99,7 @@ public final class PromptConfigScreen extends Screen {
 	private String primaryKey;
 	private String secondaryKey;
 	private String positionsKey;
+	private String minigameKey;
 	private String apiBase;
 	private String apiModel;
 	private String apiToken = "";
@@ -147,6 +150,7 @@ public final class PromptConfigScreen extends Screen {
 		primaryKey = settings.primaryKey;
 		secondaryKey = settings.secondaryKey;
 		positionsKey = settings.positionsKey;
+		minigameKey = settings.minigameKey;
 		apiBase = settings.apiBase;
 		apiModel = settings.model;
 		selectedMode = settings.defaultAgentMode();
@@ -171,6 +175,16 @@ public final class PromptConfigScreen extends Screen {
 		if (uiResultRevision != UiActionClient.revision()) {
 			uiResultRevision = UiActionClient.revision();
 			status = UiActionClient.lastMessage();
+		}
+		if (apiConfigRevision != UiActionClient.configRevision()) {
+			apiConfigRevision = UiActionClient.configRevision();
+			apiBase = UiActionClient.serverApiBase();
+			apiModel = UiActionClient.serverModel();
+			settings.apiBase = apiBase;
+			settings.model = apiModel;
+			try { settings.save(); }
+			catch (IOException error) { status = "服务器配置已读取，但客户端镜像保存失败: " + error.getMessage(); }
+			if (tab == Tab.AI_SYSTEM && aiSection == AiSection.API) rebuildPanel();
 		}
 		if (tab == Tab.AI_SYSTEM && aiSection == AiSection.MANAGEMENT
 				&& positionRevision != AgentPositionHud.revision()) {
@@ -238,6 +252,7 @@ public final class PromptConfigScreen extends Screen {
 		capturePromptDraft();
 		aiSection = next;
 		playersExpanded = false;
+		if (next == AiSection.API) requestApiConfig();
 		rebuildPanel();
 	}
 
@@ -303,6 +318,7 @@ public final class PromptConfigScreen extends Screen {
 	}
 
 	private void buildApiPanel(int left, int panelWidth) {
+		requestApiConfig();
 		EditBox endpoint = addRenderableWidget(new EditBox(font, left, 75, panelWidth, 20,
 			Component.literal("API 地址")));
 		endpoint.setMaxLength(300);
@@ -512,6 +528,9 @@ public final class PromptConfigScreen extends Screen {
 		navigator.setResponder(value -> navigatorKey = value);
 		EditBox positions = addRenderableWidget(new EditBox(font, left + 540, 85, 90, 20, Component.literal("AI 菜单键")));
 		positions.setMaxLength(3); positions.setValue(positionsKey); positions.setResponder(value -> positionsKey = value);
+		EditBox minigames = addRenderableWidget(new EditBox(font, left + 645, 85,
+			Math.max(80, panelWidth - 645), 20, Component.literal("小游戏中心")));
+		minigames.setMaxLength(1); minigames.setValue(minigameKey); minigames.setResponder(value -> minigameKey = value);
 
 		addRenderableWidget(Button.builder(Component.literal("保存快捷键"), b -> saveShortcuts())
 			.bounds(left, 130, 180, 20).build());
@@ -789,6 +808,7 @@ public final class PromptConfigScreen extends Screen {
 			settings.primaryKey = ClientSettings.normalizeKey(primaryKey, "V");
 			settings.secondaryKey = ClientSettings.normalizeKey(secondaryKey, "B");
 			settings.positionsKey = ClientSettings.normalizeFunctionKey(positionsKey, "F8");
+			settings.minigameKey = ClientSettings.normalizeKey(minigameKey, "M");
 			settings.clothNavigationTop = clothNavigationTop;
 			settings.zoomKey = ClientSettings.normalizeKey(zoomKey, "C");
 			settings.navigatorKey = ClientSettings.normalizeKey(navigatorKey, "G");
@@ -796,9 +816,11 @@ public final class PromptConfigScreen extends Screen {
 			primaryKey = settings.primaryKey;
 			secondaryKey = settings.secondaryKey;
 			positionsKey = settings.positionsKey;
+			minigameKey = settings.minigameKey;
 			zoomKey = settings.zoomKey;
 			navigatorKey = settings.navigatorKey;
-			status = "已保存；界面 " + primaryKey + "+" + secondaryKey + "，AI 菜单 " + positionsKey + "，缩放 " + zoomKey + "，导航 " + navigatorKey;
+			status = "已保存并立即生效；界面 " + primaryKey + "+" + secondaryKey + "，AI 控制台 "
+				+ positionsKey + "，小游戏 " + minigameKey + "，缩放 " + zoomKey + "，导航 " + navigatorKey;
 		} catch (RuntimeException | IOException error) {
 			status = "保存失败: " + error.getMessage();
 		}
@@ -909,6 +931,17 @@ public final class PromptConfigScreen extends Screen {
 			status = "已请求保存 API 配置；令牌不会写入客户端设置";
 		} catch (RuntimeException | IOException error) {
 			status = "API 保存失败: " + error.getMessage();
+		}
+	}
+
+	private void requestApiConfig() {
+		if (apiConfigRequested) return;
+		apiConfigRequested = true;
+		try {
+			UiActionClient.send("config.read");
+			status = "正在从服务器读取已保存的 API 配置…";
+		} catch (RuntimeException error) {
+			status = "读取服务器 API 配置失败: " + error.getMessage();
 		}
 	}
 

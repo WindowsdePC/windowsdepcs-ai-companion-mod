@@ -13,7 +13,7 @@ WindowsdePC's AI Companion Mod
 
 当前版本：
 
-0.9.9
+0.9.10-beta.1
 
 
 目标版本：
@@ -116,6 +116,14 @@ WindowsdePC's AI Companion Mod
 - 恢复失败、维度不存在或实体未同时注册到玩家列表和当前维度实体表的身份会被清理。
 - AI 列表、F8 位置面板、身份查询与传送入口只显示服务器当前确认存在的实体，避免幽灵名称和高空陈旧坐标。
 - Minecraft 1.20.1 Fabric 与 Forge 分支使用各自旧版 `LevelResource`、生命周期事件和 Java 17 命名实现同一语义。
+
+
+0.9.10-beta.1 配置、快捷键与 F8 交互修复状态：
+
+- API 配置页面以服务器持久化快照为准，保存后回传并刷新客户端镜像，重新打开不会恢复旧值。
+- 模组内快捷键页可保存并立即应用 UI、F8 控制台、缩放、导航和小游戏中心按键；默认 M 打开五游戏中心。
+- F8 改为真正的 AI 控制台弹窗，AI 请求与服务器结果直接显示在弹窗消息区，不写入聊天栏。
+- Minecraft 1.20.1 Fabric/Forge 使用 Java 17 和旧版 `Screen`、`GuiGraphics`、`ResourceLocation` 体系实现同一可见语义。
 
 
 0.6.9 实现状态：
