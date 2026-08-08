@@ -56,7 +56,7 @@ public final class LegacyFabricClient implements ClientModInitializer {
 		private String spyglassTarget = "all_living";
 		private String spyglassCooldown = "10";
 		private String spyglassMaxTargets = "256";
-		private String status = "所有按钮都会向服务器发送真实命令";
+		private String status = "小游戏纯本地运行；1.20.1 服务端操作使用兼容回退";
 		private CompanionScreen(boolean navigation) { super(Component.literal(navigation ? "AI 导航" : "WindowsdePC's AI Companion Mod")); this.navigation = navigation; }
 		@Override protected void init() {
 			rebuild();
@@ -92,8 +92,12 @@ public final class LegacyFabricClient implements ClientModInitializer {
 				case GAMEPLAY -> button("查看 1.20.1 可用功能", "aiplayer feature status", left, 65, panelWidth);
 				case CLIENT -> buildSpyglass(left, panelWidth);
 				case MINIGAMES -> {
-					button("竞技宠物列表", "aiplayer pet list", left, 65, panelWidth);
-					button("竞技宠物排行榜", "aiplayer pet leaderboard", left, 93, panelWidth);
+					addRenderableWidget(Button.builder(Component.literal("打开本地反应训练小游戏"), value ->
+						minecraft.setScreen(new LocalMinigameScreen(this))).bounds(left, 55, panelWidth, 22).build());
+					button("AI 宠物：我的宠物", "aiplayer pet list", left, 87, (panelWidth - 8) / 2);
+					button("AI 宠物：排行榜", "aiplayer pet leaderboard", left + (panelWidth + 8) / 2, 87, (panelWidth - 8) / 2);
+					button("AI 竞技：查看可用 AI", "aiplayer list", left, 119, panelWidth);
+					status = "本地小游戏已加入独立弹窗；AI 宠物与 AI 竞技入口已加入当前栏目";
 				}
 				case LEISURE -> {
 					button("模拟社会排行榜", "aiplayer society leaderboard", left, 65, panelWidth);
@@ -175,6 +179,30 @@ public final class LegacyFabricClient implements ClientModInitializer {
 			renderBackground(graphics); super.render(graphics, mouseX, mouseY, delta);
 			graphics.drawCenteredString(font, navigation ? "G：1.20.1 导航入口" : "WindowsdePC's AI Companion Mod · 1.20.1 Fabric 完整管理", width / 2, 10, 0xFFFFFF);
 			graphics.drawString(font, status, 10, height - 36, 0xA8E6A3);
+		}
+	}
+
+	/** Small 1.20.1-only local game; it never contacts a server. */
+	private static final class LocalMinigameScreen extends Screen {
+		private final Screen parent;
+		private int score;
+		private int targetX;
+		private int targetY;
+		private LocalMinigameScreen(Screen parent) { super(Component.literal("本地反应训练")); this.parent = parent; }
+		@Override protected void init() { moveTarget(); }
+		private void moveTarget() {
+			clearWidgets();
+			targetX = 20 + (int) (Math.random() * Math.max(1, width - 140));
+			targetY = 45 + (int) (Math.random() * Math.max(1, height - 120));
+			addRenderableWidget(Button.builder(Component.literal("点击目标 +1"), b -> { score++; moveTarget(); })
+				.bounds(targetX, targetY, 120, 20).build());
+			addRenderableWidget(Button.builder(Component.literal("返回小游戏中心"), b -> onClose())
+				.bounds(width / 2 - 70, height - 28, 140, 20).build());
+		}
+		@Override public void onClose() { if (minecraft != null) minecraft.setScreen(parent); }
+		@Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+			renderBackground(graphics); super.render(graphics, mouseX, mouseY, delta);
+			graphics.drawCenteredString(font, "纯本地反应训练 · 得分 " + score, width / 2, 16, 0xFFFFFF);
 		}
 	}
 }
