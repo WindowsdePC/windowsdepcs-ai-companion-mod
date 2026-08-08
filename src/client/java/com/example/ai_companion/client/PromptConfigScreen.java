@@ -66,6 +66,8 @@ public final class PromptConfigScreen extends Screen {
 
 	private boolean rushEnabled;
 	private boolean flexibleEquipmentEnabled;
+	private boolean sprintJumpEnabled;
+	private boolean clothNavigationTop;
 	private boolean spyglassHighlightEnabled;
 	private String spyglassRadiusChunks;
 	private String spyglassHoldSeconds;
@@ -92,6 +94,7 @@ public final class PromptConfigScreen extends Screen {
 	private String rushStrength;
 	private String primaryKey;
 	private String secondaryKey;
+	private String positionsKey;
 	private String apiBase;
 	private String apiModel;
 	private String apiToken = "";
@@ -113,6 +116,8 @@ public final class PromptConfigScreen extends Screen {
 		this.minigameProgress = MinigameProgress.load();
 		rushEnabled = settings.goldenSpearRushEnabled;
 		flexibleEquipmentEnabled = settings.flexibleEquipmentEnabled;
+		sprintJumpEnabled = settings.sprintJumpEnabled;
+		clothNavigationTop = settings.clothNavigationTop;
 		spyglassHighlightEnabled = settings.spyglassHighlightEnabled;
 		spyglassRadiusChunks = Integer.toString(settings.spyglassRadiusChunks);
 		spyglassHoldSeconds = Integer.toString(settings.spyglassHoldSeconds);
@@ -139,6 +144,7 @@ public final class PromptConfigScreen extends Screen {
 		rushStrength = Double.toString(settings.rushStrength);
 		primaryKey = settings.primaryKey;
 		secondaryKey = settings.secondaryKey;
+		positionsKey = settings.positionsKey;
 		apiBase = settings.apiBase;
 		apiModel = settings.model;
 		selectedMode = settings.defaultAgentMode();
@@ -161,15 +167,14 @@ public final class PromptConfigScreen extends Screen {
 		clearWidgets();
 		int fullWidth = Math.min(920, width - 24);
 		int left = (width - fullWidth) / 2;
-		int sidebarWidth = 148;
-		int panelLeft = left + sidebarWidth + 10;
-		int panelWidth = fullWidth - sidebarWidth - 10;
-		int y = 28;
-		for (Tab candidate : Tab.values()) {
-			String marker = candidate == tab ? "▶ " : "  ";
-			addRenderableWidget(Button.builder(Component.literal(marker + candidate.label),
-				button -> switchTab(candidate)).bounds(left, y, sidebarWidth, 20).build());
-			y += 23;
+		boolean topNavigation = backend == UiBackend.CLOTH_CONFIG && clothNavigationTop;
+		int panelLeft = topNavigation ? left : left + 158;
+		int panelWidth = topNavigation ? fullWidth : fullWidth - 158;
+		if (topNavigation) {
+			int tabWidth = Math.max(72, (fullWidth - 24) / Tab.values().length); int x = left;
+			for (Tab candidate : Tab.values()) { addRenderableWidget(Button.builder(Component.literal((candidate == tab ? "●" : "") + candidate.label), button -> switchTab(candidate)).bounds(x, 4, tabWidth, 20).build()); x += tabWidth + 3; }
+		} else {
+			int y = 28; for (Tab candidate : Tab.values()) { String marker = candidate == tab ? "▶ " : "  "; addRenderableWidget(Button.builder(Component.literal(marker + candidate.label), button -> switchTab(candidate)).bounds(left, y, 148, 20).build()); y += 23; }
 		}
 
 		switch (tab) {
@@ -425,8 +430,10 @@ public final class PromptConfigScreen extends Screen {
 			flexibleEquipmentEnabled = !flexibleEquipmentEnabled;
 			rebuildPanel();
 		}).bounds(left + 230, 70, 220, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("打乱非快捷栏物品"), b -> shuffleInventory())
+		addRenderableWidget(Button.builder(Component.literal("持续疾跑跳跃：" + (sprintJumpEnabled ? "开启" : "关闭")), b -> { sprintJumpEnabled = !sprintJumpEnabled; rebuildPanel(); })
 			.bounds(left + 460, 70, 180, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("打乱非快捷栏物品"), b -> shuffleInventory())
+			.bounds(left + 650, 70, Math.max(90, panelWidth - 650), 20).build());
 
 		EditBox durability = numberBox(left, 130, durabilityEvery, 4, value -> durabilityEvery = value);
 		EditBox hungerInterval = numberBox(left + 200, 130, hungerEvery, 4, value -> hungerEvery = value);
@@ -459,9 +466,12 @@ public final class PromptConfigScreen extends Screen {
 		navigator.setMaxLength(1);
 		navigator.setValue(navigatorKey);
 		navigator.setResponder(value -> navigatorKey = value);
+		EditBox positions = addRenderableWidget(new EditBox(font, left + 540, 85, 90, 20, Component.literal("AI 菜单键")));
+		positions.setMaxLength(3); positions.setValue(positionsKey); positions.setResponder(value -> positionsKey = value);
 
 		addRenderableWidget(Button.builder(Component.literal("保存快捷键"), b -> saveShortcuts())
 			.bounds(left, 130, 180, 20).build());
+		if (backend == UiBackend.CLOTH_CONFIG) addRenderableWidget(Button.builder(Component.literal("Cloth 快捷栏：" + (clothNavigationTop ? "顶部" : "左侧")), b -> { clothNavigationTop = !clothNavigationTop; rebuildPanel(); }).bounds(left + 190, 130, 210, 20).build());
 	}
 
 	private void buildAdvancedPanel(int left, int panelWidth) {
@@ -734,15 +744,17 @@ public final class PromptConfigScreen extends Screen {
 		try {
 			settings.primaryKey = ClientSettings.normalizeKey(primaryKey, "V");
 			settings.secondaryKey = ClientSettings.normalizeKey(secondaryKey, "B");
+			settings.positionsKey = ClientSettings.normalizeFunctionKey(positionsKey, "F8");
+			settings.clothNavigationTop = clothNavigationTop;
 			settings.zoomKey = ClientSettings.normalizeKey(zoomKey, "C");
 			settings.navigatorKey = ClientSettings.normalizeKey(navigatorKey, "G");
 			settings.save();
 			primaryKey = settings.primaryKey;
 			secondaryKey = settings.secondaryKey;
+			positionsKey = settings.positionsKey;
 			zoomKey = settings.zoomKey;
 			navigatorKey = settings.navigatorKey;
-			status = "已保存；界面 " + primaryKey + "+" + secondaryKey + "，缩放 " + zoomKey
-				+ "，导航 " + navigatorKey;
+			status = "已保存；界面 " + primaryKey + "+" + secondaryKey + "，AI 菜单 " + positionsKey + "，缩放 " + zoomKey + "，导航 " + navigatorKey;
 		} catch (RuntimeException | IOException error) {
 			status = "保存失败: " + error.getMessage();
 		}
@@ -771,12 +783,13 @@ public final class PromptConfigScreen extends Screen {
 			settings.hungerCost = parseInt(hungerCost, 0, 20, "饥饿消耗");
 			settings.rushStrength = parseDouble(rushStrength, 0.1, 4.0, "突进强度");
 			settings.flexibleEquipmentEnabled = flexibleEquipmentEnabled;
+			settings.sprintJumpEnabled = sprintJumpEnabled;
 			settings.save();
 			UiActionClient.send("gameplay.save", Boolean.toString(rushEnabled),
 				Integer.toString(settings.durabilityEvery), Integer.toString(settings.hungerEvery),
 				Integer.toString(settings.hungerCost), Double.toString(settings.rushStrength),
 				Boolean.toString(flexibleEquipmentEnabled));
-			status = "已保存金矛突进与任意物品装备设置";
+			status = "已保存金矛突进、任意物品装备与持续疾跑跳跃设置";
 		} catch (RuntimeException | IOException error) {
 			status = "保存失败: " + error.getMessage();
 		}
@@ -877,10 +890,11 @@ public final class PromptConfigScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
 		super.extractRenderState(graphics, mouseX, mouseY, delta);
-		graphics.centeredText(font, title, width / 2, 9, 0xFFFFFF);
+		boolean topNavigation = backend == UiBackend.CLOTH_CONFIG && clothNavigationTop;
+		if (!topNavigation) graphics.centeredText(font, title, width / 2, 9, 0xFFFFFF);
 		int fullWidth = Math.min(920, width - 24);
-		int left = (width - fullWidth) / 2 + 158;
-		int panelWidth = fullWidth - 158;
+		int left = (width - fullWidth) / 2 + (topNavigation ? 0 : 158);
+		int panelWidth = fullWidth - (topNavigation ? 0 : 158);
 		switch (tab) {
 			case AI_SYSTEM -> {
 				switch (aiSection) {

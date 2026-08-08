@@ -20,13 +20,15 @@ public final class AiCompanionClient implements ClientModInitializer {
 		FlexibleEquipmentMode.configureClient(() -> settings.flexibleEquipmentEnabled);
 		ScreenZoomController.initialize(settings);
 		ClientPerformanceController.initialize(settings);
-		AgentPositionHud.initialize();
+		AgentPositionHud.initialize(settings);
 		NavigationClientController.initialize();
 		NavigationHud.initialize();
 		MaidClientRegistry.initialize();
 		boolean[] chordHeld = {false};
 		boolean[] navigatorHeld = {false};
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+			if (settings.sprintJumpEnabled && client.player != null && client.options.keyUp.isDown()
+					&& !client.player.isShiftKeyDown()) client.player.setSprinting(true);
 			boolean pressed = InputConstants.isKeyDown(client.getWindow(), settings.primaryCode())
 				&& InputConstants.isKeyDown(client.getWindow(), settings.secondaryCode());
 			if (pressed && !chordHeld[0] && client.getConnection() != null) {

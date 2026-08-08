@@ -21,6 +21,8 @@ public final class ClientSettings {
 
 	public String primaryKey = "V";
 	public String secondaryKey = "B";
+	public String positionsKey = "F8";
+	public boolean clothNavigationTop = true;
 	public String defaultAgentMode = AgentMode.HUNTER.name();
 	public String apiBase = "https://api.openai.com/v1";
 	public String model = "gpt-5-mini";
@@ -30,6 +32,7 @@ public final class ClientSettings {
 	public int hungerCost = 2;
 	public double rushStrength = 0.916;
 	public boolean flexibleEquipmentEnabled = false;
+	public boolean sprintJumpEnabled = true;
 	public boolean spyglassHighlightEnabled = true;
 	public int spyglassRadiusChunks = 10;
 	public int spyglassHoldSeconds = 1;
@@ -74,6 +77,7 @@ public final class ClientSettings {
 	public ClientSettings normalized() {
 		primaryKey = normalizeKey(primaryKey, "V");
 		secondaryKey = normalizeKey(secondaryKey, "B");
+		positionsKey = normalizeFunctionKey(positionsKey, "F8");
 		try {
 			defaultAgentMode = AgentMode.valueOf(defaultAgentMode).name();
 		} catch (RuntimeException ignored) {
@@ -130,6 +134,7 @@ public final class ClientSettings {
 	public int navigatorCode() {
 		return keyCode(navigatorKey);
 	}
+	public int positionsCode() { return com.mojang.blaze3d.platform.InputConstants.KEY_F1 + Integer.parseInt(positionsKey.substring(1)) - 1; }
 
 	public void save() throws IOException {
 		normalized();
@@ -140,6 +145,10 @@ public final class ClientSettings {
 	public static String normalizeKey(String value, String fallback) {
 		String normalized = value == null ? "" : value.strip().toUpperCase();
 		return normalized.matches("[A-Z]") ? normalized : fallback;
+	}
+	public static String normalizeFunctionKey(String value, String fallback) {
+		String normalized = value == null ? "" : value.strip().toUpperCase();
+		return normalized.matches("F([1-9]|1[0-2])") ? normalized : fallback;
 	}
 
 	private static int keyCode(String key) {

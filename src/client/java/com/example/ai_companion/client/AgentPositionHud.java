@@ -34,7 +34,7 @@ public final class AgentPositionHud {
 	private AgentPositionHud() {
 	}
 
-	public static void initialize() {
+	public static void initialize(ClientSettings settings) {
 		ClientPlayNetworking.registerGlobalReceiver(AgentPositionsPayload.TYPE, (payload, context) -> {
 			positions = payload.positions();
 			waiting = false;
@@ -42,7 +42,7 @@ public final class AgentPositionHud {
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clear());
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			boolean pressed = InputConstants.isKeyDown(client.getWindow(), InputConstants.KEY_F8);
+			boolean pressed = InputConstants.isKeyDown(client.getWindow(), settings.positionsCode());
 			if (pressed && !keyHeld) {
 				visible = true;
 				requestRefresh(client);
@@ -75,7 +75,7 @@ public final class AgentPositionHud {
 		int rows = waiting || !error.isBlank() || positions.isEmpty()
 			? 1 : Math.min(positions.size(), MAX_VISIBLE_ROWS);
 		int panelHeight = 23 + rows * LINE_HEIGHT + (positions.size() > MAX_VISIBLE_ROWS ? LINE_HEIGHT : 0);
-		int left = Math.max(5, client.getWindow().getGuiScaledWidth() - PANEL_WIDTH - 8);
+		int left = Math.max(5, (client.getWindow().getGuiScaledWidth() - PANEL_WIDTH) / 2);
 		int top = 8;
 		graphics.fill(left, top, left + PANEL_WIDTH, top + panelHeight, 0xC010151B);
 		graphics.fill(left, top, left + PANEL_WIDTH, top + 2, 0xFF42A5F5);

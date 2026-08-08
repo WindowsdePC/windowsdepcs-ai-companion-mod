@@ -4,15 +4,15 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：v0.9.8
+当前版本：v0.9.8.1
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.8.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.8.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.8.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.8.1.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.8.1.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.8.1.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
@@ -47,6 +47,7 @@ EclipseUI，也不使用 26.2 Fabric 的文件。模组文件名中的 `mc1.20.1
 | 模组 | 适用发行目标 | 用途 | 网址 |
 | --- | --- | --- | --- |
 | Mod Menu | Minecraft 26.2 Fabric 或 1.20.1 Fabric | 在模组列表中显示“配置”按钮并直接打开完整九分类中心 | [Mod Menu](https://modrinth.com/mod/modmenu) |
+| Cloth Config API | Minecraft 1.20.1 Fabric 或 Forge（优先支持） | 低版本配置界面与顶部快捷栏 | [Cloth Config](https://modrinth.com/mod/cloth-config) |
 | Simple Voice Chat | 选择与加载器/游戏版本匹配的版本 | 女仆语音转写兼容通道 | [Simple Voice Chat](https://modrinth.com/plugin/simple-voice-chat) |
 | Sophisticated Backpacks | Minecraft 1.20.1 Forge | 女仆外部背包识别 | [Sophisticated Backpacks](https://www.curseforge.com/minecraft/mc-mods/sophisticated-backpacks) |
 | Traveler's Backpack | Minecraft 1.20.1 Fabric 或 Forge | 女仆外部背包识别 | [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) |
