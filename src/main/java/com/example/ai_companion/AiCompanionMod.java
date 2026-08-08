@@ -25,6 +25,8 @@ import com.example.ai_companion.gameplay.GoldenSpearRush;
 import com.example.ai_companion.gameplay.FlexibleEquipmentMode;
 import com.example.ai_companion.gameplay.MinigameRewardManager;
 import com.example.ai_companion.network.AgentPositionNetworking;
+import com.example.ai_companion.network.UiActionNetworking;
+import com.example.ai_companion.network.UiActionService;
 import com.example.ai_companion.orb.AssistantOrbManager;
 import com.example.ai_companion.photo.PhotographyItems;
 import com.example.ai_companion.photo.PhotographyManager;
@@ -106,6 +108,9 @@ public final class AiCompanionMod implements ModInitializer {
 		AgentPositionNetworking.registerServer(agents);
 		MaidNetworking.registerServer(maids);
 		NavigationNetworking.registerServer(() -> worldFeatures);
+		UiActionNetworking.registerServer(new UiActionService(agents, prompts, () -> config,
+			updated -> config = updated, () -> gameplay, updated -> gameplay = updated, arena,
+			petCompetitions, () -> worldFeatures, updated -> worldFeatures = updated, spyglassHighlights));
 		goldenSpearRush = new GoldenSpearRush(() -> gameplay);
 		minigameRewards = new MinigameRewardManager();
 		goldenSpearRush.register();

@@ -4,15 +4,15 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：v0.9.6
+当前版本：v0.9.7
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.6.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.6.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.6.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.7.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.7.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.7.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
@@ -66,6 +66,8 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 
 ### AI 玩家
 
+- 0.9.7 起完整 UI 使用带边界校验的自定义网络操作通道直接调用服务端管理器；创建、模式、提示词、API、游戏增强、望远镜、AI 宠物与 AI 竞技按钮不再发送聊天命令。命令仍保留给服务器控制台、脚本和无客户端场景。
+- V+B 现在直接打开可操作的九分类中心；检测到 EclipseUI 时可从“兼容设置”进入现代化数值页，不再把小游戏、AI 宠物和 AI 竞技入口藏在返回页。
 - 0.9.1 起 AI 通过原版玩家列表生命周期加入世界；命令只有在玩家列表与当前世界均验证成功后才报告创建成功。
 - 单个 AI 在命令玩家脚边生成，批量 AI 在玩家身边分散生成，避免与玩家或彼此完全重叠而看不见。
 - 创建、批量创建、列出和移除具有独立名称与 UUID 的可见 `FakePlayer`。
@@ -88,6 +90,7 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 
 ### AI 竞技场
 
+- UI 的“AI系统”和“小游戏中心”均提供独立 AI 竞技弹窗，可填写参赛 AI 并直接开始 1v1、2v2 或混战，也可查询和停止比赛。
 - 通过 `/ai battle` 运行只包含已登记 AI 玩家的服务器竞技比赛。
 - 支持 `1v1`、`2v2` 和 3～8 名 AI 的混战；2v2 的前两名与后两名分别组成一队。
 - 参赛 AI 会使用铁剑和盾牌，根据距离与生命值选择追击、后撤、格挡、普通攻击或重击。
@@ -153,6 +156,7 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 
 ### AI 宠物竞技
 
+- UI 提供独立 AI 宠物弹窗，可创建、训练、竞速、战斗、查看自己的宠物和排行榜；所有结算仍由服务端权威处理。
 - 每位玩家可创建最多 8 只持久化竞技宠物，并分配速度、力量和耐力三项初始属性。
 - 初始属性单项为 10～100、总和不超过 180；训练每 30 秒可将一项属性提高 1 点，最高 100。
 - 竞速以速度为主、耐力为辅；战斗以力量为主、耐力为辅，并保留受控随机变化和耐力决胜规则。

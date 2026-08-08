@@ -2,6 +2,7 @@ package com.example.ai_companion.client;
 
 import com.example.ai_companion.agent.AgentMode;
 import com.example.ai_companion.client.minigame.Game2048Screen;
+import com.example.ai_companion.client.minigame.MinigameCenterScreen;
 import com.example.ai_companion.client.minigame.MinigameProgress;
 import com.example.ai_companion.client.minigame.MinesweeperScreen;
 import com.example.ai_companion.client.minigame.RockPaperScissorsScreen;
@@ -16,9 +17,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 /** Unified in-game configuration UI with AI, prompt and optional-feature sections. */
@@ -46,6 +45,7 @@ public final class PromptConfigScreen extends Screen {
 	private final PromptStore promptStore;
 	private final ClientSettings settings;
 	private final UiBackend backend;
+	private final Screen parent;
 	private final MinigameProgress minigameProgress;
 	private Tab tab = Tab.AI_SYSTEM;
 	private AiSection aiSection = AiSection.MANAGEMENT;
@@ -101,10 +101,15 @@ public final class PromptConfigScreen extends Screen {
 	private MultiLineEditBox promptBox;
 
 	public PromptConfigScreen(PromptStore promptStore, ClientSettings settings, UiBackend backend) {
+		this(promptStore, settings, backend, null);
+	}
+
+	public PromptConfigScreen(PromptStore promptStore, ClientSettings settings, UiBackend backend, Screen parent) {
 		super(Component.literal("WindowsdePC's AI Companion Mod · 统一设置"));
 		this.promptStore = promptStore;
 		this.settings = settings;
 		this.backend = backend;
+		this.parent = parent;
 		this.minigameProgress = MinigameProgress.load();
 		rushEnabled = settings.goldenSpearRushEnabled;
 		flexibleEquipmentEnabled = settings.flexibleEquipmentEnabled;
@@ -139,6 +144,12 @@ public final class PromptConfigScreen extends Screen {
 		selectedMode = settings.defaultAgentMode();
 		reloadPromptIds();
 		if (!promptIds.isEmpty()) loadPrompt(promptIds.getFirst());
+	}
+
+	@Override
+	public void onClose() {
+		if (minecraft != null && parent != null) minecraft.setScreenAndShow(parent);
+		else super.onClose();
 	}
 
 	@Override
@@ -215,28 +226,21 @@ public final class PromptConfigScreen extends Screen {
 
 	private void buildMinigamePanel(int left, int panelWidth) {
 		int cardWidth = (panelWidth - 14) / 2;
-		addRenderableWidget(Button.builder(Component.literal("开始：贪吃蛇"), button -> {
-			if (minecraft != null) minecraft.setScreenAndShow(new SnakeScreen(this, minigameProgress));
-		}).bounds(left, 56, cardWidth, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("开始：Minecraft 俄罗斯方块"), button -> {
-			if (minecraft != null) minecraft.setScreenAndShow(new TetrisScreen(this, minigameProgress));
-		}).bounds(left + cardWidth + 14, 56, cardWidth, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("开始：Minecraft 方块扫雷"), button -> {
-			if (minecraft != null) minecraft.setScreenAndShow(new MinesweeperScreen(this, minigameProgress));
-		}).bounds(left, 84, cardWidth, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("开始：2048"), button -> {
-			if (minecraft != null) minecraft.setScreenAndShow(new Game2048Screen(this, minigameProgress));
-		}).bounds(left + cardWidth + 14, 84, cardWidth, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("开始：AI 猜拳"), button -> {
-			if (minecraft != null) minecraft.setScreenAndShow(new RockPaperScissorsScreen(this,
-				minigameProgress));
-		}).bounds(left + panelWidth / 4, 112, panelWidth / 2, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("竞技宠物列表"), button ->
-			sendCommand("aiplayer pet list")).bounds(left, 140, cardWidth, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("打开小游戏弹窗（5 个纯本地游戏）"), button -> {
+			if (minecraft != null) minecraft.setScreenAndShow(new MinigameCenterScreen(this, minigameProgress));
+		}).bounds(left, 62, panelWidth, 24).build());
+		addRenderableWidget(Button.builder(Component.literal("打开 AI 宠物竞技"), button -> {
+			if (minecraft != null) minecraft.setScreenAndShow(new PetCompetitionScreen(this));
+		}).bounds(left, 102, cardWidth, 22).build());
+		addRenderableWidget(Button.builder(Component.literal("打开 AI 竞技场"), button -> {
+			if (minecraft != null) minecraft.setScreenAndShow(new AiArenaScreen(this));
+		}).bounds(left + cardWidth + 14, 102, cardWidth, 22).build());
+		addRenderableWidget(Button.builder(Component.literal("我的竞技宠物"), button ->
+			UiActionClient.send("pet.list")).bounds(left, 140, cardWidth, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("竞技宠物排行榜"), button ->
-			sendCommand("aiplayer pet leaderboard")).bounds(left + cardWidth + 14, 140,
+			UiActionClient.send("pet.leaderboard")).bounds(left + cardWidth + 14, 140,
 			cardWidth, 20).build());
-		status = "0.5.9 已完成小游戏中心 5/5，分级奖励为真实物品；记录保存在客户端配置目录";
+		status = "小游戏会在独立弹窗中纯本地运行；AI 宠物与 AI 竞技通过服务端 UI 通道运行";
 	}
 
 	private void buildLeisurePanel(int left, int panelWidth) {
@@ -255,7 +259,13 @@ public final class PromptConfigScreen extends Screen {
 
 	private void buildCompatibilityPanel(int left, int panelWidth) {
 		int cardWidth = (panelWidth - 14) / 2;
-		actionButton("检查 API 配置状态", "aiplayer config status", left, 70, cardWidth);
+		if (backend == UiBackend.ECLIPSE_UI) {
+			addRenderableWidget(Button.builder(Component.literal("打开 EclipseUI 现代化数值设置"), b -> {
+				if (minecraft != null) minecraft.setScreenAndShow(backend.createScreen(this, settings));
+			}).bounds(left, 42, panelWidth, 20).build());
+		}
+		addRenderableWidget(Button.builder(Component.literal("检查 API 配置状态"), b ->
+			UiActionClient.send("config.status")).bounds(left, 70, cardWidth, 20).build());
 		actionButton("检查游戏增强状态", "aiplayer feature status", left + cardWidth + 14,
 			70, cardWidth);
 		actionButton("检查自然事件配置", "aiplayer weather config status", left, 98, cardWidth);
@@ -292,7 +302,7 @@ public final class PromptConfigScreen extends Screen {
 		addRenderableWidget(Button.builder(Component.literal("保存 API 配置"), b -> saveApi())
 			.bounds(left, 220, 180, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("查询服务器状态"), b ->
-			sendCommand("aiplayer config status")).bounds(left + 190, 220, 180, 20).build());
+			UiActionClient.send("config.status")).bounds(left + 190, 220, 180, 20).build());
 	}
 
 	private void switchTab(Tab next) {
@@ -354,6 +364,12 @@ public final class PromptConfigScreen extends Screen {
 		ask.setResponder(value -> instruction = value);
 		addRenderableWidget(Button.builder(Component.literal("让 AI 思考"), b -> askAgent())
 			.bounds(left + panelWidth - 110, 205, 110, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("打开 AI 竞技场"), b -> {
+			if (minecraft != null) minecraft.setScreenAndShow(new AiArenaScreen(this));
+		}).bounds(left, 240, (panelWidth - 10) / 2, 22).build());
+		addRenderableWidget(Button.builder(Component.literal("打开 AI 宠物竞技"), b -> {
+			if (minecraft != null) minecraft.setScreenAndShow(new PetCompetitionScreen(this));
+		}).bounds(left + (panelWidth + 10) / 2, 240, (panelWidth - 10) / 2, 22).build());
 	}
 
 	private void buildPromptPanel(int left, int panelWidth) {
@@ -537,7 +553,7 @@ public final class PromptConfigScreen extends Screen {
 			if (!baseName.matches("[A-Za-z0-9_]{1,13}")) {
 				throw new IllegalArgumentException("名称前缀应为 1-13 位字母、数字或下划线");
 			}
-			sendCommand("aiplayer create-many " + baseName + " " + count);
+			UiActionClient.send("agent.create_many", baseName, Integer.toString(count));
 			status = "创建请求已发送；请以服务器返回的已验证数量与坐标为准";
 		} catch (RuntimeException error) {
 			status = "生成失败: " + error.getMessage();
@@ -592,14 +608,8 @@ public final class PromptConfigScreen extends Screen {
 			settings.setDefaultAgentMode(selectedMode);
 			settings.save();
 			if (selectedPlayer.isBlank()) throw new IllegalArgumentException("请展开并选择当前世界玩家");
-			String modeCommand = switch (selectedMode) {
-				case HUNTER -> "hunt";
-				case TEAMMATE -> "team";
-				case PVP_COACH -> "coach";
-				case IDLE -> "idle";
-			};
-			sendCommand("aiplayer " + modeCommand + " " + agentName + " " + selectedPlayer);
-			if (!promptId.isBlank()) sendCommand("aiplayer prompt assign " + agentName + " " + promptId);
+			UiActionClient.send("agent.mode", agentName, selectedMode.name(), selectedPlayer);
+			if (!promptId.isBlank()) UiActionClient.send("prompt.assign", agentName, promptId);
 			status = "已应用 " + modeLabel() + "，目标 " + selectedPlayer + "，提示词 " + promptId;
 		} catch (RuntimeException | IOException error) {
 			status = "应用失败: " + error.getMessage();
@@ -609,7 +619,7 @@ public final class PromptConfigScreen extends Screen {
 	private void setIdle() {
 		try {
 			validateAgent();
-			sendCommand("aiplayer idle " + agentName);
+			UiActionClient.send("agent.idle", agentName);
 			status = "已请求将 " + agentName + " 设为空闲";
 		} catch (RuntimeException error) {
 			status = "设置失败: " + error.getMessage();
@@ -620,7 +630,7 @@ public final class PromptConfigScreen extends Screen {
 		try {
 			validateAgent();
 			if (instruction.isBlank()) throw new IllegalArgumentException("任务不能为空");
-			sendCommand("aiplayer ask " + agentName + " " + instruction);
+			UiActionClient.send("agent.ask", agentName, instruction);
 			status = "AI 正在思考";
 		} catch (RuntimeException error) {
 			status = "请求失败: " + error.getMessage();
@@ -656,8 +666,7 @@ public final class PromptConfigScreen extends Screen {
 		try {
 			String id = PromptStore.validateId(promptId);
 			promptStore.put(id, promptText);
-			sendCommand("aiplayer prompt put " + id + " " + Base64.getUrlEncoder().withoutPadding()
-				.encodeToString(promptText.getBytes(StandardCharsets.UTF_8)));
+			UiActionClient.send("prompt.put", id, promptText);
 			reloadPromptIds();
 			promptIndex = Math.max(0, promptIds.indexOf(id));
 			status = "已保存并请求写入服务器: " + id;
@@ -670,7 +679,7 @@ public final class PromptConfigScreen extends Screen {
 		try {
 			String id = PromptStore.validateId(promptId);
 			promptStore.remove(id);
-			sendCommand("aiplayer prompt remove " + id);
+			UiActionClient.send("prompt.remove", id);
 			reloadPromptIds();
 			if (!promptIds.isEmpty()) loadPrompt(promptIds.getFirst());
 			rebuildPanel();
@@ -684,7 +693,7 @@ public final class PromptConfigScreen extends Screen {
 		try {
 			String id = PromptStore.validateId(promptId);
 			promptStore.reset(id);
-			sendCommand("aiplayer prompt reset " + id);
+			UiActionClient.send("prompt.reset", id);
 			loadPrompt(id);
 			rebuildPanel();
 			status = "已恢复内置预设: " + id;
@@ -698,7 +707,7 @@ public final class PromptConfigScreen extends Screen {
 		try {
 			validateAgent();
 			if (!promptStore.contains(promptId)) throw new IllegalArgumentException("请先保存提示词");
-			sendCommand("aiplayer prompt assign " + agentName + " " + promptId);
+			UiActionClient.send("prompt.assign", agentName, promptId);
 			status = "已请求将 " + promptId + " 分配给 " + agentName;
 		} catch (RuntimeException error) {
 			status = "分配失败: " + error.getMessage();
@@ -746,9 +755,8 @@ public final class PromptConfigScreen extends Screen {
 			settings.mercifulVoidEnabled = mercifulVoidEnabled;
 			settings.maximumWorldBorderEnabled = maximumWorldBorderEnabled;
 			settings.save();
-			sendCommand("aiplayer-world navigator " + worldNavigatorEnabled);
-			sendCommand("aiplayer-world merciful-void " + mercifulVoidEnabled);
-			sendCommand("aiplayer-world maximum-border " + maximumWorldBorderEnabled);
+			UiActionClient.send("world.save", Boolean.toString(worldNavigatorEnabled),
+				Boolean.toString(mercifulVoidEnabled), Boolean.toString(maximumWorldBorderEnabled));
 			status = "设置已保存；服务器端高危选项需要管理员权限";
 		} catch (RuntimeException | IOException error) {
 			status = "保存失败: " + error.getMessage();
@@ -764,12 +772,10 @@ public final class PromptConfigScreen extends Screen {
 			settings.rushStrength = parseDouble(rushStrength, 0.1, 4.0, "突进强度");
 			settings.flexibleEquipmentEnabled = flexibleEquipmentEnabled;
 			settings.save();
-			sendCommand("aiplayer feature enabled " + rushEnabled);
-			sendCommand("aiplayer feature durability-every " + settings.durabilityEvery);
-			sendCommand("aiplayer feature hunger-every " + settings.hungerEvery);
-			sendCommand("aiplayer feature hunger-cost " + settings.hungerCost);
-			sendCommand("aiplayer feature strength " + settings.rushStrength);
-			sendCommand("aiplayer feature flexible-equipment " + flexibleEquipmentEnabled);
+			UiActionClient.send("gameplay.save", Boolean.toString(rushEnabled),
+				Integer.toString(settings.durabilityEvery), Integer.toString(settings.hungerEvery),
+				Integer.toString(settings.hungerCost), Double.toString(settings.rushStrength),
+				Boolean.toString(flexibleEquipmentEnabled));
 			status = "已保存金矛突进与任意物品装备设置";
 		} catch (RuntimeException | IOException error) {
 			status = "保存失败: " + error.getMessage();
@@ -781,8 +787,10 @@ public final class PromptConfigScreen extends Screen {
 			if (!flexibleEquipmentEnabled) throw new IllegalStateException("请先开启任意物品装备模式");
 			settings.flexibleEquipmentEnabled = true;
 			settings.save();
-			sendCommand("aiplayer feature flexible-equipment true");
-			sendCommand("aiplayer shuffle-inventory");
+			UiActionClient.send("gameplay.save", Boolean.toString(rushEnabled),
+				Integer.toString(settings.durabilityEvery), Integer.toString(settings.hungerEvery),
+				Integer.toString(settings.hungerCost), Double.toString(settings.rushStrength), "true");
+			UiActionClient.send("inventory.shuffle");
 			status = "已请求打乱背包栏、装备栏和副手；快捷栏不会变化";
 		} catch (RuntimeException | IOException error) {
 			status = "打乱失败: " + error.getMessage();
@@ -803,13 +811,10 @@ public final class PromptConfigScreen extends Screen {
 			settings.zoomFactor = parseDouble(zoomFactor, 1.5, 12.0, "缩放倍率");
 			settings.zoomTransitionSeconds = parseDouble(zoomTransitionSeconds, 0.0, 1.0, "过渡时间");
 			settings.save();
-			sendCommand("aiplayer spyglass enabled " + settings.spyglassHighlightEnabled);
-			sendCommand("aiplayer spyglass radius-chunks " + settings.spyglassRadiusChunks);
-			sendCommand("aiplayer spyglass hold-seconds " + settings.spyglassHoldSeconds);
-			sendCommand("aiplayer spyglass duration-seconds " + settings.spyglassDurationSeconds);
-			sendCommand("aiplayer spyglass target " + settings.spyglassTargetCondition.toLowerCase(java.util.Locale.ROOT));
-			sendCommand("aiplayer spyglass cooldown-seconds " + settings.spyglassCooldownSeconds);
-			sendCommand("aiplayer spyglass max-targets " + settings.spyglassMaxTargets);
+			UiActionClient.send("spyglass.save", Boolean.toString(settings.spyglassHighlightEnabled),
+				Integer.toString(settings.spyglassRadiusChunks), Integer.toString(settings.spyglassHoldSeconds),
+				Integer.toString(settings.spyglassDurationSeconds), settings.spyglassTargetCondition,
+				Integer.toString(settings.spyglassCooldownSeconds), Integer.toString(settings.spyglassMaxTargets));
 			status = "已保存望远镜发光与缩放设置";
 		} catch (RuntimeException | IOException error) {
 			status = "保存失败: " + error.getMessage();
@@ -842,12 +847,8 @@ public final class PromptConfigScreen extends Screen {
 			settings.apiBase = apiBase.strip();
 			settings.model = apiModel.strip();
 			settings.save();
-			sendCommand("aiplayer config endpoint " + settings.apiBase);
-			sendCommand("aiplayer config model " + settings.model);
-			if (!apiToken.isBlank()) {
-				sendCommand("aiplayer config token " + apiToken.strip());
-				apiToken = "";
-			}
+			UiActionClient.send("config.save", settings.apiBase, settings.model, apiToken.strip());
+			apiToken = "";
 			status = "已请求保存 API 配置；令牌不会写入客户端设置";
 		} catch (RuntimeException | IOException error) {
 			status = "API 保存失败: " + error.getMessage();

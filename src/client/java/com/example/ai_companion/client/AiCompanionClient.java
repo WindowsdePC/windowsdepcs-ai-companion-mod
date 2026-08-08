@@ -5,6 +5,7 @@ import com.example.ai_companion.config.PromptStore;
 import com.example.ai_companion.gameplay.FlexibleEquipmentMode;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.client.gui.screens.Screen;
 import com.example.ai_companion.client.navigation.NavigationClientController;
 import com.example.ai_companion.client.navigation.NavigationHud;
 import com.example.ai_companion.client.maid.MaidClientRegistry;
@@ -29,8 +30,7 @@ public final class AiCompanionClient implements ClientModInitializer {
 			boolean pressed = InputConstants.isKeyDown(client.getWindow(), settings.primaryCode())
 				&& InputConstants.isKeyDown(client.getWindow(), settings.secondaryCode());
 			if (pressed && !chordHeld[0] && client.getConnection() != null) {
-				PromptConfigScreen dashboard = new PromptConfigScreen(localPrompts, settings, backend);
-				client.setScreenAndShow(backend.createScreen(dashboard, settings));
+				client.setScreenAndShow(new PromptConfigScreen(localPrompts, settings, backend));
 			}
 			chordHeld[0] = pressed;
 			boolean navigatorPressed = InputConstants.isKeyDown(client.getWindow(), settings.navigatorCode());
@@ -40,5 +40,11 @@ public final class AiCompanionClient implements ClientModInitializer {
 			}
 			navigatorHeld[0] = navigatorPressed;
 		});
+	}
+
+	/** Used by Mod Menu and other client launchers to open the complete, actionable dashboard. */
+	public static Screen createConfigScreen(Screen parent) {
+		return new PromptConfigScreen(PromptStore.loadClient(), ClientSettings.load(),
+			UiBackend.detectOrThrow(), parent);
 	}
 }
