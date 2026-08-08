@@ -9,7 +9,8 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": ["com.example.ai_companion.AiCompanionMod"],
-		"client": ["com.example.ai_companion.client.AiCompanionClient"]
+		"client": ["com.example.ai_companion.client.AiCompanionClient"],
+		"modmenu": ["com.example.ai_companion.client.AiCompanionModMenuApi"]
 	},
 	"mixins": [
 		"ai_companion.mixins.json",
@@ -25,6 +26,7 @@
 		"fabric-api": ">=0.155.2"
 	},
 	"suggests": {
+		"modmenu": "*",
 		"eclipseui": "*",
 		"cloth-config": "*",
 		"voicechat": "*",

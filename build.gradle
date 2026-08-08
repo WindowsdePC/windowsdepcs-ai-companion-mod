@@ -23,6 +23,10 @@ loom {
 
 repositories {
 	maven {
+		name = "Terraformers"
+		url = "https://maven.terraformersmc.com/"
+	}
+	maven {
 		name = "Modrinth"
 		url = "https://api.modrinth.com/maven"
 		content { includeGroup "maven.modrinth" }
@@ -37,6 +41,7 @@ dependencies {
 	// Alternative client UI backends. Neither is bundled; runtime routing prefers EclipseUI.
 	clientCompileOnly "maven.modrinth:eclipseui:EW0sBZm4"
 	clientCompileOnly "maven.modrinth:cloth-config:Nv3xnWXd"
+	clientCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 
 	testImplementation platform("org.junit:junit-bom:5.13.4")
 	testImplementation "org.junit.jupiter:junit-jupiter"

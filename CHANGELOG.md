@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.8
+
+- 为 Minecraft 26.2 Fabric 与 1.20.1 Fabric 注册标准 Mod Menu 配置屏幕工厂。
+- Mod Menu 的“配置”按钮直接打开完整九分类管理中心，并正确返回原模组列表。
+- 为 1.20.1 Forge 注册 Forge 自带模组列表配置入口；不把 Fabric Mod Menu 误列为 Forge 依赖。
+- README 与发行说明补齐 Mod Menu 可选依赖名称、适用目标和网址。
+
 ## 0.9.7
 
 - V+B 直接打开完整九分类管理中心，修复 EclipseUI 环境中小游戏、AI 宠物和 AI 竞技入口被返回页隐藏的问题。
