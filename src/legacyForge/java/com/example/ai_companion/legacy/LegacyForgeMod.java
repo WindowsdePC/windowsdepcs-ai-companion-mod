@@ -63,6 +63,8 @@ public final class LegacyForgeMod {
 	private static MinecraftServer server;
 	private static final LegacyWeatherManager WEATHER = new LegacyWeatherManager(
 		DATA_FILE.resolveSibling("ai_companion-weather-1.20.1.json"));
+	private static final LegacySpyglassManager SPYGLASS = new LegacySpyglassManager(
+		DATA_FILE.resolveSibling("ai_companion-spyglass-1.20.1.json"));
 
 	public LegacyForgeMod() {
 		LegacyWeatherItems.register();
@@ -107,6 +109,7 @@ public final class LegacyForgeMod {
 				.then(literal("assign").requires(source -> source.hasPermission(2)).then(argument("name", StringArgumentType.word())
 					.then(argument("id", StringArgumentType.word()).executes(LegacyForgeMod::promptAssign)))))
 			.then(literal("feature").then(literal("status").executes(LegacyForgeMod::featureStatus)))
+			.then(SPYGLASS.command())
 			.then(literal("weather")
 				.then(literal("status").executes(LegacyForgeMod::weatherStatus))
 				.then(literal("forecast").executes(LegacyForgeMod::weatherForecast))
@@ -207,12 +210,13 @@ public final class LegacyForgeMod {
 
 	@SubscribeEvent
 	public void serverStopping(ServerStoppingEvent event) {
+		SPYGLASS.close();
 		save();
 	}
 
 	@SubscribeEvent
 	public void serverTick(TickEvent.ServerTickEvent event) {
-		if (event.phase == TickEvent.Phase.END && server != null) WEATHER.tick(server);
+		if (event.phase == TickEvent.Phase.END && server != null) { WEATHER.tick(server); SPYGLASS.tick(server); }
 	}
 
 	private static int create(CommandContext<CommandSourceStack> context) {

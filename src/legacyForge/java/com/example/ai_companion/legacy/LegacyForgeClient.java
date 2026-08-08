@@ -50,6 +50,10 @@ public final class LegacyForgeClient {
 		private String agentName = "AI_1";
 		private String prefix = "AI_";
 		private String count = "2";
+		private boolean spyglassEnabled = true;
+		private String spyglassRadius = "10";
+		private String spyglassHold = "1";
+		private String spyglassDuration = "120";
 		private String status = "所有按钮都会向服务器发送真实命令";
 		private CompanionScreen(boolean navigation) { super(Component.literal(navigation ? "AI 导航" : "WindowsdePC's AI Companion Mod")); this.navigation = navigation; }
 		@Override protected void init() {
@@ -84,10 +88,7 @@ public final class LegacyForgeClient {
 				case AI -> buildAi(left, panelWidth);
 				case SHORTCUTS -> status = "V+B 打开管理；F8 查询位置；按住 C 缩放；G 打开导航";
 				case GAMEPLAY -> button("查看 1.20.1 可用功能", "aiplayer feature status", left, 65, panelWidth);
-				case CLIENT -> {
-					button("刷新 AI 位置", "aiplayer positions", left, 65, panelWidth);
-					button("查看功能状态", "aiplayer feature status", left, 93, panelWidth);
-				}
+				case CLIENT -> buildSpyglass(left, panelWidth);
 				case MINIGAMES -> {
 					button("竞技宠物列表", "aiplayer pet list", left, 65, panelWidth);
 					button("竞技宠物排行榜", "aiplayer pet leaderboard", left, 93, panelWidth);
@@ -122,6 +123,25 @@ public final class LegacyForgeClient {
 				.bounds(left + panelWidth - 115, 83, 115, 20).build());
 			button("AI 列表", "aiplayer list", left, 111, (panelWidth - 8) / 2);
 			button("AI 位置", "aiplayer positions", left + (panelWidth + 8) / 2, 111, (panelWidth - 8) / 2);
+		}
+
+		private void buildSpyglass(int left, int panelWidth) {
+			addRenderableWidget(Button.builder(Component.literal("望远镜生物发光：" + (spyglassEnabled ? "开启" : "关闭")),
+				button -> { spyglassEnabled = !spyglassEnabled; rebuild(); }).bounds(left, 45, panelWidth, 20).build());
+			EditBox radius = new EditBox(font, left, 73, (panelWidth - 16) / 3, 20, Component.literal("半径区块"));
+			radius.setValue(spyglassRadius); radius.setResponder(value -> spyglassRadius = value); addRenderableWidget(radius);
+			EditBox hold = new EditBox(font, left + (panelWidth + 8) / 3, 73, (panelWidth - 16) / 3, 20, Component.literal("观察秒数"));
+			hold.setValue(spyglassHold); hold.setResponder(value -> spyglassHold = value); addRenderableWidget(hold);
+			EditBox duration = new EditBox(font, left + 2 * (panelWidth + 8) / 3, 73, (panelWidth - 16) / 3, 20, Component.literal("持续秒数"));
+			duration.setValue(spyglassDuration); duration.setResponder(value -> spyglassDuration = value); addRenderableWidget(duration);
+			addRenderableWidget(Button.builder(Component.literal("保存望远镜设置"), button -> {
+				command("aiplayer spyglass enabled " + spyglassEnabled);
+				command("aiplayer spyglass radius-chunks " + spyglassRadius);
+				command("aiplayer spyglass hold-seconds " + spyglassHold);
+				command("aiplayer spyglass duration-seconds " + spyglassDuration);
+			}).bounds(left, 105, (panelWidth - 8) / 2, 20).build());
+			button("查看望远镜设置", "aiplayer spyglass status", left + (panelWidth + 8) / 2, 105, (panelWidth - 8) / 2);
+			status = "默认：观察1秒，半径10区块，发光120秒；每次举镜只触发一次";
 		}
 
 		private void button(String label, String command, int x, int y, int buttonWidth) {
