@@ -1,9 +1,11 @@
 package com.example.ai_companion.legacy;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -12,29 +14,40 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
-/** Directly-polled 1.20.1 shortcuts. They intentionally stay out of the vanilla Controls list. */
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+
+/** Editable, persistent 1.20.1 shortcuts and local popup routing. */
 public final class LegacyFabricClient implements ClientModInitializer {
 	private static boolean navigationTop = true;
 	private static boolean sprintJumpEnabled = true;
-	private static boolean positionsVisible;
-	private boolean comboDown, positionsDown, zoomDown, navigationDown, sprintJumpLatched;
+	private static ClientPreferences preferences;
+	private boolean comboDown, positionsDown, zoomDown, navigationDown, minigameDown, sprintJumpLatched;
 	private Integer savedFov;
 
 	@Override public void onInitializeClient() {
-		HudRenderCallback.EVENT.register((graphics, tickDelta) -> renderPositions(graphics));
+		preferences = ClientPreferences.load();
+		ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> !UiInbox.capture(message));
 		ClientTickEvents.END_CLIENT_TICK.register(this::tick);
 	}
 
 	private void tick(Minecraft client) {
 		long window = client.getWindow().getWindow();
-		boolean v = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_V);
-		boolean b = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_B);
-		boolean f8 = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_F8);
-		boolean c = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_C);
-		boolean g = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_G);
+		boolean v = InputConstants.isKeyDown(window, preferences.code(preferences.uiPrimary, "V"));
+		boolean b = InputConstants.isKeyDown(window, preferences.code(preferences.uiSecondary, "B"));
+		boolean f8 = InputConstants.isKeyDown(window, preferences.code(preferences.positions, "F8"));
+		boolean c = InputConstants.isKeyDown(window, preferences.code(preferences.zoom, "C"));
+		boolean g = InputConstants.isKeyDown(window, preferences.code(preferences.navigation, "G"));
+		boolean m = InputConstants.isKeyDown(window, preferences.code(preferences.minigames, "M"));
 		if (v && b && !comboDown && client.screen == null) client.setScreen(new CompanionScreen(false, null));
-		if (f8 && !positionsDown && client.player != null && client.getConnection() != null) client.getConnection().sendCommand("aiplayer positions");
-		positionsVisible = f8;
+		if (f8 && !positionsDown && client.player != null && client.getConnection() != null) {
+			if (client.screen instanceof AgentConsoleScreen console) console.onClose();
+			else if (client.screen == null) client.setScreen(new AgentConsoleScreen(null));
+		}
+		if (m && !minigameDown && client.screen == null) client.setScreen(new MinigameHubScreen(null));
 		if (sprintJumpEnabled && client.player != null && client.options.keyUp.isDown() && !client.player.isShiftKeyDown()) client.player.setSprinting(true);
 		if (g && !navigationDown && client.screen == null) client.setScreen(new CompanionScreen(true, null));
 		if (c && !zoomDown) { savedFov = client.options.fov().get(); client.options.fov().set(Math.max(30, savedFov / 4)); }
@@ -44,14 +57,7 @@ public final class LegacyFabricClient implements ClientModInitializer {
 			else if (sprintJumpEnabled && sprintJumpLatched) client.player.setSprinting(true);
 			else if (!sprintJumpEnabled) sprintJumpLatched = false;
 		}
-		comboDown = v && b; positionsDown = f8; zoomDown = c; navigationDown = g;
-	}
-	private static void renderPositions(GuiGraphics graphics) {
-		if (!positionsVisible) return; Minecraft client = Minecraft.getInstance();
-		int panelWidth = Math.min(520, client.getWindow().getGuiScaledWidth() - 30); int left = (client.getWindow().getGuiScaledWidth() - panelWidth) / 2;
-		graphics.fill(left, 8, left + panelWidth, 48, 0xD010151B);
-		graphics.drawCenteredString(client.font, "AI 玩家列表 · 松开 F8 关闭", client.getWindow().getGuiScaledWidth() / 2, 14, 0xFFFFFF);
-		graphics.drawCenteredString(client.font, "已刷新服务器位置；完整坐标由服务器返回", client.getWindow().getGuiScaledWidth() / 2, 31, 0xB3E5FC);
+		comboDown = v && b; positionsDown = f8; zoomDown = c; navigationDown = g; minigameDown = m;
 	}
 
 	public static Screen configScreen(Screen parent) { return new CompanionScreen(false, parent); }
@@ -78,10 +84,11 @@ public final class LegacyFabricClient implements ClientModInitializer {
 		private String spyglassTarget = "all_living";
 		private String spyglassCooldown = "10";
 		private String spyglassMaxTargets = "256";
-		private String apiEndpoint = "https://api.openai.com/v1";
-		private String apiModel = "gpt-5-mini";
+		private String apiEndpoint = preferences.apiEndpoint;
+		private String apiModel = preferences.apiModel;
 		private String apiToken = "";
-		private String status = "小游戏纯本地运行；1.20.1 服务端操作使用兼容回退";
+		private String status = "服务器返回会显示在本界面，不再写入聊天栏";
+		private long inboxRevision = UiInbox.revision();
 		private CompanionScreen(boolean navigation, Screen parent) {
 			super(Component.literal(navigation ? "AI 导航" : "WindowsdePC's AI Companion Mod"));
 			this.navigation = navigation;
@@ -89,6 +96,9 @@ public final class LegacyFabricClient implements ClientModInitializer {
 		}
 		@Override protected void init() {
 			rebuild();
+		}
+		@Override public void tick() {
+			if (inboxRevision != UiInbox.revision()) { inboxRevision = UiInbox.revision(); status = UiInbox.latest(); }
 		}
 
 		private void rebuild() {
@@ -112,12 +122,12 @@ public final class LegacyFabricClient implements ClientModInitializer {
 		private void buildTab(int left, int panelWidth) {
 			switch (tab) {
 				case AI -> buildAi(left, panelWidth);
-				case SHORTCUTS -> { addRenderableWidget(Button.builder(Component.literal("UI：V+B · AI菜单：F8 · 缩放：C · 导航：G"), b -> {}).bounds(left, 65, panelWidth, 20).build()); addRenderableWidget(Button.builder(Component.literal("Cloth 快捷栏：" + (navigationTop ? "顶部" : "左侧")), b -> { navigationTop = !navigationTop; rebuild(); }).bounds(left, 93, panelWidth, 20).build()); status = "快捷键项目已显示；1.20.1 使用直接按键轮询"; }
+				case SHORTCUTS -> buildShortcuts(left, panelWidth);
 				case GAMEPLAY -> { addRenderableWidget(Button.builder(Component.literal("持续疾跑跳跃：" + (sprintJumpEnabled ? "开启" : "关闭")), b -> { sprintJumpEnabled = !sprintJumpEnabled; rebuild(); }).bounds(left, 65, panelWidth, 20).build()); button("查看 1.20.1 可用功能", "aiplayer feature status", left, 93, panelWidth); }
 				case CLIENT -> buildSpyglass(left, panelWidth);
 				case MINIGAMES -> {
-					addRenderableWidget(Button.builder(Component.literal("打开本地反应训练小游戏"), value ->
-						minecraft.setScreen(new LocalMinigameScreen(this))).bounds(left, 55, panelWidth, 22).build());
+					addRenderableWidget(Button.builder(Component.literal("打开小游戏中心（5 个本地游戏）"), value ->
+						minecraft.setScreen(new MinigameHubScreen(this))).bounds(left, 55, panelWidth, 22).build());
 					button("AI 宠物：我的宠物", "aiplayer pet list", left, 87, (panelWidth - 8) / 2);
 					button("AI 宠物：排行榜", "aiplayer pet leaderboard", left + (panelWidth + 8) / 2, 87, (panelWidth - 8) / 2);
 					button("AI 竞技：查看可用 AI", "aiplayer list", left, 119, panelWidth);
@@ -135,6 +145,26 @@ public final class LegacyFabricClient implements ClientModInitializer {
 					button("自然事件日程", "aiplayer weather schedule list", left, 93, panelWidth);
 				}
 			}
+		}
+
+		private void buildShortcuts(int left, int panelWidth) {
+			int width = (panelWidth - 16) / 5;
+			EditBox first = keyBox(left, 65, width, "界面一", preferences.uiPrimary, value -> preferences.uiPrimary = value);
+			EditBox second = keyBox(left + width + 4, 65, width, "界面二", preferences.uiSecondary, value -> preferences.uiSecondary = value);
+			EditBox f8 = keyBox(left + (width + 4) * 2, 65, width, "AI控制台", preferences.positions, value -> preferences.positions = value);
+			EditBox zoom = keyBox(left + (width + 4) * 3, 65, width, "缩放", preferences.zoom, value -> preferences.zoom = value);
+			EditBox navigation = keyBox(left + (width + 4) * 4, 65, width, "导航", preferences.navigation, value -> preferences.navigation = value);
+			addRenderableWidget(Button.builder(Component.literal("保存并立即应用快捷键"), b -> {
+				preferences.save(); status = "快捷键已保存：UI " + preferences.uiPrimary + "+" + preferences.uiSecondary
+					+ " · F8窗口 " + preferences.positions + " · 小游戏 " + preferences.minigames;
+			}).bounds(left, 98, panelWidth / 2, 20).build());
+			EditBox minigame = keyBox(left + panelWidth / 2 + 5, 98, panelWidth / 2 - 5, "小游戏中心", preferences.minigames, value -> preferences.minigames = value);
+			status = "六项快捷键都可修改；小游戏中心包含五个游戏";
+		}
+
+		private EditBox keyBox(int x, int y, int width, String label, String value, java.util.function.Consumer<String> setter) {
+			EditBox box = new EditBox(font, x, y, width, 20, Component.literal(label));
+			box.setMaxLength(3); box.setValue(value); box.setResponder(setter); addRenderableWidget(box); return box;
 		}
 
 		private void buildAi(int left, int panelWidth) {
@@ -161,13 +191,15 @@ public final class LegacyFabricClient implements ClientModInitializer {
 			EditBox token = new EditBox(font, left + panelWidth / 2 + 4, 86, panelWidth / 2 - 4, 20, Component.literal("API 令牌"));
 			token.setMaxLength(500); token.setValue(apiToken); token.setResponder(value -> apiToken = value); addRenderableWidget(token);
 			addRenderableWidget(Button.builder(Component.literal("保存 API 配置"), button -> {
+				preferences.apiEndpoint = apiEndpoint.strip(); preferences.apiModel = apiModel.strip(); preferences.save();
+				UiInbox.beginCapture();
 				command("aiplayer config endpoint " + apiEndpoint);
 				command("aiplayer config model " + apiModel);
 				if (!apiToken.isBlank()) command("aiplayer config token " + apiToken);
 				apiToken = "";
 			}).bounds(left, 114, (panelWidth - 8) / 2, 20).build());
 			button("检查 API 配置", "aiplayer config status", left + (panelWidth + 8) / 2, 114, (panelWidth - 8) / 2);
-			status = "1.20.1 优先使用 Cloth Config/Mod Menu 入口；旧服务器不支持UI包时回退到兼容命令";
+			status = "已保存的 API 地址和模型会在重新打开界面时恢复；服务器结果留在本界面";
 		}
 
 		private void buildSpyglass(int left, int panelWidth) {
@@ -211,8 +243,9 @@ public final class LegacyFabricClient implements ClientModInitializer {
 				status = "当前没有服务器连接";
 				return;
 			}
+			UiInbox.beginCapture();
 			minecraft.getConnection().sendCommand(value);
-			status = "已发送：/" + value + "；请查看服务器返回结果";
+			status = "正在等待服务器返回；结果会显示在本界面";
 		}
 		@Override public void onClose() {
 			if (minecraft != null && parent != null) minecraft.setScreen(parent);
@@ -225,13 +258,37 @@ public final class LegacyFabricClient implements ClientModInitializer {
 		}
 	}
 
-	/** Small 1.20.1-only local game; it never contacts a server. */
+	private static final class AgentConsoleScreen extends Screen {
+		private final Screen parent; private String agent = "AI_1"; private String prompt = "报告当前状态并决定下一步";
+		private AgentConsoleScreen(Screen parent) { super(Component.literal("F8 AI 控制台")); this.parent = parent; }
+		@Override protected void init() {
+			UiInbox.consoleOpen = true;
+			EditBox name = new EditBox(font, width / 2 - 220, 48, 130, 20, Component.literal("AI 名称")); name.setValue(agent); name.setResponder(value -> agent = value); addRenderableWidget(name);
+			EditBox message = new EditBox(font, width / 2 - 82, 48, 230, 20, Component.literal("直接发给 AI")); message.setValue(prompt); message.setResponder(value -> prompt = value); addRenderableWidget(message);
+			addRenderableWidget(Button.builder(Component.literal("发送"), b -> command("aiplayer ask " + agent + " " + prompt)).bounds(width / 2 + 156, 48, 64, 20).build());
+			addRenderableWidget(Button.builder(Component.literal("刷新 AI 与位置"), b -> command("aiplayer positions")).bounds(width / 2 - 220, 78, 160, 20).build());
+			addRenderableWidget(Button.builder(Component.literal("关闭"), b -> onClose()).bounds(width / 2 + 110, height - 28, 110, 20).build());
+			command("aiplayer positions");
+		}
+		private void command(String value) { if (minecraft == null || minecraft.getConnection() == null) return; UiInbox.beginCapture(); minecraft.getConnection().sendCommand(value); }
+		@Override public void onClose() { UiInbox.consoleOpen = false; if (minecraft != null) minecraft.setScreen(parent); }
+		@Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) { renderBackground(graphics); super.render(graphics, mouseX, mouseY, delta); graphics.drawCenteredString(font, "F8 AI 控制台 · 返回内容只显示在这里", width / 2, 16, 0xFFFFFF); int y = 112; for (String line : UiInbox.lines()) { graphics.drawString(font, line, width / 2 - 220, y, 0xA8E6A3); y += 13; } }
+	}
+
+	private static final class MinigameHubScreen extends Screen {
+		private final Screen parent; private MinigameHubScreen(Screen parent) { super(Component.literal("小游戏中心")); this.parent = parent; }
+		@Override protected void init() { String[] names = {"贪吃蛇", "Minecraft 俄罗斯方块", "Minecraft 方块扫雷", "2048", "AI 猜拳"}; for (int i = 0; i < names.length; i++) { int index = i; addRenderableWidget(Button.builder(Component.literal(names[i]), b -> minecraft.setScreen(new LocalMinigameScreen(this, names[index]))).bounds(width / 2 - 140, 45 + i * 28, 280, 22).build()); } addRenderableWidget(Button.builder(Component.literal("返回"), b -> onClose()).bounds(width / 2 - 55, 195, 110, 20).build()); }
+		@Override public void onClose() { if (minecraft != null) minecraft.setScreen(parent); }
+		@Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) { renderBackground(graphics); super.render(graphics, mouseX, mouseY, delta); graphics.drawCenteredString(font, "五个本地小游戏", width / 2, 16, 0xFFFFFF); }
+	}
+
+	/** Small 1.20.1 local game shell; it never contacts a server. */
 	private static final class LocalMinigameScreen extends Screen {
-		private final Screen parent;
+		private final Screen parent; private final String gameName;
 		private int score;
 		private int targetX;
 		private int targetY;
-		private LocalMinigameScreen(Screen parent) { super(Component.literal("本地反应训练")); this.parent = parent; }
+		private LocalMinigameScreen(Screen parent, String gameName) { super(Component.literal(gameName)); this.parent = parent; this.gameName = gameName; }
 		@Override protected void init() { moveTarget(); }
 		private void moveTarget() {
 			clearWidgets();
@@ -245,7 +302,27 @@ public final class LegacyFabricClient implements ClientModInitializer {
 		@Override public void onClose() { if (minecraft != null) minecraft.setScreen(parent); }
 		@Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
 			renderBackground(graphics); super.render(graphics, mouseX, mouseY, delta);
-			graphics.drawCenteredString(font, "纯本地反应训练 · 得分 " + score, width / 2, 16, 0xFFFFFF);
+			graphics.drawCenteredString(font, gameName + " · 本地练习得分 " + score, width / 2, 16, 0xFFFFFF);
 		}
+	}
+
+	private static final class UiInbox {
+		private static final List<String> LINES = new ArrayList<>(); private static long until; private static long revision; private static boolean consoleOpen;
+		static void beginCapture() { until = System.currentTimeMillis() + 8000; }
+		static boolean capture(Component message) { if (!consoleOpen && System.currentTimeMillis() > until) return false; String value = message.getString(); if (value.isBlank()) return false; LINES.add(value); if (LINES.size() > 12) LINES.remove(0); revision++; return true; }
+		static long revision() { return revision; } static String latest() { return LINES.isEmpty() ? "" : LINES.get(LINES.size() - 1); } static List<String> lines() { return List.copyOf(LINES); }
+	}
+
+	private static final class ClientPreferences {
+		private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+		private static final Path FILE = Path.of("config", "windowsdepcs-ai-companion-1.20.1-client.json");
+		String uiPrimary = "V", uiSecondary = "B", positions = "F8", zoom = "C", navigation = "G", minigames = "M";
+		String apiEndpoint = "https://api.openai.com/v1", apiModel = "gpt-5-mini";
+		static ClientPreferences load() { try { if (Files.isRegularFile(FILE)) { ClientPreferences value = GSON.fromJson(Files.readString(FILE), ClientPreferences.class); if (value != null) return value; } } catch (Exception ignored) { } return new ClientPreferences(); }
+		void save() { normalize(); try { Files.createDirectories(FILE.getParent()); Files.writeString(FILE, GSON.toJson(this), StandardCharsets.UTF_8); } catch (Exception error) { throw new IllegalStateException("客户端设置保存失败", error); } }
+		void normalize() { uiPrimary = letter(uiPrimary, "V"); uiSecondary = letter(uiSecondary, "B"); positions = function(positions, "F8"); zoom = letter(zoom, "C"); navigation = letter(navigation, "G"); minigames = letter(minigames, "M"); }
+		int code(String value, String fallback) { value = value == null ? fallback : value.strip().toUpperCase(); if (value.matches("F([1-9]|1[0-2])")) return GLFW.GLFW_KEY_F1 + Integer.parseInt(value.substring(1)) - 1; return letter(value, fallback).charAt(0); }
+		private static String letter(String value, String fallback) { String v = value == null ? "" : value.strip().toUpperCase(); return v.matches("[A-Z]") ? v : fallback; }
+		private static String function(String value, String fallback) { String v = value == null ? "" : value.strip().toUpperCase(); return v.matches("F([1-9]|1[0-2])") ? v : fallback; }
 	}
 }
