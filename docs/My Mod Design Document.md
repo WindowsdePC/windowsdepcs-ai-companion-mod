@@ -127,6 +127,14 @@ WindowsdePC's AI Companion Mod
 - Minecraft 1.20.1 Fabric 与 Forge 分支使用各自旧版 `LevelResource`、生命周期事件和 Java 17 命名实现同一语义。
 
 
+0.9.10-beta.1 配置、快捷键与 F8 交互修复状态：
+
+- API 配置页面以服务器持久化快照为准，保存后回传并刷新客户端镜像，重新打开不会恢复旧值。
+- 模组内快捷键页可保存并立即应用 UI、F8 控制台、缩放、导航和小游戏中心按键；默认 M 打开五游戏中心。
+- F8 改为真正的 AI 控制台弹窗，AI 请求与服务器结果直接显示在弹窗消息区，不写入聊天栏。
+- Minecraft 1.20.1 Fabric/Forge 使用 Java 17 和旧版 `Screen`、`GuiGraphics`、`ResourceLocation` 体系实现同一可见语义。
+
+
 0.6.9 实现状态：
 
 - 已完成默认关闭的结构、群系与维度指南针；目录读取服务器动态注册表并支持模组内容

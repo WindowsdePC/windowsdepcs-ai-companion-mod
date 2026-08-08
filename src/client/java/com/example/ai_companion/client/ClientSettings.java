@@ -18,6 +18,7 @@ public final class ClientSettings {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Path PATH = FabricLoader.getInstance().getConfigDir()
 		.resolve("windowsdepcs-ai-companion-client-settings.json");
+	private static ClientSettings shared;
 
 	public String primaryKey = "V";
 	public String secondaryKey = "B";
@@ -81,6 +82,12 @@ public final class ClientSettings {
 			AiCompanionMod.LOGGER.error("Cannot read client UI settings {}; using defaults", PATH, error);
 			return new ClientSettings();
 		}
+	}
+
+	/** One live settings object keeps modified shortcuts effective for every client controller. */
+	public static synchronized ClientSettings shared() {
+		if (shared == null) shared = load();
+		return shared;
 	}
 
 	public ClientSettings normalized() {

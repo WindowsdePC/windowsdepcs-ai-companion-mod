@@ -19,7 +19,7 @@ public final class AiCompanionClient implements ClientModInitializer {
 		UiActionClient.initialize();
 		UiBackend backend = UiBackend.detectOrThrow();
 		PromptStore localPrompts = PromptStore.loadClient();
-		ClientSettings settings = ClientSettings.load();
+		ClientSettings settings = ClientSettings.shared();
 		FlexibleEquipmentMode.configureClient(() -> settings.flexibleEquipmentEnabled);
 		ScreenZoomController.initialize(settings);
 		ClientPerformanceController.initialize(settings);
@@ -69,7 +69,7 @@ public final class AiCompanionClient implements ClientModInitializer {
 
 	/** Used by Mod Menu and other client launchers to open the complete, actionable dashboard. */
 	public static Screen createConfigScreen(Screen parent) {
-		return new PromptConfigScreen(PromptStore.loadClient(), ClientSettings.load(),
+		return new PromptConfigScreen(PromptStore.loadClient(), ClientSettings.shared(),
 			UiBackend.detectOrThrow(), parent);
 	}
 }
