@@ -23,6 +23,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.LevelResource;
 
 import java.io.IOException;
 import java.net.URI;
@@ -54,11 +55,13 @@ public final class LegacyFabricMod implements ModInitializer {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Path DATA_FILE = net.fabricmc.loader.api.FabricLoader.getInstance()
 		.getConfigDir().resolve("ai_companion-1.20.1.json");
+	private static final String WORLD_AGENT_FILE_NAME = "windowsdepcs-ai-companion-agent-identities-1.20.1.json";
 	private static final Map<String, RuntimeAgent> AGENTS = new LinkedHashMap<>();
 	private static final HttpClient HTTP = HttpClient.newBuilder()
 		.connectTimeout(Duration.ofSeconds(15)).build();
 	private static volatile State state = new State();
 	private static MinecraftServer server;
+	private static Path worldAgentFile;
 	private static final LegacyWeatherManager WEATHER = new LegacyWeatherManager(
 		DATA_FILE.resolveSibling("ai_companion-weather-1.20.1.json"));
 	private static final LegacySpyglassManager SPYGLASS = new LegacySpyglassManager(
@@ -193,20 +196,42 @@ public final class LegacyFabricMod implements ModInitializer {
 				.then(literal("compatibility").executes(LegacyFabricMod::compatibility))));
 
 		ServerLifecycleEvents.SERVER_STARTED.register(LegacyFabricMod::start);
-		ServerLifecycleEvents.SERVER_STOPPING.register(ignored -> { save(); SPYGLASS.close(); });
+		ServerLifecycleEvents.SERVER_STOPPING.register(ignored -> stop());
 		ServerTickEvents.END_SERVER_TICK.register(WEATHER::tick);
 		ServerTickEvents.END_SERVER_TICK.register(SPYGLASS::tick);
 	}
 
 	private static void start(MinecraftServer minecraftServer) {
 		server = minecraftServer;
+		AGENTS.clear();
 		load();
+		worldAgentFile = server.getWorldPath(LevelResource.ROOT).toAbsolutePath().normalize()
+			.resolve("data").resolve(WORLD_AGENT_FILE_NAME);
+		state.agents = loadWorldAgents();
 		for (AgentData data : new ArrayList<>(state.agents.values())) {
 			try { restore(data); }
 			catch (RuntimeException error) {
 				System.err.println("[AI Companion] 无法恢复 AI " + data.name + ": " + safeError(error));
+				state.agents.remove(data.name.toLowerCase(Locale.ROOT));
 			}
 		}
+		save();
+	}
+
+	private static void stop() {
+		save();
+		SPYGLASS.close();
+		for (RuntimeAgent runtime : AGENTS.values()) {
+			if (server != null && server.getPlayerList().getPlayer(runtime.player.getUUID()) == runtime.player) {
+				server.getPlayerList().remove(runtime.player);
+			} else {
+				runtime.player.remove(Entity.RemovalReason.DISCARDED);
+			}
+		}
+		AGENTS.clear();
+		state.agents = new LinkedHashMap<>();
+		worldAgentFile = null;
+		server = null;
 	}
 
 	private static int create(CommandContext<CommandSourceStack> context) {
@@ -278,12 +303,14 @@ public final class LegacyFabricMod implements ModInitializer {
 	}
 
 	private static int list(CommandContext<CommandSourceStack> context) {
+		pruneStaleAgents();
 		if (state.agents.isEmpty()) return ok(context, "当前没有 AI");
 		return ok(context, "AI（" + state.agents.size() + "）：" + String.join(", ",
 			state.agents.values().stream().map(data -> data.name + "[" + data.mode + "]").toList()));
 	}
 
 	private static int positions(CommandContext<CommandSourceStack> context) {
+		pruneStaleAgents();
 		if (AGENTS.isEmpty()) return ok(context, "当前没有已加载的 AI");
 		for (RuntimeAgent runtime : AGENTS.values()) {
 			ServerPlayer player = runtime.player;
@@ -295,6 +322,7 @@ public final class LegacyFabricMod implements ModInitializer {
 	}
 
 	private static int teleportToAgent(CommandContext<CommandSourceStack> context) {
+		pruneStaleAgents();
 		String name = StringArgumentType.getString(context, "name");
 		RuntimeAgent runtime = AGENTS.get(name.toLowerCase(Locale.ROOT));
 		if (runtime == null) return fail(context, "未找到已加载 AI：" + name);
@@ -739,6 +767,7 @@ public final class LegacyFabricMod implements ModInitializer {
 		+ " · 余额=" + data.balance + " · 精力=" + data.energy + " · 声望=" + data.reputation; }
 
 	private static AgentData find(CommandContext<CommandSourceStack> context) {
+		pruneStaleAgents();
 		String key = StringArgumentType.getString(context, "name").toLowerCase(Locale.ROOT);
 		AgentData data = state.agents.get(key);
 		if (data == null) fail(context, "未找到 AI：" + key);
@@ -749,7 +778,7 @@ public final class LegacyFabricMod implements ModInitializer {
 		ResourceLocation id = new ResourceLocation(data.dimension);
 		ResourceKey<Level> key = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, id);
 		ServerLevel level = server.getLevel(key);
-		if (level == null) level = server.overworld();
+		if (level == null) throw new IllegalStateException("AI 所在维度当前不存在：" + data.dimension);
 		UUID uuid = UUID.fromString(data.uuid);
 		if (server.getPlayerList().getPlayer(uuid) != null) throw new IllegalStateException("相同 UUID 的 AI 已在线");
 		FakePlayer fake = new LegacyVisibleFakePlayer(level, new GameProfile(uuid, data.name));
@@ -801,7 +830,50 @@ public final class LegacyFabricMod implements ModInitializer {
 		}
 	}
 
+	private static Map<String, AgentData> loadWorldAgents() {
+		if (worldAgentFile == null || !Files.isRegularFile(worldAgentFile)) return new LinkedHashMap<>();
+		try {
+			AgentFile loaded = GSON.fromJson(Files.readString(worldAgentFile), AgentFile.class);
+			return loaded == null || loaded.agents == null ? new LinkedHashMap<>()
+				: new LinkedHashMap<>(loaded.agents);
+		} catch (Exception exception) {
+			System.err.println("[AI Companion] 当前世界 AI 身份读取失败：" + safeError(exception));
+			return new LinkedHashMap<>();
+		}
+	}
+
+	private static boolean isLive(RuntimeAgent runtime) {
+		if (server == null || runtime == null || runtime.player.isRemoved()) return false;
+		if (server.getPlayerList().getPlayer(runtime.player.getUUID()) != runtime.player) return false;
+		return runtime.player.level() instanceof ServerLevel level
+			&& level.getEntity(runtime.player.getUUID()) == runtime.player;
+	}
+
+	private static void pruneStaleAgents() {
+		var stale = AGENTS.entrySet().stream().filter(entry -> !isLive(entry.getValue()))
+			.map(Map.Entry::getKey).toList();
+		for (String key : stale) {
+			AGENTS.remove(key);
+			state.agents.remove(key);
+		}
+		if (!stale.isEmpty()) saveWorldAgents();
+	}
+
+	private static void saveWorldAgents() {
+		if (worldAgentFile == null) return;
+		try {
+			Files.createDirectories(worldAgentFile.getParent());
+			Path temporary = worldAgentFile.resolveSibling(worldAgentFile.getFileName() + ".tmp");
+			Files.writeString(temporary, GSON.toJson(new AgentFile(state.agents)), StandardCharsets.UTF_8);
+			Files.move(temporary, worldAgentFile, StandardCopyOption.REPLACE_EXISTING,
+				StandardCopyOption.ATOMIC_MOVE);
+		} catch (IOException exception) {
+			System.err.println("[AI Companion] 当前世界 AI 身份保存失败：" + safeError(exception));
+		}
+	}
+
 	private static synchronized void save() {
+		pruneStaleAgents();
 		for (RuntimeAgent runtime : AGENTS.values()) {
 			ServerPlayer player = runtime.player;
 			runtime.data.dimension = player.level().dimension().location().toString();
@@ -815,6 +887,7 @@ public final class LegacyFabricMod implements ModInitializer {
 		} catch (IOException exception) {
 			System.err.println("[AI Companion] 配置保存失败：" + safeError(exception));
 		}
+		saveWorldAgents();
 	}
 
 	private static int ok(CommandContext<CommandSourceStack> context, String message) {
@@ -867,6 +940,13 @@ public final class LegacyFabricMod implements ModInitializer {
 			values.put("teammate", "你与 {targets} 是队友。合作生存、分享资源并主动报告风险；禁止作弊。");
 			values.put("pvp_coach", "你是 {targets} 的 PvP 教练。进行安全对练并给出走位、距离和节奏建议，危险时停手。");
 			return values;
+		}
+	}
+
+	private static final class AgentFile {
+		private Map<String, AgentData> agents;
+		private AgentFile(Map<String, AgentData> agents) {
+			this.agents = new LinkedHashMap<>(agents);
 		}
 	}
 

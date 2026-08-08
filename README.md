@@ -4,15 +4,15 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前版本：v0.9.8.2
+当前版本：[v0.9.9](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.9.9)
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.8.2.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.8.2.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.8.2.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.9.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.9.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.9.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
@@ -81,6 +81,7 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 - 按住 `F8` 显示 AI 位置 HUD；每次重新按下都会向服务器刷新一次，松开立即关闭。
 - 支持 Mojang 纹理值与签名形式的自定义皮肤数据。
 - AI 身份会按稳定 UUID 持久化；服务器重启后恢复名称、位置、模式、目标、提示词与皮肤。
+- 0.9.9 起 AI 身份按世界存档隔离；恢复失败或未同时存在于玩家列表和当前维度实体表中的记录会被清除，不再出现在列表、F8 HUD 或传送入口中。
 - AI 使用独立的原版 `PlayerAdvancements` 进度存档；可用 `/aiplayer identity <名称>` 和
   `/aiplayer advancements <名称>` 查询身份与已完成进度。
 - 每个 AI 可独立开启自动连续决策，间隔可设为 5 秒至 1 小时；设置随身份存档恢复。
