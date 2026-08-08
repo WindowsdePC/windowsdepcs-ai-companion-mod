@@ -71,6 +71,7 @@ public final class PromptConfigScreen extends Screen {
 	private String spyglassHoldSeconds;
 	private String spyglassDurationSeconds;
 	private String spyglassCooldownSeconds;
+	private String spyglassMaxTargets;
 	private com.example.ai_companion.spyglass.SpyglassTargetCondition spyglassTargetCondition;
 	private boolean screenZoomEnabled;
 	private String zoomKey;
@@ -112,6 +113,7 @@ public final class PromptConfigScreen extends Screen {
 		spyglassHoldSeconds = Integer.toString(settings.spyglassHoldSeconds);
 		spyglassDurationSeconds = Integer.toString(settings.spyglassDurationSeconds);
 		spyglassCooldownSeconds = Integer.toString(settings.spyglassCooldownSeconds);
+		spyglassMaxTargets = Integer.toString(settings.spyglassMaxTargets);
 		spyglassTargetCondition = com.example.ai_companion.spyglass.SpyglassTargetCondition.parse(settings.spyglassTargetCondition);
 		screenZoomEnabled = settings.screenZoomEnabled;
 		zoomKey = settings.zoomKey;
@@ -491,6 +493,7 @@ public final class PromptConfigScreen extends Screen {
 			rebuildPanel();
 		}).bounds(left + 450, 115, 180, 20).build());
 		numberBox(left, 145, spyglassCooldownSeconds, 3, value -> spyglassCooldownSeconds = value);
+		numberBox(left + 150, 145, spyglassMaxTargets, 4, value -> spyglassMaxTargets = value);
 		numberBox(left, 170, zoomFactor, 5, value -> zoomFactor = value);
 		numberBox(left + 200, 170, zoomTransitionSeconds, 5,
 			value -> zoomTransitionSeconds = value);
@@ -794,6 +797,7 @@ public final class PromptConfigScreen extends Screen {
 			settings.spyglassDurationSeconds = parseInt(spyglassDurationSeconds, 1, 600, "发光持续时间");
 			settings.spyglassTargetCondition = spyglassTargetCondition.name();
 			settings.spyglassCooldownSeconds = parseInt(spyglassCooldownSeconds, 1, 600, "望远镜冷却时间");
+			settings.spyglassMaxTargets = parseInt(spyglassMaxTargets, 1, 1024, "望远镜单次命中上限");
 			settings.screenZoomEnabled = screenZoomEnabled;
 			settings.zoomKey = ClientSettings.normalizeKey(zoomKey, "C");
 			settings.zoomFactor = parseDouble(zoomFactor, 1.5, 12.0, "缩放倍率");
@@ -805,6 +809,7 @@ public final class PromptConfigScreen extends Screen {
 			sendCommand("aiplayer spyglass duration-seconds " + settings.spyglassDurationSeconds);
 			sendCommand("aiplayer spyglass target " + settings.spyglassTargetCondition.toLowerCase(java.util.Locale.ROOT));
 			sendCommand("aiplayer spyglass cooldown-seconds " + settings.spyglassCooldownSeconds);
+			sendCommand("aiplayer spyglass max-targets " + settings.spyglassMaxTargets);
 			status = "已保存望远镜发光与缩放设置";
 		} catch (RuntimeException | IOException error) {
 			status = "保存失败: " + error.getMessage();

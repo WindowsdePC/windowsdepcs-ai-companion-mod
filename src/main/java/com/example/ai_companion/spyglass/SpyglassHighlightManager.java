@@ -81,18 +81,22 @@ public final class SpyglassHighlightManager {
 	private static void apply(ServerPlayer player, SpyglassHighlightSettings settings) {
 		double radius = settings.radiusChunks() * 16.0;
 		AABB area = player.getBoundingBox().inflate(radius);
-		int affected = 0;
-		for (LivingEntity entity : player.level().getEntitiesOfClass(LivingEntity.class, area,
+		var targets = player.level().getEntitiesOfClass(LivingEntity.class, area,
 				entity -> entity != player && entity.isAlive() && settings.targetCondition().matches(entity)
-					&& player.distanceToSqr(entity) <= radius * radius)) {
+					&& player.distanceToSqr(entity) <= radius * radius);
+		targets.sort(java.util.Comparator.comparingDouble(player::distanceToSqr));
+		int totalMatches = targets.size();
+		int affected = Math.min(totalMatches, settings.maxTargets());
+		for (int index = 0; index < affected; index++) {
+			LivingEntity entity = targets.get(index);
 			entity.addEffect(new MobEffectInstance(MobEffects.GLOWING, settings.effectTicks(), 0,
 				false, false, true));
-			affected++;
 		}
 		player.sendOverlayMessage(Component.literal("望远镜标记了 " + affected + " 个生物 · 半径 "
 			+ settings.radiusChunks() + " 区块 · " + settings.targetCondition().displayName()
 			+ " · 持续 " + settings.effectTicks() / 20 + " 秒 · 冷却 "
-			+ settings.cooldownTicks() / 20 + " 秒"));
+			+ settings.cooldownTicks() / 20 + " 秒"
+			+ (totalMatches > affected ? " · 符合条件 " + totalMatches + " 个，按距离取最近 " + affected + " 个" : "")));
 	}
 
 	public void close() { save(); useTicks.clear(); cooldownTicks.clear(); triggered.clear(); }

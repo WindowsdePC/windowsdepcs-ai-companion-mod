@@ -94,6 +94,10 @@ final class EclipseUiApiBridge {
 					.description(Component.literal("一次发光脉冲后再次触发前的等待时间"))
 					.range(1, 600, 1).bindingInt(() -> settings.spyglassCooldownSeconds,
 						value -> settings.spyglassCooldownSeconds = value).defaultValue(10))
+				.slider(slider -> slider.name(Component.literal("单次命中上限"))
+					.description(Component.literal("目标过多时优先标记距离最近的生物"))
+					.range(1, 1024, 1).bindingInt(() -> settings.spyglassMaxTargets,
+						value -> settings.spyglassMaxTargets = value).defaultValue(256))
 				.toggle(toggle -> toggle.name(Component.literal("按键屏幕缩放"))
 					.description(Component.literal("按住设置的快捷键平滑缩放；默认关闭"))
 					.binding(() -> settings.screenZoomEnabled,
