@@ -71,14 +71,15 @@ public final class SpyglassHighlightManager {
 		AABB area = player.getBoundingBox().inflate(radius);
 		int affected = 0;
 		for (LivingEntity entity : player.level().getEntitiesOfClass(LivingEntity.class, area,
-				entity -> entity != player && entity.isAlive()
+				entity -> entity != player && entity.isAlive() && settings.targetCondition().matches(entity)
 					&& player.distanceToSqr(entity) <= radius * radius)) {
 			entity.addEffect(new MobEffectInstance(MobEffects.GLOWING, settings.effectTicks(), 0,
 				false, false, true));
 			affected++;
 		}
 		player.sendOverlayMessage(Component.literal("望远镜标记了 " + affected + " 个生物 · 半径 "
-			+ settings.radiusChunks() + " 区块 · 持续 " + settings.effectTicks() / 20 + " 秒"));
+			+ settings.radiusChunks() + " 区块 · " + settings.targetCondition().displayName()
+			+ " · 持续 " + settings.effectTicks() / 20 + " 秒"));
 	}
 
 	public void close() { save(); useTicks.clear(); triggered.clear(); }

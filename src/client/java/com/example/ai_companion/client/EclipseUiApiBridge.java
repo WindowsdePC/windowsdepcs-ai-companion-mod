@@ -1,6 +1,7 @@
 package com.example.ai_companion.client;
 
 import com.example.ai_companion.agent.AgentMode;
+import com.example.ai_companion.spyglass.SpyglassTargetCondition;
 import dev.eclipseui.EclipseUI;
 import dev.eclipseui.api.Theme;
 import net.minecraft.client.gui.screens.Screen;
@@ -83,6 +84,12 @@ final class EclipseUiApiBridge {
 				.slider(slider -> slider.name(Component.literal("发光持续时间（秒）"))
 					.range(1, 600, 1).bindingInt(() -> settings.spyglassDurationSeconds,
 						value -> settings.spyglassDurationSeconds = value).defaultValue(120))
+				.<SpyglassTargetCondition>dropdown(option -> option.name("发光目标条件")
+					.description("全部生物、仅非玩家生物或仅敌对生物")
+					.enumClass(SpyglassTargetCondition.class)
+					.binding(() -> SpyglassTargetCondition.parse(settings.spyglassTargetCondition),
+						value -> settings.spyglassTargetCondition = value.name())
+					.defaultValue(SpyglassTargetCondition.ALL_LIVING))
 				.toggle(toggle -> toggle.name(Component.literal("按键屏幕缩放"))
 					.description(Component.literal("按住设置的快捷键平滑缩放；默认关闭"))
 					.binding(() -> settings.screenZoomEnabled,

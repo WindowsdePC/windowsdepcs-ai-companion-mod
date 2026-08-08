@@ -34,6 +34,7 @@ public final class ClientSettings {
 	public int spyglassRadiusChunks = 10;
 	public int spyglassHoldSeconds = 1;
 	public int spyglassDurationSeconds = 120;
+	public String spyglassTargetCondition = "ALL_LIVING";
 	public boolean screenZoomEnabled = false;
 	public String zoomKey = "C";
 	public double zoomFactor = 4.0;
@@ -85,6 +86,8 @@ public final class ClientSettings {
 		spyglassRadiusChunks = Math.clamp(spyglassRadiusChunks, 1, 32);
 		spyglassHoldSeconds = Math.clamp(spyglassHoldSeconds, 1, 10);
 		spyglassDurationSeconds = Math.clamp(spyglassDurationSeconds, 1, 600);
+		try { spyglassTargetCondition = com.example.ai_companion.spyglass.SpyglassTargetCondition.valueOf(spyglassTargetCondition).name(); }
+		catch (RuntimeException ignored) { spyglassTargetCondition = "ALL_LIVING"; }
 		zoomKey = normalizeKey(zoomKey, "C");
 		zoomFactor = Math.clamp(zoomFactor, 1.5, 12.0);
 		zoomTransitionSeconds = Math.clamp(zoomTransitionSeconds, 0.0, 1.0);
