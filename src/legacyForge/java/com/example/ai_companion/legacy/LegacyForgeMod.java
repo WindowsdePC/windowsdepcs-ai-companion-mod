@@ -16,8 +16,14 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.LevelResource;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
@@ -90,6 +96,8 @@ public final class LegacyForgeMod {
 				.then(argument("name", StringArgumentType.word()).executes(LegacyForgeMod::teleportToAgent)))
 			.then(literal("idle").requires(source -> source.hasPermission(2))
 				.then(argument("name", StringArgumentType.word()).executes(ctx -> mode(ctx, "idle"))))
+			.then(literal("survival").requires(source -> source.hasPermission(2))
+				.then(argument("name", StringArgumentType.word()).executes(ctx -> mode(ctx, "survival"))))
 			.then(literal("hunt").requires(source -> source.hasPermission(2))
 				.then(argument("name", StringArgumentType.word())
 					.then(argument("target", StringArgumentType.word()).executes(ctx -> mode(ctx, "hunter")))))
@@ -238,7 +246,9 @@ public final class LegacyForgeMod {
 
 	@SubscribeEvent
 	public void serverTick(TickEvent.ServerTickEvent event) {
-		if (event.phase == TickEvent.Phase.END && server != null) { WEATHER.tick(server); SPYGLASS.tick(server); }
+		if (event.phase == TickEvent.Phase.END && server != null) {
+			WEATHER.tick(server); SPYGLASS.tick(server); tickAgents(server);
+		}
 	}
 
 	private static int create(CommandContext<CommandSourceStack> context) {
@@ -254,7 +264,7 @@ public final class LegacyForgeMod {
 		}
 		UUID uuid = UUID.nameUUIDFromBytes(("ai_companion:" + key).getBytes(StandardCharsets.UTF_8));
 		AgentData data = new AgentData(name, uuid.toString(), owner.level().dimension().location().toString(),
-			owner.getX(), owner.getY(), owner.getZ(), "idle", "");
+			owner.getX(), owner.getY(), owner.getZ(), "survival", "");
 		try {
 			restore(data);
 			state.agents.put(key, data);
@@ -281,7 +291,7 @@ public final class LegacyForgeMod {
 			UUID uuid = UUID.nameUUIDFromBytes(("ai_companion:" + key).getBytes(StandardCharsets.UTF_8));
 			AgentData data = new AgentData(name, uuid.toString(), owner.level().dimension().location().toString(),
 				owner.getX(), owner.getY(), owner.getZ(),
-				"idle", "");
+				"survival", "");
 			try {
 				restore(data);
 				state.agents.put(key, data);
@@ -347,7 +357,8 @@ public final class LegacyForgeMod {
 	private static int mode(CommandContext<CommandSourceStack> context, String selected) {
 		AgentData data = find(context);
 		if (data == null) return 0;
-		String target = selected.equals("idle") ? "" : StringArgumentType.getString(context, "target");
+		String target = selected.equals("idle") || selected.equals("survival")
+			? "" : StringArgumentType.getString(context, "target");
 		if (!target.isBlank() && server.getPlayerList().getPlayerByName(target) == null) {
 			return fail(context, "目标玩家不在线：" + target);
 		}
@@ -385,8 +396,9 @@ public final class LegacyForgeMod {
 				context.getSource().sendFailure(Component.literal("AI 请求失败：" + safeError(error)));
 				return;
 			}
-			execute(runtime.player, decision);
-			context.getSource().sendSuccess(() -> Component.literal(data.name + " 执行：" + decision.action), false);
+			execute(runtime, decision);
+			String detail = decision.say.isBlank() ? "" : " · " + decision.say;
+			context.getSource().sendSuccess(() -> Component.literal(data.name + " 执行：" + decision.action + detail), false);
 		}));
 		return 1;
 	}
@@ -416,14 +428,11 @@ public final class LegacyForgeMod {
 		});
 	}
 
-	private static void execute(ServerPlayer player, Decision decision) {
+	private static void execute(RuntimeAgent runtime, Decision decision) {
+		ServerPlayer player = runtime.player;
+		runtime.lastMessage = decision.say.isBlank() ? "已执行：" + decision.action : decision.say;
 		switch (decision.action) {
-			case "say" -> {
-				if (!decision.say.isBlank()) server.getPlayerList().broadcastSystemMessage(
-					Component.literal("<" + player.getGameProfile().getName() + "> " + decision.say), false);
-			}
-			case "move" -> player.moveTo(player.getX() + decision.dx, player.getY(), player.getZ() + decision.dz,
-				player.getYRot(), player.getXRot());
+			case "move" -> { runtime.remainingX = decision.dx; runtime.remainingZ = decision.dz; }
 			default -> { }
 		}
 	}
@@ -769,6 +778,8 @@ public final class LegacyForgeMod {
 	}
 
 	private static void restore(AgentData data) {
+		if (data.mode == null || data.mode.isBlank()) data.mode = "survival";
+		if (data.target == null) data.target = "";
 		ResourceLocation id = new ResourceLocation(data.dimension);
 		ResourceKey<Level> key = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, id);
 		ServerLevel level = server.getLevel(key);
@@ -779,11 +790,66 @@ public final class LegacyForgeMod {
 		player.moveTo(data.x, data.y, data.z, 0, 0);
 		server.getPlayerList().placeNewPlayer(new LegacySilentConnection(), player);
 		player.teleportTo(level, data.x, data.y, data.z, 0.0F, 0.0F);
+		player.setGameMode(GameType.SURVIVAL);
+		player.setInvulnerable(false);
+		player.getAbilities().invulnerable = false;
+		player.getAbilities().flying = false;
+		player.getAbilities().mayfly = false;
+		player.setHealth(player.getMaxHealth());
 		if (server.getPlayerList().getPlayer(uuid) != player || level.getEntity(uuid) != player) {
 			server.getPlayerList().remove(player);
 			throw new IllegalStateException("AI 未进入玩家列表或当前世界");
 		}
 		AGENTS.put(data.name.toLowerCase(Locale.ROOT), new RuntimeAgent(data, player));
+	}
+
+	private static void tickAgents(MinecraftServer ignored) {
+		long now = server.getTickCount();
+		for (RuntimeAgent runtime : AGENTS.values()) {
+			if (runtime.player.isRemoved() || runtime.data.mode.equals("idle")) continue;
+			if (runtime.data.mode.equals("survival") && Math.hypot(runtime.remainingX, runtime.remainingZ) < 0.05
+					&& now >= runtime.nextWanderTick) {
+				double angle = runtime.player.getRandom().nextDouble() * Math.PI * 2.0;
+				double distance = 2.0 + runtime.player.getRandom().nextDouble() * 4.0;
+				runtime.remainingX = Math.cos(angle) * distance;
+				runtime.remainingZ = Math.sin(angle) * distance;
+				runtime.nextWanderTick = now + 50 + runtime.player.getRandom().nextInt(90);
+				runtime.lastMessage = "生存巡查：正在观察附近环境";
+			} else if (!runtime.data.target.isBlank()) {
+				ServerPlayer target = server.getPlayerList().getPlayerByName(runtime.data.target);
+				if (target != null && target.level() == runtime.player.level() && target.isAlive()) {
+					double dx = target.getX() - runtime.player.getX();
+					double dz = target.getZ() - runtime.player.getZ();
+					double distance = Math.hypot(dx, dz);
+					if (distance > 2.5) {
+						double travel = Math.min(4.0, distance - 2.5);
+						runtime.remainingX = dx / distance * travel;
+						runtime.remainingZ = dz / distance * travel;
+					}
+					if ((runtime.data.mode.equals("hunter") || runtime.data.mode.equals("pvp_coach"))
+							&& distance <= 3.0 && now - runtime.lastAttackTick >= 12) {
+						runtime.player.attack(target);
+						runtime.lastAttackTick = now;
+					}
+				}
+			}
+			double remaining = Math.hypot(runtime.remainingX, runtime.remainingZ);
+			if (remaining >= 0.01) {
+				double step = Math.min(0.18, remaining);
+				double dx = runtime.remainingX / remaining * step;
+				double dz = runtime.remainingZ / remaining * step;
+				runtime.player.move(MoverType.SELF, new Vec3(dx, 0, dz));
+				runtime.remainingX -= dx;
+				runtime.remainingZ -= dz;
+			}
+			if (now % 20L == 0L && runtime.player.level() instanceof ServerLevel level) {
+				AABB area = runtime.player.getBoundingBox().inflate(16.0);
+				level.getEntitiesOfClass(Mob.class, area, mob -> mob instanceof Enemy && mob.isAlive()
+					&& mob.getTarget() == null).stream()
+					.min(Comparator.comparingDouble(mob -> mob.distanceToSqr(runtime.player)))
+					.ifPresent(mob -> mob.setTarget(runtime.player));
+			}
+		}
 	}
 
 	private static JsonObject chat(String role, String content) {
@@ -905,6 +971,9 @@ public final class LegacyForgeMod {
 		private final AgentData data;
 		private final ServerPlayer player;
 		private boolean thinking;
+		private double remainingX, remainingZ;
+		private long nextWanderTick, lastAttackTick;
+		private String lastMessage = "已生成，正在以生存模式观察附近环境";
 		private RuntimeAgent(AgentData data, ServerPlayer player) { this.data = data; this.player = player; }
 	}
 
@@ -929,6 +998,7 @@ public final class LegacyForgeMod {
 		}
 		private static Map<String, String> defaultPrompts() {
 			Map<String, String> values = new LinkedHashMap<>();
+			values.put("survival", "你是 Minecraft 生存玩家。自主观察、巡查、采集、建造和防卫；禁止作弊、传送、管理员命令和复制。");
 			values.put("idle", "你是 Minecraft 生存玩家。正常探索、建造、采集与交流；禁止作弊、传送、管理员命令和复制。");
 			values.put("hunter", "你要在正常生存规则内追踪 {targets}，规划路线和装备；禁止作弊或虚构坐标。");
 			values.put("teammate", "你与 {targets} 是队友。合作生存、分享资源并主动报告风险；禁止作弊。");

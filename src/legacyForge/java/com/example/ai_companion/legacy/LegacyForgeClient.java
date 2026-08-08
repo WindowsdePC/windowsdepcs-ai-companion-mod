@@ -190,6 +190,8 @@ public final class LegacyForgeClient {
 			button("AI 列表", "aiplayer list", left, 111, (panelWidth - 8) / 2);
 			button("AI 位置", "aiplayer positions", left + (panelWidth + 8) / 2, 111, (panelWidth - 8) / 2);
 			button("传送至 " + agentName + "（管理员）", "aiplayer teleport-to " + agentName, left, 139, panelWidth);
+			addRenderableWidget(Button.builder(Component.literal("修改 AI 模式 / 分配提示词"), b ->
+				minecraft.setScreen(new PromptAssignmentScreen(this, agentName))).bounds(left, 167, panelWidth, 20).build());
 		}
 
 		private void buildCompatibility(int left, int panelWidth) {
@@ -268,10 +270,36 @@ public final class LegacyForgeClient {
 	private static final class AgentConsoleScreen extends Screen {
 		private final Screen parent; private String agent = "AI_1"; private String prompt = "报告当前状态并决定下一步";
 		private AgentConsoleScreen(Screen parent) { super(Component.literal("F8 AI 控制台")); this.parent = parent; }
-		@Override protected void init() { UiInbox.consoleOpen = true; EditBox name = new EditBox(font, width / 2 - 220, 48, 130, 20, Component.literal("AI 名称")); name.setValue(agent); name.setResponder(value -> agent = value); addRenderableWidget(name); EditBox message = new EditBox(font, width / 2 - 82, 48, 230, 20, Component.literal("直接发给 AI")); message.setValue(prompt); message.setResponder(value -> prompt = value); addRenderableWidget(message); addRenderableWidget(Button.builder(Component.literal("发送"), b -> command("aiplayer ask " + agent + " " + prompt)).bounds(width / 2 + 156, 48, 64, 20).build()); addRenderableWidget(Button.builder(Component.literal("刷新 AI 与位置"), b -> command("aiplayer positions")).bounds(width / 2 - 220, 78, 160, 20).build()); addRenderableWidget(Button.builder(Component.literal("关闭"), b -> onClose()).bounds(width / 2 + 110, height - 28, 110, 20).build()); command("aiplayer positions"); }
+		@Override protected void init() { UiInbox.consoleOpen = true; EditBox name = new EditBox(font, width / 2 - 220, 48, 130, 20, Component.literal("AI 名称")); name.setValue(agent); name.setResponder(value -> agent = value); addRenderableWidget(name); EditBox message = new EditBox(font, width / 2 - 82, 48, 230, 20, Component.literal("直接发给 AI")); message.setValue(prompt); message.setResponder(value -> prompt = value); addRenderableWidget(message); addRenderableWidget(Button.builder(Component.literal("发送"), b -> command("aiplayer ask " + agent + " " + prompt)).bounds(width / 2 + 156, 48, 64, 20).build()); addRenderableWidget(Button.builder(Component.literal("刷新 AI 与位置"), b -> command("aiplayer positions")).bounds(width / 2 - 220, 78, 160, 20).build()); addRenderableWidget(Button.builder(Component.literal("模式与提示词"), b -> minecraft.setScreen(new PromptAssignmentScreen(this, agent))).bounds(width / 2 - 50, 78, 160, 20).build()); addRenderableWidget(Button.builder(Component.literal("关闭"), b -> onClose()).bounds(width / 2 + 110, height - 28, 110, 20).build()); command("aiplayer positions"); }
 		private void command(String value) { if (minecraft == null || minecraft.getConnection() == null) return; UiInbox.beginCapture(); minecraft.getConnection().sendCommand(value); }
 		@Override public void onClose() { UiInbox.consoleOpen = false; if (minecraft != null) minecraft.setScreen(parent); }
 		@Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) { renderBackground(graphics); super.render(graphics, mouseX, mouseY, delta); graphics.drawCenteredString(font, "F8 AI 控制台 · 返回内容只显示在这里", width / 2, 16, 0xFFFFFF); int y = 112; for (String line : UiInbox.lines()) { graphics.drawString(font, line, width / 2 - 220, y, 0xA8E6A3); y += 13; } }
+	}
+
+	private static final class PromptAssignmentScreen extends Screen {
+		private static final String[] MODES = {"survival", "hunter", "teammate", "pvp_coach", "idle"};
+		private static final String[] PROMPTS = {"survival", "hunter", "teammate", "pvp_coach", "idle"};
+		private final Screen parent; private String agent; private String target = "";
+		private int modeIndex; private int promptIndex; private String status = "选择 AI 模式、目标玩家和提示词";
+		private PromptAssignmentScreen(Screen parent, String agent) { super(Component.literal("AI 提示词分配")); this.parent = parent; this.agent = agent; }
+		@Override protected void init() {
+			EditBox name = new EditBox(font, width / 2 - 210, 55, 200, 20, Component.literal("AI 名称")); name.setValue(agent); name.setResponder(value -> agent = value); addRenderableWidget(name);
+			EditBox player = new EditBox(font, width / 2 + 10, 55, 200, 20, Component.literal("目标玩家")); player.setValue(target); player.setResponder(value -> target = value); addRenderableWidget(player);
+			addRenderableWidget(Button.builder(Component.literal("模式：" + MODES[modeIndex]), b -> { modeIndex = (modeIndex + 1) % MODES.length; rebuild(); }).bounds(width / 2 - 210, 87, 200, 20).build());
+			addRenderableWidget(Button.builder(Component.literal("提示词：" + PROMPTS[promptIndex]), b -> { promptIndex = (promptIndex + 1) % PROMPTS.length; rebuild(); }).bounds(width / 2 + 10, 87, 200, 20).build());
+			addRenderableWidget(Button.builder(Component.literal("应用模式并分配提示词"), b -> apply()).bounds(width / 2 - 210, 119, 420, 22).build());
+			addRenderableWidget(Button.builder(Component.literal("返回"), b -> onClose()).bounds(width / 2 - 55, 151, 110, 20).build());
+		}
+		private void rebuild() { clearWidgets(); init(); }
+		private void apply() {
+			if (minecraft == null || minecraft.getConnection() == null || agent.isBlank()) return;
+			String mode = MODES[modeIndex];
+			String command = switch (mode) { case "survival" -> "aiplayer survival " + agent; case "hunter" -> "aiplayer hunt " + agent + " " + target; case "teammate" -> "aiplayer team " + agent + " " + target; case "pvp_coach" -> "aiplayer coach " + agent + " " + target; default -> "aiplayer idle " + agent; };
+			UiInbox.beginCapture(); minecraft.getConnection().sendCommand(command); minecraft.getConnection().sendCommand("aiplayer prompt assign " + agent + " " + PROMPTS[promptIndex]);
+			status = "已提交 " + agent + " · " + mode + " · " + PROMPTS[promptIndex];
+		}
+		@Override public void onClose() { if (minecraft != null) minecraft.setScreen(parent); }
+		@Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) { renderBackground(graphics); super.render(graphics, mouseX, mouseY, delta); graphics.drawCenteredString(font, "AI 提示词分配", width / 2, 18, 0xFFFFFF); graphics.drawCenteredString(font, status, width / 2, 182, 0xA8E6A3); }
 	}
 
 	private static final class MinigameHubScreen extends Screen {
