@@ -13,7 +13,7 @@ WindowsdePC's AI Companion Mod
 
 当前版本：
 
-0.9.10-beta.2
+0.9.10-beta.3
 
 
 目标版本：
@@ -26,6 +26,13 @@ WindowsdePC's AI Companion Mod
 - Minecraft 26.2 / Fabric Loader / JDK 25
 - Minecraft 1.20.1 / Fabric Loader / JDK 17
 - Minecraft 1.20.1 / Forge / JDK 17
+
+
+0.9.10-beta.3 完整 UI 目录状态：
+
+- 九分类中的全部既有功能以按钮卡片列出，点击后进入独立详情页。
+- 休闲与兼容查询结果显示在详情页内，不写入聊天栏；26.2 使用类型化网络通道。
+- 两个 1.20.1 版本保留 Java 17 与旧版 Screen/GuiGraphics 命名，并补齐小游戏操作快捷键编辑。
 
 
 0.9.10-beta.2 交互与 AI 行为修复状态：

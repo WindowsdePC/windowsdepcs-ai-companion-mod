@@ -294,25 +294,32 @@ public final class PromptConfigScreen extends Screen {
 		addRenderableWidget(Button.builder(Component.literal("打开 AI 竞技场"), button -> {
 			if (minecraft != null) minecraft.setScreenAndShow(new AiArenaScreen(this));
 		}).bounds(left + cardWidth + 14, 102, cardWidth, 22).build());
-		addRenderableWidget(Button.builder(Component.literal("我的竞技宠物"), button ->
-			UiActionClient.send("pet.list")).bounds(left, 140, cardWidth, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("竞技宠物排行榜"), button ->
-			UiActionClient.send("pet.leaderboard")).bounds(left + cardWidth + 14, 140,
-			cardWidth, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("小游戏与竞技功能目录"), button -> {
+			if (minecraft != null) minecraft.setScreenAndShow(
+				new FeatureCatalogScreen(this, FeatureCatalogScreen.Group.ALL));
+		}).bounds(left, 140, panelWidth, 20).build());
 		status = "小游戏会在独立弹窗中纯本地运行；AI 宠物与 AI 竞技通过服务端 UI 通道运行";
 	}
 
 	private void buildLeisurePanel(int left, int panelWidth) {
 		int cardWidth = (panelWidth - 14) / 2;
-		directButton("打开相册列表", "album.list", left, 60, cardWidth);
-		directButton("旅行日志统计", "travel.stats", left + cardWidth + 14, 60, cardWidth);
-		directButton("生成今日 Minecraft 日报", "news.today", left, 88, cardWidth);
-		directButton("查看 AI 直播状态", "live.status", left + cardWidth + 14, 88, cardWidth);
-		directButton("查看 AI 合奏状态", "music.status", left, 116, cardWidth);
-		directButton("模拟社会排行榜", "society.leaderboard", left + cardWidth + 14, 116, cardWidth);
-		directButton("自然事件状态", "weather.status", left, 144, cardWidth);
-		directButton("AI 助手球探索", "orb.explore", left + cardWidth + 14, 144, cardWidth);
-		status = "休闲查询直接调用服务端 Java 管理器，不再向聊天栏发送命令";
+		featureButton("AI 摄影与相册", FeatureCatalogScreen.Feature.PHOTO, left, 60, cardWidth);
+		featureButton("旅行日志与图鉴", FeatureCatalogScreen.Feature.TRAVEL,
+			left + cardWidth + 14, 60, cardWidth);
+		featureButton("Minecraft 日报", FeatureCatalogScreen.Feature.NEWS, left, 88, cardWidth);
+		featureButton("AI 直播", FeatureCatalogScreen.Feature.LIVESTREAM,
+			left + cardWidth + 14, 88, cardWidth);
+		featureButton("AI 音乐合奏", FeatureCatalogScreen.Feature.MUSIC, left, 116, cardWidth);
+		featureButton("AI 模拟社会", FeatureCatalogScreen.Feature.SOCIETY,
+			left + cardWidth + 14, 116, cardWidth);
+		featureButton("世界自然事件", FeatureCatalogScreen.Feature.WEATHER, left, 144, cardWidth);
+		featureButton("AI 助手球", FeatureCatalogScreen.Feature.ORB,
+			left + cardWidth + 14, 144, cardWidth);
+		addRenderableWidget(Button.builder(Component.literal("打开休闲系统完整目录"), button -> {
+			if (minecraft != null) minecraft.setScreenAndShow(
+				new FeatureCatalogScreen(this, FeatureCatalogScreen.Group.LEISURE));
+		}).bounds(left, 182, panelWidth, 22).build());
+		status = "每个功能按钮都会进入独立页面；请求结果只在页面内显示";
 	}
 
 	private void buildCompatibilityPanel(int left, int panelWidth) {
@@ -322,21 +329,26 @@ public final class PromptConfigScreen extends Screen {
 				if (minecraft != null) minecraft.setScreenAndShow(backend.createScreen(this, settings));
 			}).bounds(left, 42, panelWidth, 20).build());
 		}
-		addRenderableWidget(Button.builder(Component.literal("检查 API 配置状态"), b ->
-			UiActionClient.send("config.status")).bounds(left, 70, cardWidth, 20).build());
-		directButton("检查游戏增强状态", "feature.status", left + cardWidth + 14, 70, cardWidth);
-		directButton("检查自然事件配置", "weather.config", left, 98, cardWidth);
+		featureButton("AI API 与模型", FeatureCatalogScreen.Feature.API, left, 70, cardWidth);
+		featureButton("可选模组兼容", FeatureCatalogScreen.Feature.OPTIONAL_MODS,
+			left + cardWidth + 14, 70, cardWidth);
+		featureButton("自然事件兼容状态", FeatureCatalogScreen.Feature.WEATHER,
+			left, 98, cardWidth);
 		addRenderableWidget(Button.builder(Component.literal("刷新 AI 位置"), button -> {
 			if (minecraft != null) AgentPositionHud.requestRefresh(minecraft);
 			status = "正在从服务器刷新 AI 位置";
 		}).bounds(left + cardWidth + 14, 98, cardWidth, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("打开兼容与状态完整目录"), button -> {
+			if (minecraft != null) minecraft.setScreenAndShow(
+				new FeatureCatalogScreen(this, FeatureCatalogScreen.Group.COMPATIBILITY));
+		}).bounds(left, 132, panelWidth, 22).build());
 		status = "当前 UI 后端：" + backend.displayName() + "；Simple Voice Chat 与背包兼容均为可选";
 	}
 
-	private void directButton(String label, String action, int x, int y, int width) {
+	private void featureButton(String label, FeatureCatalogScreen.Feature feature,
+			int x, int y, int width) {
 		addRenderableWidget(Button.builder(Component.literal(label), button -> {
-			UiActionClient.send(action);
-			status = "已直接请求服务器：" + label;
+			if (minecraft != null) minecraft.setScreenAndShow(new FeatureCatalogScreen(this, feature));
 		}).bounds(x, y, width, 20).build());
 	}
 
@@ -584,6 +596,10 @@ public final class PromptConfigScreen extends Screen {
 		}).bounds(left + 260, 115, 220, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("保存高危区域设置"), button ->
 			saveWorldFeatures()).bounds(left, 170, 250, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("全部已完成功能与修改入口"), button -> {
+			if (minecraft != null) minecraft.setScreenAndShow(
+				new FeatureCatalogScreen(this, FeatureCatalogScreen.Group.ALL));
+		}).bounds(left + 260, 170, Math.min(300, panelWidth - 260), 20).build());
 		status = "高危区域：真正无限高度与64位坐标超出Minecraft区块格式；本版不会伪造该能力";
 	}
 

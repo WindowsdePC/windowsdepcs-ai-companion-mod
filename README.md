@@ -4,15 +4,15 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前测试版本：[v0.9.10-beta.2](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.9.10-beta.2)（预发行版；稳定版仍为 `v0.9.9`）
+当前测试版本：[v0.9.10-beta.3](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.9.10-beta.3)（预发行版；稳定版仍为 `v0.9.9`）
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.10-beta.2.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.10-beta.2.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.10-beta.2.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.10-beta.3.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.10-beta.3.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.10-beta.3.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
@@ -57,6 +57,14 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 两个都必须安装。外部背包的内部私有槽位始终由对应背包模组管理。
 
 ## 主要功能
+
+### 0.9.10-beta.3 UI 完整目录
+
+- 九分类主界面的按钮现在进入独立功能页，不再把休闲/兼容查询压成聊天栏或单行状态。
+- “全部已完成功能与修改入口”列出 AI、女仆、协作、竞技、小游戏、游戏增强、客户端增强、导航、世界安全、摄影、旅行、日报、直播、家具、音乐、宠物、社会、天气、助手球、性能与兼容功能。
+- 26.2 Fabric 的页面通过类型化 UI 网络通道请求服务器，结果保留在功能详情页；不会执行聊天命令。
+- 1.20.1 Fabric/Forge 使用 Java 17 和旧版 `Screen`、`GuiGraphics`、`ResourceLocation` 体系实现相同的“目录 → 详情 → 页面内结果”体验，不混入 26.2 API。
+- 三端快捷键页均显示 UI、F8、缩放、导航、小游戏中心、方向、动作、暂停、重开与辅助键；可修改并持久化。
 
 ### 结构、群系与维度导航
 
