@@ -4,19 +4,19 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前测试版本：`v0.9.10-beta.2`（预发行版；稳定版仍为 `v0.9.9`）
+当前测试版本：`v0.9.10-beta.3`（预发行版；稳定版仍为 `v0.9.9`）
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.10-beta.2.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.10-beta.2.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.10-beta.2.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.10-beta.3.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.10-beta.3.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.10-beta.3.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
-`0.9.10-beta.2` 起，1.20.1 模组内快捷键页可保存并立即应用 UI、F8 AI 控制台、缩放、
+`0.9.10-beta.3` 起，1.20.1 模组内快捷键页可保存并立即应用 UI、F8 AI 控制台、缩放、
 导航和小游戏中心按键；默认 `M` 打开包含五个游戏的中心。实现只使用 Java 17 与 1.20.1 API。
 新建 AI 默认使用可受伤的生存模式并进行基础巡查，敌对生物会将其纳入仇恨目标；AI 管理页
 与 F8 窗口均可打开模式/提示词分配弹窗。
@@ -60,6 +60,12 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 两个都必须安装。外部背包的内部私有槽位始终由对应背包模组管理。
 
 ## 主要功能
+
+### 0.9.10-beta.3 UI 完整目录
+
+- 九分类主界面的功能按钮进入独立详情页，结果保留在页面内。
+- 完整目录覆盖 AI、小游戏、游戏/客户端增强、休闲、性能、兼容与高级功能。
+- 1.20.1 Forge 保持 Java 17、Forge 47.x 与旧版 `Screen`/`GuiGraphics` 命名；小游戏操作快捷键可编辑并持久化。
 
 ### 结构、群系与维度导航
 
