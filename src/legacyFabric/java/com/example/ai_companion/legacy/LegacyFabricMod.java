@@ -61,6 +61,8 @@ public final class LegacyFabricMod implements ModInitializer {
 	private static MinecraftServer server;
 	private static final LegacyWeatherManager WEATHER = new LegacyWeatherManager(
 		DATA_FILE.resolveSibling("ai_companion-weather-1.20.1.json"));
+	private static final LegacySpyglassManager SPYGLASS = new LegacySpyglassManager(
+		DATA_FILE.resolveSibling("ai_companion-spyglass-1.20.1.json"));
 
 	@Override
 	public void onInitialize() {
@@ -102,6 +104,7 @@ public final class LegacyFabricMod implements ModInitializer {
 					.then(literal("assign").requires(source -> source.hasPermission(2)).then(argument("name", StringArgumentType.word())
 						.then(argument("id", StringArgumentType.word()).executes(LegacyFabricMod::promptAssign)))))
 				.then(literal("feature").then(literal("status").executes(LegacyFabricMod::featureStatus)))
+				.then(SPYGLASS.command())
 				.then(literal("weather")
 					.then(literal("status").executes(LegacyFabricMod::weatherStatus))
 					.then(literal("forecast").executes(LegacyFabricMod::weatherForecast))
@@ -188,8 +191,9 @@ public final class LegacyFabricMod implements ModInitializer {
 				.then(literal("compatibility").executes(LegacyFabricMod::compatibility))));
 
 		ServerLifecycleEvents.SERVER_STARTED.register(LegacyFabricMod::start);
-		ServerLifecycleEvents.SERVER_STOPPING.register(ignored -> save());
+		ServerLifecycleEvents.SERVER_STOPPING.register(ignored -> { save(); SPYGLASS.close(); });
 		ServerTickEvents.END_SERVER_TICK.register(WEATHER::tick);
+		ServerTickEvents.END_SERVER_TICK.register(SPYGLASS::tick);
 	}
 
 	private static void start(MinecraftServer minecraftServer) {
