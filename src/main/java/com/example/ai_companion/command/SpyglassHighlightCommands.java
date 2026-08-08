@@ -14,8 +14,8 @@ public final class SpyglassHighlightCommands {
 	private SpyglassHighlightCommands() {}
 
 	public static void register(SpyglassHighlightManager manager) {
-		CommandRegistrationCallback.EVENT.register((dispatcher, access, environment) -> dispatcher.register(
-			Commands.literal("aiplayer").then(Commands.literal("spyglass")
+		CommandRegistrationCallback.EVENT.register((dispatcher, access, environment) -> {
+			var spyglass = Commands.literal("spyglass")
 				.then(Commands.literal("status").executes(c -> status(c.getSource().getPlayerOrException(), manager)))
 				.then(Commands.literal("enabled").then(Commands.argument("value", BoolArgumentType.bool())
 					.executes(c -> update(c.getSource().getPlayerOrException(), manager,
@@ -28,7 +28,9 @@ public final class SpyglassHighlightCommands {
 						manager.settings(c.getSource().getPlayerOrException().getUUID()).withHoldSeconds(IntegerArgumentType.getInteger(c, "value"))))))
 				.then(Commands.literal("duration-seconds").then(Commands.argument("value", IntegerArgumentType.integer(1, 600))
 					.executes(c -> update(c.getSource().getPlayerOrException(), manager,
-						manager.settings(c.getSource().getPlayerOrException().getUUID()).withEffectSeconds(IntegerArgumentType.getInteger(c, "value"))))))))));
+						manager.settings(c.getSource().getPlayerOrException().getUUID()).withEffectSeconds(IntegerArgumentType.getInteger(c, "value"))))));
+			dispatcher.register(Commands.literal("aiplayer").then(spyglass));
+		});
 	}
 
 	private static int update(ServerPlayer player, SpyglassHighlightManager manager, SpyglassHighlightSettings settings) {
