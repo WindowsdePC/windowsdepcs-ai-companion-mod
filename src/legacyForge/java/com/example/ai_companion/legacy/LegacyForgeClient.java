@@ -8,9 +8,12 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.ConfigScreenHandler;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import org.lwjgl.glfw.GLFW;
 
 /** Directly-polled 1.20.1 shortcuts. They intentionally stay out of the vanilla Controls list. */
@@ -28,12 +31,23 @@ public final class LegacyForgeClient {
 		boolean f8 = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_F8);
 		boolean c = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_C);
 		boolean g = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_G);
-		if (v && b && !comboDown && client.screen == null) client.setScreen(new CompanionScreen(false));
+		if (v && b && !comboDown && client.screen == null) client.setScreen(new CompanionScreen(false, null));
 		if (f8 && !positionsDown && client.player != null && client.getConnection() != null) client.getConnection().sendCommand("aiplayer positions");
-		if (g && !navigationDown && client.screen == null) client.setScreen(new CompanionScreen(true));
+		if (g && !navigationDown && client.screen == null) client.setScreen(new CompanionScreen(true, null));
 		if (c && !zoomDown) { savedFov = client.options.fov().get(); client.options.fov().set(Math.max(30, savedFov / 4)); }
 		if (!c && zoomDown && savedFov != null) { client.options.fov().set(savedFov); savedFov = null; }
 		comboDown = v && b; positionsDown = f8; zoomDown = c; navigationDown = g;
+	}
+
+	public static Screen configScreen(Screen parent) { return new CompanionScreen(false, parent); }
+
+	@Mod.EventBusSubscriber(modid = LegacyForgeMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+	public static final class ModBus {
+		private ModBus() { }
+		@SubscribeEvent public static void clientSetup(FMLClientSetupEvent event) {
+			ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
+				() -> new ConfigScreenHandler.ConfigScreenFactory((minecraft, parent) -> configScreen(parent)));
+		}
 	}
 
 	private static final class CompanionScreen extends Screen {
@@ -46,6 +60,7 @@ public final class LegacyForgeClient {
 		}
 
 		private final boolean navigation;
+		private final Screen parent;
 		private Tab tab = Tab.AI;
 		private String agentName = "AI_1";
 		private String prefix = "AI_";
@@ -58,7 +73,11 @@ public final class LegacyForgeClient {
 		private String spyglassCooldown = "10";
 		private String spyglassMaxTargets = "256";
 		private String status = "小游戏纯本地运行；1.20.1 服务端操作使用兼容回退";
-		private CompanionScreen(boolean navigation) { super(Component.literal(navigation ? "AI 导航" : "WindowsdePC's AI Companion Mod")); this.navigation = navigation; }
+		private CompanionScreen(boolean navigation, Screen parent) {
+			super(Component.literal(navigation ? "AI 导航" : "WindowsdePC's AI Companion Mod"));
+			this.navigation = navigation;
+			this.parent = parent;
+		}
 		@Override protected void init() {
 			rebuild();
 		}
@@ -175,6 +194,10 @@ public final class LegacyForgeClient {
 			}
 			minecraft.getConnection().sendCommand(value);
 			status = "已发送：/" + value + "；请查看服务器返回结果";
+		}
+		@Override public void onClose() {
+			if (minecraft != null && parent != null) minecraft.setScreen(parent);
+			else super.onClose();
 		}
 		@Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
 			renderBackground(graphics); super.render(graphics, mouseX, mouseY, delta);
