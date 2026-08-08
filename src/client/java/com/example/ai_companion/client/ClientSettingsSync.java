@@ -36,5 +36,6 @@ final class ClientSettingsSync {
 		minecraft.getConnection().sendCommand("aiplayer spyglass hold-seconds " + settings.spyglassHoldSeconds);
 		minecraft.getConnection().sendCommand("aiplayer spyglass duration-seconds " + settings.spyglassDurationSeconds);
 		minecraft.getConnection().sendCommand("aiplayer spyglass target " + settings.spyglassTargetCondition.toLowerCase(java.util.Locale.ROOT));
+		minecraft.getConnection().sendCommand("aiplayer spyglass cooldown-seconds " + settings.spyglassCooldownSeconds);
 	}
 }

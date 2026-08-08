@@ -32,6 +32,7 @@ public final class SpyglassHighlightManager {
 		.resolve("windowsdepcs-ai-companion-spyglass.json");
 	private final Map<String, SpyglassHighlightSettings> saved = new HashMap<>();
 	private final Map<UUID, Integer> useTicks = new HashMap<>();
+	private final Map<UUID, Integer> cooldownTicks = new HashMap<>();
 	private final Set<UUID> triggered = new HashSet<>();
 
 	public SpyglassHighlightManager() { load(); }
@@ -51,6 +52,7 @@ public final class SpyglassHighlightManager {
 			if (player instanceof FakePlayer) continue;
 			UUID id = player.getUUID();
 			online.add(id);
+			cooldownTicks.computeIfPresent(id, (ignored, remaining) -> remaining <= 1 ? null : remaining - 1);
 			SpyglassHighlightSettings settings = settings(id);
 			boolean observing = settings.enabled() && player.isUsingItem()
 				&& player.getUseItem().is(Items.SPYGLASS);
@@ -60,9 +62,19 @@ public final class SpyglassHighlightManager {
 				continue;
 			}
 			int ticks = useTicks.merge(id, 1, Integer::sum);
-			if (ticks >= settings.holdTicks() && triggered.add(id)) apply(player, settings);
+			if (ticks >= settings.holdTicks() && triggered.add(id)) {
+				int remaining = cooldownTicks.getOrDefault(id, 0);
+				if (remaining > 0) {
+					player.sendOverlayMessage(Component.literal("望远镜发光冷却中：还需 "
+						+ (remaining + 19) / 20 + " 秒"));
+				} else {
+					apply(player, settings);
+					cooldownTicks.put(id, settings.cooldownTicks());
+				}
+			}
 		}
 		useTicks.keySet().retainAll(online);
+		cooldownTicks.keySet().retainAll(online);
 		triggered.retainAll(online);
 	}
 
@@ -79,10 +91,11 @@ public final class SpyglassHighlightManager {
 		}
 		player.sendOverlayMessage(Component.literal("望远镜标记了 " + affected + " 个生物 · 半径 "
 			+ settings.radiusChunks() + " 区块 · " + settings.targetCondition().displayName()
-			+ " · 持续 " + settings.effectTicks() / 20 + " 秒"));
+			+ " · 持续 " + settings.effectTicks() / 20 + " 秒 · 冷却 "
+			+ settings.cooldownTicks() / 20 + " 秒"));
 	}
 
-	public void close() { save(); useTicks.clear(); triggered.clear(); }
+	public void close() { save(); useTicks.clear(); cooldownTicks.clear(); triggered.clear(); }
 
 	@SuppressWarnings("unchecked")
 	private void load() {

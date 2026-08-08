@@ -90,6 +90,10 @@ final class EclipseUiApiBridge {
 					.binding(() -> SpyglassTargetCondition.parse(settings.spyglassTargetCondition),
 						value -> settings.spyglassTargetCondition = value.name())
 					.defaultValue(SpyglassTargetCondition.ALL_LIVING))
+				.slider(slider -> slider.name(Component.literal("触发冷却（秒）"))
+					.description(Component.literal("一次发光脉冲后再次触发前的等待时间"))
+					.range(1, 600, 1).bindingInt(() -> settings.spyglassCooldownSeconds,
+						value -> settings.spyglassCooldownSeconds = value).defaultValue(10))
 				.toggle(toggle -> toggle.name(Component.literal("按键屏幕缩放"))
 					.description(Component.literal("按住设置的快捷键平滑缩放；默认关闭"))
 					.binding(() -> settings.screenZoomEnabled,

@@ -34,6 +34,9 @@ public final class SpyglassHighlightCommands {
 			spyglass.then(Commands.literal("target").then(Commands.argument("value", StringArgumentType.word()).executes(c ->
 				update(c.getSource().getPlayerOrException(), manager, manager.settings(c.getSource().getPlayerOrException().getUUID())
 					.withTargetCondition(SpyglassTargetCondition.parse(StringArgumentType.getString(c, "value")))))));
+			spyglass.then(Commands.literal("cooldown-seconds").then(Commands.argument("value", IntegerArgumentType.integer(1, 600)).executes(c ->
+				update(c.getSource().getPlayerOrException(), manager, manager.settings(c.getSource().getPlayerOrException().getUUID())
+					.withCooldownSeconds(IntegerArgumentType.getInteger(c, "value"))))));
 			dispatcher.register(Commands.literal("aiplayer").then(spyglass));
 		});
 	}
@@ -47,7 +50,8 @@ public final class SpyglassHighlightCommands {
 		SpyglassHighlightSettings value = manager.settings(player.getUUID());
 		player.sendSystemMessage(Component.literal("望远镜发光=" + value.enabled() + "，半径=" + value.radiusChunks()
 			+ "区块，观察=" + value.holdTicks() / 20 + "秒，持续=" + value.effectTicks() / 20
-			+ "秒，目标=" + value.targetCondition().name().toLowerCase(java.util.Locale.ROOT)));
+			+ "秒，目标=" + value.targetCondition().name().toLowerCase(java.util.Locale.ROOT)
+			+ "，冷却=" + value.cooldownTicks() / 20 + "秒"));
 		return 1;
 	}
 }
