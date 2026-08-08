@@ -285,7 +285,7 @@ public final class LegacyForgeClient {
 		}
 	}
 
-+	private enum FeatureGroup { ALL, LEISURE, COMPATIBILITY }
+	private enum FeatureGroup { ALL, LEISURE, COMPATIBILITY }
 
 	private enum LegacyFeature {
 		AI("AI 玩家系统", "生成、模式、目标、提示词、天眼与任务控制", FeatureGroup.ALL, "aiplayer feature status"),
