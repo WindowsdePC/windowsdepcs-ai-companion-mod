@@ -27,13 +27,15 @@ public final class LegacyFabricClient implements ClientModInitializer {
 		boolean f8 = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_F8);
 		boolean c = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_C);
 		boolean g = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_G);
-		if (v && b && !comboDown && client.screen == null) client.setScreen(new CompanionScreen(false));
+		if (v && b && !comboDown && client.screen == null) client.setScreen(new CompanionScreen(false, null));
 		if (f8 && !positionsDown && client.player != null && client.getConnection() != null) client.getConnection().sendCommand("aiplayer positions");
-		if (g && !navigationDown && client.screen == null) client.setScreen(new CompanionScreen(true));
+		if (g && !navigationDown && client.screen == null) client.setScreen(new CompanionScreen(true, null));
 		if (c && !zoomDown) { savedFov = client.options.fov().get(); client.options.fov().set(Math.max(30, savedFov / 4)); }
 		if (!c && zoomDown && savedFov != null) { client.options.fov().set(savedFov); savedFov = null; }
 		comboDown = v && b; positionsDown = f8; zoomDown = c; navigationDown = g;
 	}
+
+	public static Screen configScreen(Screen parent) { return new CompanionScreen(false, parent); }
 
 	private static final class CompanionScreen extends Screen {
 		private enum Tab {
@@ -45,6 +47,7 @@ public final class LegacyFabricClient implements ClientModInitializer {
 		}
 
 		private final boolean navigation;
+		private final Screen parent;
 		private Tab tab = Tab.AI;
 		private String agentName = "AI_1";
 		private String prefix = "AI_";
@@ -57,7 +60,11 @@ public final class LegacyFabricClient implements ClientModInitializer {
 		private String spyglassCooldown = "10";
 		private String spyglassMaxTargets = "256";
 		private String status = "小游戏纯本地运行；1.20.1 服务端操作使用兼容回退";
-		private CompanionScreen(boolean navigation) { super(Component.literal(navigation ? "AI 导航" : "WindowsdePC's AI Companion Mod")); this.navigation = navigation; }
+		private CompanionScreen(boolean navigation, Screen parent) {
+			super(Component.literal(navigation ? "AI 导航" : "WindowsdePC's AI Companion Mod"));
+			this.navigation = navigation;
+			this.parent = parent;
+		}
 		@Override protected void init() {
 			rebuild();
 		}
@@ -174,6 +181,10 @@ public final class LegacyFabricClient implements ClientModInitializer {
 			}
 			minecraft.getConnection().sendCommand(value);
 			status = "已发送：/" + value + "；请查看服务器返回结果";
+		}
+		@Override public void onClose() {
+			if (minecraft != null && parent != null) minecraft.setScreen(parent);
+			else super.onClose();
 		}
 		@Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
 			renderBackground(graphics); super.render(graphics, mouseX, mouseY, delta);
