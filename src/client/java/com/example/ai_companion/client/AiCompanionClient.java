@@ -14,6 +14,7 @@ import com.example.ai_companion.client.maid.MaidClientRegistry;
 public final class AiCompanionClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
+		UiActionClient.initialize();
 		UiBackend backend = UiBackend.detectOrThrow();
 		PromptStore localPrompts = PromptStore.loadClient();
 		ClientSettings settings = ClientSettings.load();
@@ -26,6 +27,7 @@ public final class AiCompanionClient implements ClientModInitializer {
 		MaidClientRegistry.initialize();
 		boolean[] chordHeld = {false};
 		boolean[] navigatorHeld = {false};
+		boolean[] sprintJumpLatch = {false};
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			if (settings.sprintJumpEnabled && client.player != null && client.options.keyUp.isDown()
 					&& !client.player.isShiftKeyDown()) client.player.setSprinting(true);
@@ -41,6 +43,18 @@ public final class AiCompanionClient implements ClientModInitializer {
 				NavigationClientController.open(client, client.gui.screen());
 			}
 			navigatorHeld[0] = navigatorPressed;
+			if (client.player != null) {
+				if (client.player.onGround()) {
+					sprintJumpLatch[0] = settings.sprintJumpEnabled && client.player.isSprinting();
+				} else if (settings.sprintJumpEnabled && sprintJumpLatch[0]) {
+					// Preserve the sprint state during the airborne part of a sprint-jump. The server
+					// remains authoritative for movement/collisions; this only avoids a client-side
+					// sprint cancellation between take-off and landing.
+					client.player.setSprinting(true);
+				} else if (!settings.sprintJumpEnabled) {
+					sprintJumpLatch[0] = false;
+				}
+			}
 		});
 	}
 

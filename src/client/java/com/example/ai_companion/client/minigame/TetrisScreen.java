@@ -115,8 +115,8 @@ public final class TetrisScreen extends Screen {
 			rewardStatus = "本局记录已保存；当前没有服务器连接，无法发放矿物";
 			return;
 		}
-		minecraft.getConnection().sendCommand("aiplayer minigame finish tetris " + sessionId + " "
-			+ game.score() + " " + game.lines());
+		com.example.ai_companion.client.UiActionClient.send("minigame.tetris.finish", sessionId,
+			Integer.toString(game.score()), Integer.toString(game.lines()));
 		rewardStatus = game.lines() > 0 ? "已提交成绩；矿物奖励结果会显示在物品栏上方"
 			: "未消除方块行，本局没有矿物奖励";
 	}
@@ -125,7 +125,7 @@ public final class TetrisScreen extends Screen {
 		if (sessionStarted) return;
 		sessionStarted = true;
 		if (minecraft != null && minecraft.getConnection() != null) {
-			minecraft.getConnection().sendCommand("aiplayer minigame start tetris " + sessionId);
+			com.example.ai_companion.client.UiActionClient.send("minigame.tetris.start", sessionId);
 		}
 	}
 

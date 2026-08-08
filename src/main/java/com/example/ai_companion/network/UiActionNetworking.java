@@ -9,6 +9,7 @@ public final class UiActionNetworking {
 
 	public static void registerServer(UiActionService service) {
 		PayloadTypeRegistry.serverboundPlay().register(UiActionPayload.TYPE, UiActionPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(UiActionResultPayload.TYPE, UiActionResultPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(UiActionPayload.TYPE, (payload, context) ->
 			service.handle(context.player(), payload));
 	}

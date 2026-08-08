@@ -11,17 +11,14 @@ import java.util.Set;
 
 /** Creates a fake player through PlayerList instead of adding an untracked world entity. */
 final class VisibleAgentSpawner {
-	private static final double[][] OFFSETS = {
-		{1.25, 0.0}, {0.0, 1.25}, {-1.25, 0.0}, {0.0, -1.25},
-		{1.25, 1.25}, {-1.25, 1.25}, {-1.25, -1.25}, {1.25, -1.25}
-	};
-
 	private VisibleAgentSpawner() {
 	}
 
 	static VisibleFakePlayer spawnNear(ServerPlayer owner, GameProfile profile, int ordinal) {
 		VisibleFakePlayer player = new VisibleFakePlayer(owner.level(), profile);
-		Vec3 position = safePosition(owner.level(), player, owner.position(), ordinal);
+		// Creation is deliberately anchored to the player who requested this AI. Do not choose a
+		// random point in a radius: the caller must immediately be able to see the new player.
+		Vec3 position = owner.position();
 		return register(owner.level().getServer(), owner.level(), player, position,
 			owner.getYRot(), owner.getXRot());
 	}
@@ -30,16 +27,6 @@ final class VisibleAgentSpawner {
 			double x, double y, double z) {
 		VisibleFakePlayer player = new VisibleFakePlayer(level, profile);
 		return register(server, level, player, new Vec3(x, y, z), 0.0F, 0.0F);
-	}
-
-	private static Vec3 safePosition(ServerLevel level, VisibleFakePlayer player, Vec3 origin, int ordinal) {
-		for (int attempt = 0; attempt < OFFSETS.length; attempt++) {
-			double[] offset = OFFSETS[Math.floorMod(ordinal + attempt, OFFSETS.length)];
-			Vec3 candidate = origin.add(offset[0], 0.0, offset[1]);
-			player.setPos(candidate.x, candidate.y, candidate.z);
-			if (level.noCollision(player)) return candidate;
-		}
-		return origin;
 	}
 
 	private static VisibleFakePlayer register(MinecraftServer server, ServerLevel level,

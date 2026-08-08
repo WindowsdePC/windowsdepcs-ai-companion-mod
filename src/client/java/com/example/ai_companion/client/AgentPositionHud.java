@@ -21,8 +21,8 @@ import java.util.List;
 public final class AgentPositionHud {
 	private static final Identifier HUD_ID = Identifier.fromNamespaceAndPath(
 		AiCompanionMod.MOD_ID, "agent_position_hud");
-	private static final int PANEL_WIDTH = 250;
-	private static final int LINE_HEIGHT = 11;
+	private static final int PANEL_WIDTH = 520;
+	private static final int LINE_HEIGHT = 13;
 	private static final int MAX_VISIBLE_ROWS = 16;
 
 	private static List<AgentPosition> positions = List.of();
@@ -30,6 +30,7 @@ public final class AgentPositionHud {
 	private static boolean visible;
 	private static boolean waiting;
 	private static String error = "";
+	private static long revision;
 
 	private AgentPositionHud() {
 	}
@@ -39,6 +40,7 @@ public final class AgentPositionHud {
 			positions = payload.positions();
 			waiting = false;
 			error = "";
+			revision++;
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clear());
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -55,7 +57,7 @@ public final class AgentPositionHud {
 			VanillaHudElements.CHAT, HUD_ID, AgentPositionHud::extractRenderState);
 	}
 
-	private static void requestRefresh(Minecraft client) {
+	public static void requestRefresh(Minecraft client) {
 		positions = List.of();
 		waiting = true;
 		error = "";
@@ -67,6 +69,14 @@ public final class AgentPositionHud {
 		ClientPlayNetworking.send(new AgentPositionRequestPayload());
 	}
 
+	public static List<AgentPosition> snapshot() {
+		return List.copyOf(positions);
+	}
+
+	public static long revision() {
+		return revision;
+	}
+
 	private static void extractRenderState(GuiGraphicsExtractor graphics,
 			net.minecraft.client.DeltaTracker deltaTracker) {
 		if (!visible) return;
@@ -74,15 +84,18 @@ public final class AgentPositionHud {
 
 		int rows = waiting || !error.isBlank() || positions.isEmpty()
 			? 1 : Math.min(positions.size(), MAX_VISIBLE_ROWS);
-		int panelHeight = 23 + rows * LINE_HEIGHT + (positions.size() > MAX_VISIBLE_ROWS ? LINE_HEIGHT : 0);
-		int left = Math.max(5, (client.getWindow().getGuiScaledWidth() - PANEL_WIDTH) / 2);
-		int top = 8;
-		graphics.fill(left, top, left + PANEL_WIDTH, top + panelHeight, 0xC010151B);
-		graphics.fill(left, top, left + PANEL_WIDTH, top + 2, 0xFF42A5F5);
+		int panelHeight = 38 + rows * LINE_HEIGHT + (positions.size() > MAX_VISIBLE_ROWS ? LINE_HEIGHT : 0);
+		int actualWidth = Math.min(PANEL_WIDTH, client.getWindow().getGuiScaledWidth() - 24);
+		int left = (client.getWindow().getGuiScaledWidth() - actualWidth) / 2;
+		int top = 18;
+		graphics.fill(left, top, left + actualWidth, top + panelHeight, 0xD010151B);
+		graphics.fill(left, top, left + actualWidth, top + 2, 0xFF42A5F5);
 		graphics.text(client.font, Component.translatable("hud.ai_companion.positions.title"),
 			left + 7, top + 7, 0xFFFFFFFF);
+		graphics.text(client.font, "AI名称", left + 12, top + 22, 0xFFB0BEC5);
+		graphics.text(client.font, "当前维度 / 位置", left + Math.min(150, actualWidth / 3), top + 22, 0xFFB0BEC5);
 
-		int y = top + 21;
+		int y = top + 36;
 		if (waiting) {
 			graphics.text(client.font, Component.translatable("hud.ai_companion.positions.loading"),
 				left + 7, y, 0xFFB0BEC5);
@@ -98,7 +111,7 @@ public final class AgentPositionHud {
 			return;
 		}
 		for (int index = 0; index < Math.min(positions.size(), MAX_VISIBLE_ROWS); index++) {
-			graphics.text(client.font, positions.get(index).displayText(), left + 7, y,
+			graphics.text(client.font, positions.get(index).displayText(), left + 12, y,
 				index % 2 == 0 ? 0xFFE3F2FD : 0xFFB3E5FC);
 			y += LINE_HEIGHT;
 		}

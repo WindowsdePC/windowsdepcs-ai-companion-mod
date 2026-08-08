@@ -47,7 +47,7 @@ EclipseUI，也不使用 26.2 Fabric 的文件。模组文件名中的 `mc1.20.1
 | 模组 | 适用发行目标 | 用途 | 网址 |
 | --- | --- | --- | --- |
 | Mod Menu | Minecraft 26.2 Fabric 或 1.20.1 Fabric | 在模组列表中显示“配置”按钮并直接打开完整九分类中心 | [Mod Menu](https://modrinth.com/mod/modmenu) |
-| Cloth Config API | Minecraft 1.20.1 Fabric 或 Forge（优先支持） | 低版本配置界面与顶部快捷栏 | [Cloth Config](https://modrinth.com/mod/cloth-config) |
+| Cloth Config API | Minecraft 1.20.1 Fabric 或 Forge（优先支持） | 低版本配置界面与顶部快捷栏；1.20.1 不使用 EclipseUI | [Cloth Config](https://modrinth.com/mod/cloth-config) |
 | Simple Voice Chat | 选择与加载器/游戏版本匹配的版本 | 女仆语音转写兼容通道 | [Simple Voice Chat](https://modrinth.com/plugin/simple-voice-chat) |
 | Sophisticated Backpacks | Minecraft 1.20.1 Forge | 女仆外部背包识别 | [Sophisticated Backpacks](https://www.curseforge.com/minecraft/mc-mods/sophisticated-backpacks) |
 | Traveler's Backpack | Minecraft 1.20.1 Fabric 或 Forge | 女仆外部背包识别 | [Traveler's Backpack](https://modrinth.com/mod/travelersbackpack) |
@@ -69,9 +69,13 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 ### AI 玩家
 
 - 0.9.7 起完整 UI 使用带边界校验的自定义网络操作通道直接调用服务端管理器；创建、模式、提示词、API、游戏增强、望远镜、AI 宠物与 AI 竞技按钮不再发送聊天命令。命令仍保留给服务器控制台、脚本和无客户端场景。
+- 0.9.8 将相册、旅行日志、日报、直播、音乐、模拟社会、自然事件、助手球等 UI 查询也改为直接调用服务端 Java 管理器；UI 操作结果显示在模组界面内，不再刷聊天栏，旧客户端连接时才回退为系统消息。
 - V+B 现在直接打开可操作的九分类中心；检测到 EclipseUI 时可从“兼容设置”进入现代化数值页，不再把小游戏、AI 宠物和 AI 竞技入口藏在返回页。
+- AI 管理页会实时列出 AI 的当前维度与 XYZ，并提供“传送至该 AI”按钮；传送属于服务器管理操作，需要管理员权限。F8 改为接近原版 Tab 玩家列表的居中面板，同样显示每个 AI 的当前维度与位置。
+- 新创建的 AI 不再在半径内随机选点，而是从发起创建的玩家当前位置加入世界，并继续执行 PlayerList/世界实体双重可见性校验。
+- “客户端增强”新增默认开启的疾跑跳跃保持，可让已经进入疾跑状态的玩家在跳跃腾空期间继续保持疾跑；服务器仍负责碰撞与移动校验。
 - 0.9.1 起 AI 通过原版玩家列表生命周期加入世界；命令只有在玩家列表与当前世界均验证成功后才报告创建成功。
-- 单个 AI 在命令玩家脚边生成，批量 AI 在玩家身边分散生成，避免与玩家或彼此完全重叠而看不见。
+- 单个和批量 AI 都以实际发起创建的玩家当前位置为生成锚点；不再从半径内随机挑选落点。
 - 创建、批量创建、列出和移除具有独立名称与 UUID 的可见 `FakePlayer`。
 - 猎人、队友、PvP 教练和空闲四种任务模式。
 - 选择当前在线玩家作为目标，并为指定 AI 分配提示词预设。

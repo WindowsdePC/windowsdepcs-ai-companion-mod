@@ -103,15 +103,15 @@ public final class MinesweeperScreen extends Screen {
 		resultRecorded = true;
 		progress.recordMinesweeperResult(won, game.elapsedTicks(), difficulty);
 		if (!won || !rewardSessionStarted || minecraft == null || minecraft.getConnection() == null) return;
-		minecraft.getConnection().sendCommand("aiplayer minigame finish minesweeper " + sessionId + " "
-			+ game.elapsedTicks());
+		com.example.ai_companion.client.UiActionClient.send("minigame.minesweeper.finish", sessionId,
+			Integer.toString(game.elapsedTicks()));
 	}
 
 	private void startRewardSession() {
 		if (rewardSessionStarted) return;
 		rewardSessionStarted = true;
 		if (minecraft != null && minecraft.getConnection() != null) {
-			minecraft.getConnection().sendCommand("aiplayer minigame start minesweeper " + sessionId);
+			com.example.ai_companion.client.UiActionClient.send("minigame.minesweeper.start", sessionId);
 		}
 	}
 

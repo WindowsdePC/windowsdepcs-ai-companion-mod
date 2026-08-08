@@ -105,14 +105,16 @@ public final class AiCompanionMod implements ModInitializer {
 		worldFeatures = WorldFeatureConfig.load();
 		worldFeatureManager = new WorldFeatureManager(() -> worldFeatures);
 		spyglassHighlights = new SpyglassHighlightManager();
+		minigameRewards = new MinigameRewardManager();
 		AgentPositionNetworking.registerServer(agents);
 		MaidNetworking.registerServer(maids);
 		NavigationNetworking.registerServer(() -> worldFeatures);
 		UiActionNetworking.registerServer(new UiActionService(agents, prompts, () -> config,
 			updated -> config = updated, () -> gameplay, updated -> gameplay = updated, arena,
-			petCompetitions, () -> worldFeatures, updated -> worldFeatures = updated, spyglassHighlights));
+			petCompetitions, () -> worldFeatures, updated -> worldFeatures = updated, spyglassHighlights,
+			assistantOrb, photography, travelLog, dailyNews, livestreams, music, society, weatherEvents,
+			minigameRewards));
 		goldenSpearRush = new GoldenSpearRush(() -> gameplay);
-		minigameRewards = new MinigameRewardManager();
 		goldenSpearRush.register();
 		AiPlayerCommands.register(agents, prompts, () -> config, updated -> config = updated,
 			() -> gameplay, updated -> gameplay = updated, minigameRewards);

@@ -53,5 +53,7 @@ public final class AiArenaScreen extends Screen {
 		super.extractRenderState(graphics, mouseX, mouseY, delta);
 		graphics.centeredText(font, title, width / 2, 24, 0xFFFFFF);
 		graphics.centeredText(font, "1v1 需要 2 名，2v2 需要 4 名，混战需要 3～8 名已登记 AI", width / 2, 44, 0xA0A0A0);
+		if (!UiActionClient.lastMessage().isBlank()) graphics.centeredText(font, UiActionClient.lastMessage(),
+			width / 2, 170, UiActionClient.lastSuccess() ? 0xFF9CCC65 : 0xFFEF5350);
 	}
 }

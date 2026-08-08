@@ -50,6 +50,8 @@ public final class PromptConfigScreen extends Screen {
 	private Tab tab = Tab.AI_SYSTEM;
 	private AiSection aiSection = AiSection.MANAGEMENT;
 	private String status = "修改服务器设置和分配 AI 需要管理员权限";
+	private long positionRevision = -1;
+	private long uiResultRevision = UiActionClient.revision();
 
 	private String baseName = "AI_";
 	private String createCount = "2";
@@ -163,6 +165,20 @@ public final class PromptConfigScreen extends Screen {
 		rebuildPanel();
 	}
 
+	@Override
+	public void tick() {
+		super.tick();
+		if (uiResultRevision != UiActionClient.revision()) {
+			uiResultRevision = UiActionClient.revision();
+			status = UiActionClient.lastMessage();
+		}
+		if (tab == Tab.AI_SYSTEM && aiSection == AiSection.MANAGEMENT
+				&& positionRevision != AgentPositionHud.revision()) {
+			positionRevision = AgentPositionHud.revision();
+			rebuildPanel();
+		}
+	}
+
 	private void rebuildPanel() {
 		clearWidgets();
 		int fullWidth = Math.min(920, width - 24);
@@ -250,16 +266,15 @@ public final class PromptConfigScreen extends Screen {
 
 	private void buildLeisurePanel(int left, int panelWidth) {
 		int cardWidth = (panelWidth - 14) / 2;
-		actionButton("打开相册列表", "aiplayer album list", left, 60, cardWidth);
-		actionButton("旅行日志统计", "aiplayer travel stats", left + cardWidth + 14, 60, cardWidth);
-		actionButton("生成今日 Minecraft 日报", "aiplayer news today", left, 88, cardWidth);
-		actionButton("查看 AI 直播状态", "aiplayer live status", left + cardWidth + 14, 88, cardWidth);
-		actionButton("查看 AI 合奏状态", "aiplayer music status", left, 116, cardWidth);
-		actionButton("模拟社会排行榜", "aiplayer society leaderboard",
-			left + cardWidth + 14, 116, cardWidth);
-		actionButton("自然事件状态", "aiplayer weather status", left, 144, cardWidth);
-		actionButton("AI 助手球探索", "aiplayer orb explore", left + cardWidth + 14, 144, cardWidth);
-		status = "休闲功能已提供真实入口；需要名称或参数的操作会继续使用对应命令补全参数";
+		directButton("打开相册列表", "album.list", left, 60, cardWidth);
+		directButton("旅行日志统计", "travel.stats", left + cardWidth + 14, 60, cardWidth);
+		directButton("生成今日 Minecraft 日报", "news.today", left, 88, cardWidth);
+		directButton("查看 AI 直播状态", "live.status", left + cardWidth + 14, 88, cardWidth);
+		directButton("查看 AI 合奏状态", "music.status", left, 116, cardWidth);
+		directButton("模拟社会排行榜", "society.leaderboard", left + cardWidth + 14, 116, cardWidth);
+		directButton("自然事件状态", "weather.status", left, 144, cardWidth);
+		directButton("AI 助手球探索", "orb.explore", left + cardWidth + 14, 144, cardWidth);
+		status = "休闲查询直接调用服务端 Java 管理器，不再向聊天栏发送命令";
 	}
 
 	private void buildCompatibilityPanel(int left, int panelWidth) {
@@ -271,17 +286,19 @@ public final class PromptConfigScreen extends Screen {
 		}
 		addRenderableWidget(Button.builder(Component.literal("检查 API 配置状态"), b ->
 			UiActionClient.send("config.status")).bounds(left, 70, cardWidth, 20).build());
-		actionButton("检查游戏增强状态", "aiplayer feature status", left + cardWidth + 14,
-			70, cardWidth);
-		actionButton("检查自然事件配置", "aiplayer weather config status", left, 98, cardWidth);
-		actionButton("刷新 AI 位置", "aiplayer positions", left + cardWidth + 14, 98, cardWidth);
+		directButton("检查游戏增强状态", "feature.status", left + cardWidth + 14, 70, cardWidth);
+		directButton("检查自然事件配置", "weather.config", left, 98, cardWidth);
+		addRenderableWidget(Button.builder(Component.literal("刷新 AI 位置"), button -> {
+			if (minecraft != null) AgentPositionHud.requestRefresh(minecraft);
+			status = "正在从服务器刷新 AI 位置";
+		}).bounds(left + cardWidth + 14, 98, cardWidth, 20).build());
 		status = "当前 UI 后端：" + backend.displayName() + "；Simple Voice Chat 与背包兼容均为可选";
 	}
 
-	private void actionButton(String label, String command, int x, int y, int width) {
+	private void directButton(String label, String action, int x, int y, int width) {
 		addRenderableWidget(Button.builder(Component.literal(label), button -> {
-			sendCommand(command);
-			status = "已发送：/" + command;
+			UiActionClient.send(action);
+			status = "已直接请求服务器：" + label;
 		}).bounds(x, y, width, 20).build());
 	}
 
@@ -318,6 +335,10 @@ public final class PromptConfigScreen extends Screen {
 	}
 
 	private void buildAiPanel(int left, int panelWidth) {
+		if (minecraft != null && positionRevision < 0) {
+			positionRevision = AgentPositionHud.revision();
+			AgentPositionHud.requestRefresh(minecraft);
+		}
 		EditBox base = addRenderableWidget(new EditBox(font, left, 70, 180, 20,
 			Component.literal("AI 名称前缀")));
 		base.setMaxLength(13);
@@ -375,6 +396,29 @@ public final class PromptConfigScreen extends Screen {
 		addRenderableWidget(Button.builder(Component.literal("打开 AI 宠物竞技"), b -> {
 			if (minecraft != null) minecraft.setScreenAndShow(new PetCompetitionScreen(this));
 		}).bounds(left + (panelWidth + 10) / 2, 240, (panelWidth - 10) / 2, 22).build());
+
+		addRenderableWidget(Button.builder(Component.literal("刷新 AI 列表"), b -> {
+			if (minecraft != null) AgentPositionHud.requestRefresh(minecraft);
+			status = "正在从服务器刷新 AI 当前维度与位置…";
+		}).bounds(left, 270, 140, 20).build());
+		List<com.example.ai_companion.agent.AgentPosition> liveAgents = AgentPositionHud.snapshot();
+		if (liveAgents.isEmpty()) {
+			status = "AI 列表暂无数据；点击“刷新 AI 列表”从服务器获取";
+			return;
+		}
+		int y = 295;
+		for (var position : liveAgents.stream().limit(5).toList()) {
+			int rowWidth = Math.max(220, panelWidth - 150);
+			addRenderableWidget(Button.builder(Component.literal(position.displayText()), b -> {
+				agentName = position.name();
+				status = "已选择 " + position.name() + "；当前维度 " + position.dimension();
+			}).bounds(left, y, rowWidth, 20).build());
+			addRenderableWidget(Button.builder(Component.literal("传送至 " + position.name()), b -> {
+				UiActionClient.send("agent.teleport_to", position.name());
+				status = "已请求服务器传送至 " + position.name() + "（需要管理员权限）";
+			}).bounds(left + rowWidth + 8, y, Math.max(130, panelWidth - rowWidth - 8), 20).build());
+			y += 22;
+		}
 	}
 
 	private void buildPromptPanel(int left, int panelWidth) {
@@ -828,7 +872,7 @@ public final class PromptConfigScreen extends Screen {
 				Integer.toString(settings.spyglassRadiusChunks), Integer.toString(settings.spyglassHoldSeconds),
 				Integer.toString(settings.spyglassDurationSeconds), settings.spyglassTargetCondition,
 				Integer.toString(settings.spyglassCooldownSeconds), Integer.toString(settings.spyglassMaxTargets));
-			status = "已保存望远镜发光与缩放设置";
+			status = "已保存望远镜发光、缩放与疾跑跳跃保持设置";
 		} catch (RuntimeException | IOException error) {
 			status = "保存失败: " + error.getMessage();
 		}
@@ -878,13 +922,6 @@ public final class PromptConfigScreen extends Screen {
 		double parsed = Double.parseDouble(value);
 		if (parsed < min || parsed > max) throw new IllegalArgumentException(label + "超出范围");
 		return parsed;
-	}
-
-	private void sendCommand(String command) {
-		if (minecraft == null || minecraft.getConnection() == null) {
-			throw new IllegalStateException("当前没有服务器连接");
-		}
-		minecraft.getConnection().sendCommand(command);
 	}
 
 	@Override

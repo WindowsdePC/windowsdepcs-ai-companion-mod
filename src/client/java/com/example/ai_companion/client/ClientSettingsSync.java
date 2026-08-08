@@ -1,8 +1,6 @@
 package com.example.ai_companion.client;
 
 import com.example.ai_companion.AiCompanionMod;
-import net.minecraft.client.Minecraft;
-
 import java.io.IOException;
 
 /** Saves client options and mirrors gameplay values to an attached server when permitted. */
@@ -22,21 +20,13 @@ final class ClientSettingsSync {
 			throw new IllegalStateException("客户端设置保存失败", error);
 		}
 
-		Minecraft minecraft = Minecraft.getInstance();
-		if (minecraft.getConnection() == null) return;
-		minecraft.getConnection().sendCommand("aiplayer feature enabled " + settings.goldenSpearRushEnabled);
-		minecraft.getConnection().sendCommand("aiplayer feature durability-every " + settings.durabilityEvery);
-		minecraft.getConnection().sendCommand("aiplayer feature hunger-every " + settings.hungerEvery);
-		minecraft.getConnection().sendCommand("aiplayer feature hunger-cost " + settings.hungerCost);
-		minecraft.getConnection().sendCommand("aiplayer feature strength " + settings.rushStrength);
-		minecraft.getConnection().sendCommand("aiplayer feature flexible-equipment "
-			+ settings.flexibleEquipmentEnabled);
-		minecraft.getConnection().sendCommand("aiplayer spyglass enabled " + settings.spyglassHighlightEnabled);
-		minecraft.getConnection().sendCommand("aiplayer spyglass radius-chunks " + settings.spyglassRadiusChunks);
-		minecraft.getConnection().sendCommand("aiplayer spyglass hold-seconds " + settings.spyglassHoldSeconds);
-		minecraft.getConnection().sendCommand("aiplayer spyglass duration-seconds " + settings.spyglassDurationSeconds);
-		minecraft.getConnection().sendCommand("aiplayer spyglass target " + settings.spyglassTargetCondition.toLowerCase(java.util.Locale.ROOT));
-		minecraft.getConnection().sendCommand("aiplayer spyglass cooldown-seconds " + settings.spyglassCooldownSeconds);
-		minecraft.getConnection().sendCommand("aiplayer spyglass max-targets " + settings.spyglassMaxTargets);
+		UiActionClient.send("gameplay.save", Boolean.toString(settings.goldenSpearRushEnabled),
+			Integer.toString(settings.durabilityEvery), Integer.toString(settings.hungerEvery),
+			Integer.toString(settings.hungerCost), Double.toString(settings.rushStrength),
+			Boolean.toString(settings.flexibleEquipmentEnabled));
+		UiActionClient.send("spyglass.save", Boolean.toString(settings.spyglassHighlightEnabled),
+			Integer.toString(settings.spyglassRadiusChunks), Integer.toString(settings.spyglassHoldSeconds),
+			Integer.toString(settings.spyglassDurationSeconds), settings.spyglassTargetCondition,
+			Integer.toString(settings.spyglassCooldownSeconds), Integer.toString(settings.spyglassMaxTargets));
 	}
 }

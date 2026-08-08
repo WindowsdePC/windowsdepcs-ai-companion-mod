@@ -8,21 +8,32 @@ import com.example.ai_companion.config.GameplayConfig;
 import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
 import com.example.ai_companion.gameplay.InventoryShuffleManager;
+import com.example.ai_companion.gameplay.MinigameRewardManager;
 import com.example.ai_companion.pet.PetAttribute;
 import com.example.ai_companion.pet.PetCompetitionEngine;
 import com.example.ai_companion.pet.PetCompetitionManager;
 import com.example.ai_companion.pet.PetCompetitionMode;
 import com.example.ai_companion.pet.PetProfile;
+import com.example.ai_companion.orb.AssistantOrbManager;
+import com.example.ai_companion.photo.PhotographyManager;
+import com.example.ai_companion.travel.TravelLogManager;
+import com.example.ai_companion.news.MinecraftDailyNewsManager;
+import com.example.ai_companion.livestream.LivestreamManager;
+import com.example.ai_companion.music.AiMusicManager;
+import com.example.ai_companion.society.AiSocietyManager;
+import com.example.ai_companion.weather.WeatherEventManager;
 import com.example.ai_companion.spyglass.SpyglassHighlightManager;
 import com.example.ai_companion.spyglass.SpyglassTargetCondition;
 import com.example.ai_companion.world.WorldFeatureConfig;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -39,12 +50,24 @@ public final class UiActionService {
 	private final Supplier<WorldFeatureConfig> world;
 	private final Consumer<WorldFeatureConfig> updateWorld;
 	private final SpyglassHighlightManager spyglass;
+	private final AssistantOrbManager orb;
+	private final PhotographyManager photography;
+	private final TravelLogManager travel;
+	private final MinecraftDailyNewsManager news;
+	private final LivestreamManager livestreams;
+	private final AiMusicManager music;
+	private final AiSocietyManager society;
+	private final WeatherEventManager weather;
+	private final MinigameRewardManager minigameRewards;
 
 	public UiActionService(AgentManager agents, PromptStore prompts, Supplier<ModConfig> config,
 			Consumer<ModConfig> updateConfig, Supplier<GameplayConfig> gameplay,
 			Consumer<GameplayConfig> updateGameplay, AiArenaManager arena, PetCompetitionManager pets,
 			Supplier<WorldFeatureConfig> world, Consumer<WorldFeatureConfig> updateWorld,
-			SpyglassHighlightManager spyglass) {
+			SpyglassHighlightManager spyglass, AssistantOrbManager orb, PhotographyManager photography,
+			TravelLogManager travel, MinecraftDailyNewsManager news, LivestreamManager livestreams,
+			AiMusicManager music, AiSocietyManager society, WeatherEventManager weather,
+			MinigameRewardManager minigameRewards) {
 		this.agents = agents;
 		this.prompts = prompts;
 		this.config = config;
@@ -56,12 +79,22 @@ public final class UiActionService {
 		this.world = world;
 		this.updateWorld = updateWorld;
 		this.spyglass = spyglass;
+		this.orb = orb;
+		this.photography = photography;
+		this.travel = travel;
+		this.news = news;
+		this.livestreams = livestreams;
+		this.music = music;
+		this.society = society;
+		this.weather = weather;
+		this.minigameRewards = minigameRewards;
 	}
 
 	public void handle(ServerPlayer player, UiActionPayload request) {
 		try {
 			switch (request.action()) {
 				case "agent.create_many" -> createMany(player, arg(request, 0), integer(request, 1, 1, 20));
+				case "agent.teleport_to" -> teleportToAgent(player, arg(request, 0));
 				case "agent.mode" -> setMode(player, arg(request, 0), AgentMode.valueOf(arg(request, 1)), arg(request, 2));
 				case "agent.idle" -> setMode(player, arg(request, 0), AgentMode.IDLE, "");
 				case "agent.ask" -> ask(player, arg(request, 0), arg(request, 1));
@@ -85,10 +118,34 @@ public final class UiActionService {
 				case "inventory.shuffle" -> shuffle(player);
 				case "spyglass.save" -> saveSpyglass(player, request);
 				case "world.save" -> saveWorld(player, request);
+				case "album.list" -> reply(player, photography.photos(player).stream().limit(8)
+					.map(value -> value.displayText()).collect(java.util.stream.Collectors.joining(" | ", "相册：", "")));
+				case "travel.stats" -> reply(player, "旅行日志：" + travel.categoryCounts(player));
+				case "news.today" -> reply(player, news.generateCurrent(player.level().getServer()).summaryText());
+				case "live.status" -> reply(player, describe(livestreams.status(player)));
+				case "music.status" -> reply(player, describe(music.status(player)));
+				case "society.leaderboard" -> reply(player, society.leaderboard().stream().limit(8)
+					.map(value -> value.agentName() + "=" + value.balance()).collect(java.util.stream.Collectors.joining(", ", "社会排行：", "")));
+				case "weather.status" -> reply(player, weather.active() == null ? "当前没有自然事件"
+					: weather.active().type().displayName() + " · 剩余 " + weather.active().remainingSeconds() + " 秒");
+				case "weather.config" -> reply(player, "自然事件配置：" + weather.settings()
+					+ " · 权重=" + weather.typeWeightSummary());
+				case "orb.explore" -> reply(player, orb.explorationSummary(player));
+				case "feature.status" -> reply(player, "服务端直连 UI、小游戏、宠物竞技、AI竞技、导航、望远镜与世界功能可用");
+				case "minigame.tetris.start" -> minigameResult(player,
+					minigameRewards.startTetris(player, arg(request, 0), player.level().getServer().getTickCount()));
+				case "minigame.tetris.finish" -> minigameResult(player,
+					minigameRewards.finishTetris(player, arg(request, 0), integer(request, 1, 0, 2_000_000),
+						integer(request, 2, 0, 200), player.level().getServer().getTickCount()));
+				case "minigame.minesweeper.start" -> minigameResult(player,
+					minigameRewards.startMinesweeper(player, arg(request, 0), player.level().getServer().getTickCount()));
+				case "minigame.minesweeper.finish" -> minigameResult(player,
+					minigameRewards.finishMinesweeper(player, arg(request, 0), integer(request, 1, 0, 72_000),
+						player.level().getServer().getTickCount()));
 				default -> throw new IllegalArgumentException("服务器不支持此 UI 操作: " + request.action());
 			}
 		} catch (Exception error) {
-			reply(player, "UI 操作失败：" + rootMessage(error));
+			result(player, false, "UI 操作失败：" + rootMessage(error));
 		}
 	}
 
@@ -103,6 +160,17 @@ public final class UiActionService {
 			created++;
 		}
 		reply(player, "已通过 UI 在服务端创建 " + created + " 个可见 AI");
+	}
+
+	private void teleportToAgent(ServerPlayer player, String name) {
+		requireAdmin(player);
+		ServerPlayer target = agents.managedPlayer(name);
+		player.teleportTo(target.level(), target.getX(), target.getY(), target.getZ(), Set.of(),
+			target.getYRot(), target.getXRot(), true);
+		reply(player, "已传送至 " + agents.canonicalName(name) + " · "
+			+ target.level().dimension().identifier() + " · X " + String.format(java.util.Locale.ROOT, "%.1f", target.getX())
+			+ " Y " + String.format(java.util.Locale.ROOT, "%.1f", target.getY())
+			+ " Z " + String.format(java.util.Locale.ROOT, "%.1f", target.getZ()));
 	}
 
 	private void setMode(ServerPlayer player, String name, AgentMode mode, String target) {
@@ -230,9 +298,22 @@ public final class UiActionService {
 		reply(player, "世界功能设置已直接保存到服务器");
 	}
 
+	private void minigameResult(ServerPlayer player, MinigameRewardManager.Result value) {
+		result(player, value.accepted(), value.message().getString());
+	}
+
 	private static String describe(PetProfile pet) {
 		return pet.name() + " · 主人=" + pet.ownerName() + " · 速度=" + pet.speed() + " · 力量="
 			+ pet.strength() + " · 耐力=" + pet.endurance() + " · 胜负=" + pet.wins() + "/" + pet.losses();
+	}
+
+	private static String describe(com.example.ai_companion.livestream.LivestreamSession value) {
+		return "直播：" + (value.enabled() ? "开启" : "关闭") + " · AI=" + value.viewers()
+			+ " · 间隔=" + (value.intervalTicks() / 20) + "秒 · 弹幕=" + value.commentsGenerated();
+	}
+
+	private static String describe(com.example.ai_companion.music.MusicSession value) {
+		return "合奏：" + value.style().displayName() + " · AI=" + value.members() + " · 音符=" + value.notesPlayed();
 	}
 
 	private static String arg(UiActionPayload request, int index) {
@@ -263,7 +344,16 @@ public final class UiActionService {
 	}
 
 	private static void reply(ServerPlayer player, String message) {
-		player.sendSystemMessage(Component.literal(message));
+		result(player, true, message);
+	}
+
+	private static void result(ServerPlayer player, boolean success, String message) {
+		if (ServerPlayNetworking.canSend(player, UiActionResultPayload.TYPE)) {
+			ServerPlayNetworking.send(player, new UiActionResultPayload(success, message));
+		} else {
+			// Compatibility fallback for clients older than the direct UI result protocol.
+			player.sendSystemMessage(Component.literal(message));
+		}
 	}
 
 	private static String rootMessage(Throwable error) {

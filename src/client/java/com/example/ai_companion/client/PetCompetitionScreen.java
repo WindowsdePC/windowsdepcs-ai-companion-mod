@@ -74,5 +74,7 @@ public final class PetCompetitionScreen extends Screen {
 		graphics.centeredText(font, title, width / 2, 20, 0xFFFFFF);
 		graphics.centeredText(font, "宠物名 / 速度 / 力量 / 耐力（单项 10～100，总和不超过 180）", width / 2, 42, 0xA0A0A0);
 		graphics.centeredText(font, "下方左侧填写对手名；训练始终作用于上方宠物名", width / 2, 122, 0xA0A0A0);
+		if (!UiActionClient.lastMessage().isBlank()) graphics.centeredText(font, UiActionClient.lastMessage(),
+			width / 2, 202, UiActionClient.lastSuccess() ? 0xFF9CCC65 : 0xFFEF5350);
 	}
 }
