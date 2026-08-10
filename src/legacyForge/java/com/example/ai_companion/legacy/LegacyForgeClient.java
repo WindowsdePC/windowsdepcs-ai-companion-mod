@@ -34,17 +34,18 @@ public final class LegacyForgeClient {
 	private static ClientPreferences preferences = ClientPreferences.load();
 	private static boolean comboDown, positionsDown, zoomDown, navigationDown, minigameDown, sprintJumpLatched;
 	private static Integer savedFov;
+	static { preferences.migrateLegacyDefaults(); }
 
 	@SubscribeEvent public static void clientTick(TickEvent.ClientTickEvent event) {
 		if (event.phase != TickEvent.Phase.END) return;
 		Minecraft client = Minecraft.getInstance();
 		long window = client.getWindow().getWindow();
-		boolean v = InputConstants.isKeyDown(window, preferences.code(preferences.uiPrimary, "V"));
-		boolean b = InputConstants.isKeyDown(window, preferences.code(preferences.uiSecondary, "B"));
-		boolean f8 = InputConstants.isKeyDown(window, preferences.code(preferences.positions, "F8"));
-		boolean c = InputConstants.isKeyDown(window, preferences.code(preferences.zoom, "C"));
-		boolean g = InputConstants.isKeyDown(window, preferences.code(preferences.navigation, "G"));
-		boolean m = InputConstants.isKeyDown(window, preferences.code(preferences.minigames, "M"));
+		boolean v = preferences.uiPrimaryEnabled && InputConstants.isKeyDown(window, preferences.code(preferences.uiPrimary, "V"));
+		boolean b = preferences.uiSecondaryEnabled && InputConstants.isKeyDown(window, preferences.code(preferences.uiSecondary, "B"));
+		boolean f8 = preferences.positionsEnabled && InputConstants.isKeyDown(window, preferences.code(preferences.positions, "F8"));
+		boolean c = preferences.zoomEnabled && InputConstants.isKeyDown(window, preferences.code(preferences.zoom, "F6"));
+		boolean g = preferences.navigationEnabled && InputConstants.isKeyDown(window, preferences.code(preferences.navigation, "F7"));
+		boolean m = preferences.minigamesEnabled && InputConstants.isKeyDown(window, preferences.code(preferences.minigames, "F9"));
 		if (v && b && !comboDown && client.screen == null) client.setScreen(new CompanionScreen(false, null));
 		if (f8 && !positionsDown && client.player != null && client.getConnection() != null) {
 			if (client.screen instanceof AgentConsoleScreen console) console.onClose();
@@ -168,27 +169,8 @@ public final class LegacyForgeClient {
 		}
 
 		private void buildShortcuts(int left, int panelWidth) {
-			int width = (panelWidth - 16) / 5;
-			keyBox(left, 55, width, "界面一", preferences.uiPrimary, value -> preferences.uiPrimary = value);
-			keyBox(left + width + 4, 55, width, "界面二", preferences.uiSecondary, value -> preferences.uiSecondary = value);
-			keyBox(left + (width + 4) * 2, 55, width, "AI控制台", preferences.positions, value -> preferences.positions = value);
-			keyBox(left + (width + 4) * 3, 55, width, "缩放", preferences.zoom, value -> preferences.zoom = value);
-			keyBox(left + (width + 4) * 4, 55, width, "导航", preferences.navigation, value -> preferences.navigation = value);
-			keyBox(left, 85, width, "小游戏中心", preferences.minigames, value -> preferences.minigames = value);
-			keyBox(left + width + 4, 85, width, "上", preferences.gameUp, value -> preferences.gameUp = value);
-			keyBox(left + (width + 4) * 2, 85, width, "下", preferences.gameDown, value -> preferences.gameDown = value);
-			keyBox(left + (width + 4) * 3, 85, width, "左", preferences.gameLeft, value -> preferences.gameLeft = value);
-			keyBox(left + (width + 4) * 4, 85, width, "右", preferences.gameRight, value -> preferences.gameRight = value);
-			keyBox(left, 115, width, "动作", preferences.gameAction, value -> preferences.gameAction = value);
-			keyBox(left + width + 4, 115, width, "暂停", preferences.gamePause, value -> preferences.gamePause = value);
-			keyBox(left + (width + 4) * 2, 115, width, "重开", preferences.gameRestart, value -> preferences.gameRestart = value);
-			keyBox(left + (width + 4) * 3, 115, width, "辅助", preferences.gameSecondary, value -> preferences.gameSecondary = value);
-			addRenderableWidget(Button.builder(Component.literal("保存并立即应用快捷键"), b -> { preferences.save(); status = "快捷键已保存：UI " + preferences.uiPrimary + "+" + preferences.uiSecondary + " · F8窗口 " + preferences.positions + " · 小游戏 " + preferences.minigames; }).bounds(left + (width + 4) * 4, 115, width, 20).build());
-			status = "UI、F8、缩放、导航和全部小游戏共用键均可修改";
-		}
-
-		private EditBox keyBox(int x, int y, int width, String label, String value, java.util.function.Consumer<String> setter) {
-			EditBox box = new EditBox(font, x, y, width, 20, Component.literal(label)); box.setMaxLength(label.equals("动作") ? 5 : 3); box.setValue(value); box.setResponder(setter); addRenderableWidget(box); return box;
+			addRenderableWidget(Button.builder(Component.literal("打开四列式快捷键管理（功能 / 开关 / 改键 / 重置）"), b -> minecraft.setScreen(new ShortcutSettingsScreen(this))).bounds(left, 58, panelWidth, 24).build());
+			status = "小游戏中心默认 F9；缩放 F6；导航 F7。旧 M/C/G 默认值会安全迁移";
 		}
 
 		private void buildAi(int left, int panelWidth) {
@@ -207,6 +189,8 @@ public final class LegacyForgeClient {
 			button("传送至 " + agentName + "（管理员）", "aiplayer teleport-to " + agentName, left, 139, panelWidth);
 			addRenderableWidget(Button.builder(Component.literal("修改 AI 模式 / 分配提示词"), b ->
 				minecraft.setScreen(new PromptAssignmentScreen(this, agentName))).bounds(left, 167, panelWidth, 20).build());
+			addRenderableWidget(Button.builder(Component.literal("编辑 AI 提示词内容"), b -> minecraft.setScreen(new PromptEditorScreen(this))).bounds(left, 195, (panelWidth - 8) / 2, 20).build());
+			addRenderableWidget(Button.builder(Component.literal("AI 女仆任务面板"), b -> minecraft.setScreen(new MaidTaskScreen(this, agentName))).bounds(left + (panelWidth + 8) / 2, 195, (panelWidth - 8) / 2, 20).build());
 		}
 
 		private void buildCompatibility(int left, int panelWidth) {
@@ -289,6 +273,7 @@ public final class LegacyForgeClient {
 
 	private enum LegacyFeature {
 		AI("AI 玩家系统", "生成、模式、目标、提示词、天眼与任务控制", FeatureGroup.ALL, "aiplayer feature status"),
+		PROMPTS("AI 提示词编辑", "编辑中文名称对应的提示词内容并分配给 AI", FeatureGroup.ALL, null),
 		MAID("AI 女仆", "皮肤、披风、对话、背包、成长与所有权", FeatureGroup.ALL, null),
 		COLLAB("多 AI 协作", "共享任务、共识、投票和领队选举", FeatureGroup.ALL, null),
 		ARENA("AI 竞技场", "1v1、2v2 与混战", FeatureGroup.ALL, null),
@@ -329,7 +314,7 @@ public final class LegacyForgeClient {
 				List<LegacyFeature> entries = values(); int pages = Math.max(1, (entries.size() + 7) / 8);
 				page = Math.max(0, Math.min(page, pages - 1)); int card = (panel - 10) / 2; int start = page * 8;
 				for (int i = 0; i < 8 && start + i < entries.size(); i++) { LegacyFeature feature = entries.get(start + i); int column = i % 2, row = i / 2;
-					addRenderableWidget(Button.builder(Component.literal("进入 · " + feature.title), b -> { selected = feature; rebuild(); })
+					addRenderableWidget(Button.builder(Component.literal("进入 · " + feature.title), b -> { if (feature == LegacyFeature.MAID) minecraft.setScreen(new MaidTaskScreen(this, "AI_1")); else if (feature == LegacyFeature.PROMPTS) minecraft.setScreen(new PromptEditorScreen(this)); else { selected = feature; rebuild(); } })
 						.bounds(left + column * (card + 10), 45 + row * 45, card, 22).build()); }
 				if (pages > 1) { addRenderableWidget(Button.builder(Component.literal("上一页"), b -> { page--; rebuild(); }).bounds(left, height - 52, 90, 20).build()); addRenderableWidget(Button.builder(Component.literal("下一页"), b -> { page++; rebuild(); }).bounds(left + 100, height - 52, 90, 20).build()); }
 			} else {
@@ -349,6 +334,29 @@ public final class LegacyForgeClient {
 	}
 
 
+	private static final class ShortcutSettingsScreen extends Screen {
+		private static final int PAGE_SIZE = 9; private final Screen parent; private final List<ShortcutRow> rows = new ArrayList<>(); private int page; private ShortcutRow awaiting;
+		private ShortcutSettingsScreen(Screen parent) { super(Component.literal("快捷键管理")); this.parent = parent;
+			rows.add(row("主界面组合键（主键）", () -> preferences.uiPrimaryEnabled, v -> preferences.uiPrimaryEnabled = v, () -> preferences.uiPrimary, v -> preferences.uiPrimary = v, "V"));
+			rows.add(row("主界面组合键（副键）", () -> preferences.uiSecondaryEnabled, v -> preferences.uiSecondaryEnabled = v, () -> preferences.uiSecondary, v -> preferences.uiSecondary = v, "B"));
+			rows.add(row("F8 AI 控制台", () -> preferences.positionsEnabled, v -> preferences.positionsEnabled = v, () -> preferences.positions, v -> preferences.positions = v, "F8"));
+			rows.add(row("视野缩放", () -> preferences.zoomEnabled, v -> preferences.zoomEnabled = v, () -> preferences.zoom, v -> preferences.zoom = v, "F6"));
+			rows.add(row("AI 导航", () -> preferences.navigationEnabled, v -> preferences.navigationEnabled = v, () -> preferences.navigation, v -> preferences.navigation = v, "F7"));
+			rows.add(row("小游戏中心", () -> preferences.minigamesEnabled, v -> preferences.minigamesEnabled = v, () -> preferences.minigames, v -> preferences.minigames = v, "F9"));
+			rows.add(row("小游戏：上", () -> preferences.gameUpEnabled, v -> preferences.gameUpEnabled = v, () -> preferences.gameUp, v -> preferences.gameUp = v, "W")); rows.add(row("小游戏：下", () -> preferences.gameDownEnabled, v -> preferences.gameDownEnabled = v, () -> preferences.gameDown, v -> preferences.gameDown = v, "S")); rows.add(row("小游戏：左", () -> preferences.gameLeftEnabled, v -> preferences.gameLeftEnabled = v, () -> preferences.gameLeft, v -> preferences.gameLeft = v, "A")); rows.add(row("小游戏：右", () -> preferences.gameRightEnabled, v -> preferences.gameRightEnabled = v, () -> preferences.gameRight, v -> preferences.gameRight = v, "D"));
+			rows.add(row("小游戏：动作", () -> preferences.gameActionEnabled, v -> preferences.gameActionEnabled = v, () -> preferences.gameAction, v -> preferences.gameAction = v, "SPACE")); rows.add(row("小游戏：暂停", () -> preferences.gamePauseEnabled, v -> preferences.gamePauseEnabled = v, () -> preferences.gamePause, v -> preferences.gamePause = v, "P")); rows.add(row("小游戏：重新开始", () -> preferences.gameRestartEnabled, v -> preferences.gameRestartEnabled = v, () -> preferences.gameRestart, v -> preferences.gameRestart = v, "R")); rows.add(row("小游戏：辅助动作", () -> preferences.gameSecondaryEnabled, v -> preferences.gameSecondaryEnabled = v, () -> preferences.gameSecondary, v -> preferences.gameSecondary = v, "F")); }
+		private ShortcutRow row(String n, java.util.function.Supplier<Boolean> e, java.util.function.Consumer<Boolean> es, java.util.function.Supplier<String> k, java.util.function.Consumer<String> ks, String d) { return new ShortcutRow(n, e, es, k, ks, d); }
+		@Override protected void init() { rebuild(); }
+		private void rebuild() { clearWidgets(); int panel = Math.min(720, width - 24), left = (width - panel) / 2, pages = Math.max(1, (rows.size() + PAGE_SIZE - 1) / PAGE_SIZE); page = Math.max(0, Math.min(page, pages - 1)); int featureWidth = panel - 315;
+			for (int i = 0; i < PAGE_SIZE && page * PAGE_SIZE + i < rows.size(); i++) { ShortcutRow row = rows.get(page * PAGE_SIZE + i); int y = 48 + i * 24; addRenderableWidget(Button.builder(Component.literal(row.name), b -> { }).bounds(left, y, featureWidth, 20).build()); addRenderableWidget(Button.builder(Component.literal(row.enabled.get() ? "开" : "关"), b -> { row.enabledSetter.accept(!row.enabled.get()); save(); rebuild(); }).bounds(left + featureWidth + 8, y, 58, 20).build()); addRenderableWidget(Button.builder(Component.literal(awaiting == row ? "请按键…" : "更改按键：" + row.key.get()), b -> { awaiting = row; rebuild(); }).bounds(left + featureWidth + 72, y, 145, 20).build()); addRenderableWidget(Button.builder(Component.literal("重置为默认按键"), b -> { row.keySetter.accept(row.defaultKey); save(); rebuild(); }).bounds(left + featureWidth + 223, y, 92, 20).build()); }
+			if (page > 0) addRenderableWidget(Button.builder(Component.literal("上一页"), b -> { page--; awaiting = null; rebuild(); }).bounds(left, height - 28, 86, 20).build()); if (page + 1 < pages) addRenderableWidget(Button.builder(Component.literal("下一页"), b -> { page++; awaiting = null; rebuild(); }).bounds(left + 92, height - 28, 86, 20).build()); addRenderableWidget(Button.builder(Component.literal("完成"), b -> onClose()).bounds(left + panel - 90, height - 28, 90, 20).build()); }
+		private void save() { preferences.save(); }
+		@Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) { if (awaiting != null) { if (keyCode == GLFW.GLFW_KEY_ESCAPE) { awaiting = null; rebuild(); return true; } String name = ClientPreferences.keyName(keyCode); if (name != null) { awaiting.keySetter.accept(name); awaiting = null; save(); rebuild(); } return true; } return super.keyPressed(keyCode, scanCode, modifiers); }
+		@Override public void onClose() { save(); if (minecraft != null) minecraft.setScreen(parent); }
+		@Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) { renderBackground(graphics); super.render(graphics, mouseX, mouseY, delta); graphics.drawCenteredString(font, "功能名称　　开/关　　更改按键　　重置为默认按键", width / 2, 16, 0xFFFFFF); graphics.drawCenteredString(font, "小游戏中心默认 F9，避免与小地图常用的 M 冲突", width / 2, 30, 0xA8E6A3); }
+		private record ShortcutRow(String name, java.util.function.Supplier<Boolean> enabled, java.util.function.Consumer<Boolean> enabledSetter, java.util.function.Supplier<String> key, java.util.function.Consumer<String> keySetter, String defaultKey) { }
+	}
+
 	private static final class AgentConsoleScreen extends Screen {
 		private final Screen parent; private String agent = "AI_1"; private String prompt = "报告当前状态并决定下一步";
 		private AgentConsoleScreen(Screen parent) { super(Component.literal("F8 AI 控制台")); this.parent = parent; }
@@ -367,8 +375,8 @@ public final class LegacyForgeClient {
 		@Override protected void init() {
 			EditBox name = new EditBox(font, width / 2 - 210, 55, 200, 20, Component.literal("AI 名称")); name.setValue(agent); name.setResponder(value -> agent = value); addRenderableWidget(name);
 			EditBox player = new EditBox(font, width / 2 + 10, 55, 200, 20, Component.literal("目标玩家")); player.setValue(target); player.setResponder(value -> target = value); addRenderableWidget(player);
-			addRenderableWidget(Button.builder(Component.literal("模式：" + MODES[modeIndex]), b -> { modeIndex = (modeIndex + 1) % MODES.length; rebuild(); }).bounds(width / 2 - 210, 87, 200, 20).build());
-			addRenderableWidget(Button.builder(Component.literal("提示词：" + PROMPTS[promptIndex]), b -> { promptIndex = (promptIndex + 1) % PROMPTS.length; rebuild(); }).bounds(width / 2 + 10, 87, 200, 20).build());
+			addRenderableWidget(Button.builder(Component.literal("模式：" + localized(MODES[modeIndex])), b -> { modeIndex = (modeIndex + 1) % MODES.length; rebuild(); }).bounds(width / 2 - 210, 87, 200, 20).build());
+			addRenderableWidget(Button.builder(Component.literal("提示词：" + localized(PROMPTS[promptIndex])), b -> { promptIndex = (promptIndex + 1) % PROMPTS.length; rebuild(); }).bounds(width / 2 + 10, 87, 200, 20).build());
 			addRenderableWidget(Button.builder(Component.literal("应用模式并分配提示词"), b -> apply()).bounds(width / 2 - 210, 119, 420, 22).build());
 			addRenderableWidget(Button.builder(Component.literal("返回"), b -> onClose()).bounds(width / 2 - 55, 151, 110, 20).build());
 		}
@@ -378,10 +386,27 @@ public final class LegacyForgeClient {
 			String mode = MODES[modeIndex];
 			String command = switch (mode) { case "survival" -> "aiplayer survival " + agent; case "hunter" -> "aiplayer hunt " + agent + " " + target; case "teammate" -> "aiplayer team " + agent + " " + target; case "pvp_coach" -> "aiplayer coach " + agent + " " + target; default -> "aiplayer idle " + agent; };
 			UiInbox.beginCapture(); minecraft.getConnection().sendCommand(command); minecraft.getConnection().sendCommand("aiplayer prompt assign " + agent + " " + PROMPTS[promptIndex]);
-			status = "已提交 " + agent + " · " + mode + " · " + PROMPTS[promptIndex];
+			status = "已提交 " + agent + " · " + localized(mode) + " · " + localized(PROMPTS[promptIndex]);
 		}
+		private static String localized(String value) { return switch (value) { case "survival" -> "生存玩家"; case "hunter" -> "猎人"; case "teammate" -> "队友"; case "pvp_coach" -> "PVP 教练"; case "idle" -> "空闲 / 通用"; default -> value; }; }
 		@Override public void onClose() { if (minecraft != null) minecraft.setScreen(parent); }
 		@Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) { renderBackground(graphics); super.render(graphics, mouseX, mouseY, delta); graphics.drawCenteredString(font, "AI 提示词分配", width / 2, 18, 0xFFFFFF); graphics.drawCenteredString(font, status, width / 2, 182, 0xA8E6A3); }
+	}
+
+	private static final class PromptEditorScreen extends Screen {
+		private static final String[] IDS = {"survival", "hunter", "teammate", "pvp_coach", "idle"}; private final Screen parent; private int index; private String content = ""; private String status = "选择提示词后输入新内容";
+		private PromptEditorScreen(Screen parent) { super(Component.literal("AI 提示词编辑")); this.parent = parent; }
+		@Override protected void init() { addRenderableWidget(Button.builder(Component.literal("提示词名称：" + PromptAssignmentScreen.localized(IDS[index])), b -> { index = (index + 1) % IDS.length; rebuild(); }).bounds(width / 2 - 210, 52, 420, 20).build()); EditBox editor = new EditBox(font, width / 2 - 210, 82, 420, 20, Component.literal("提示词内容")); editor.setMaxLength(1000); editor.setValue(content); editor.setResponder(v -> content = v); addRenderableWidget(editor); addRenderableWidget(Button.builder(Component.literal("查看当前提示词"), b -> command("aiplayer prompt show " + IDS[index])).bounds(width / 2 - 210, 114, 205, 20).build()); addRenderableWidget(Button.builder(Component.literal("保存提示词内容"), b -> { if (!content.isBlank()) command("aiplayer prompt set " + IDS[index] + " " + content); }).bounds(width / 2 + 5, 114, 205, 20).build()); addRenderableWidget(Button.builder(Component.literal("返回"), b -> onClose()).bounds(width / 2 - 55, 146, 110, 20).build()); }
+		private void rebuild() { clearWidgets(); init(); } private void command(String value) { if (minecraft == null || minecraft.getConnection() == null) { status = "当前没有服务器连接"; return; } UiInbox.beginCapture(); minecraft.getConnection().sendCommand(value); status = "已提交，结果会显示在管理界面"; }
+		@Override public void onClose() { if (minecraft != null) minecraft.setScreen(parent); } @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) { renderBackground(graphics); super.render(graphics, mouseX, mouseY, delta); graphics.drawCenteredString(font, "AI 提示词编辑", width / 2, 18, 0xFFFFFF); graphics.drawCenteredString(font, status, width / 2, 178, 0xA8E6A3); }
+	}
+
+	private static final class MaidTaskScreen extends Screen {
+		private final Screen parent; private String maid, owner = "", task = "跟随所有者并协助收集附近物品", status = "女仆只执行其所有者在本页提交的任务";
+		private MaidTaskScreen(Screen parent, String maid) { super(Component.literal("AI 女仆")); this.parent = parent; this.maid = maid; }
+		@Override protected void init() { EditBox name = new EditBox(font, width / 2 - 210, 48, 200, 20, Component.literal("女仆 / AI 名称")); name.setValue(maid); name.setResponder(v -> maid = v); addRenderableWidget(name); EditBox ownerBox = new EditBox(font, width / 2 + 10, 48, 200, 20, Component.literal("所有者玩家名")); ownerBox.setValue(owner); ownerBox.setResponder(v -> owner = v); addRenderableWidget(ownerBox); EditBox taskBox = new EditBox(font, width / 2 - 210, 78, 420, 20, Component.literal("所有者任务")); taskBox.setMaxLength(500); taskBox.setValue(task); taskBox.setResponder(v -> task = v); addRenderableWidget(taskBox); button("召唤 / 创建女仆", "aiplayer create " + maid, -210, 110); button("执行所有者任务", "aiplayer ask " + maid + " 所有者" + owner + "要求你：" + task, 5, 110); button("跟随所有者", "aiplayer team " + maid + " " + owner, -210, 140); button("收集并整理", "aiplayer ask " + maid + " 收集附近掉落物并整理背包", 5, 140); button("女仆生存模式", "aiplayer survival " + maid, -210, 170); button("查看女仆状态", "aiplayer positions", 5, 170); addRenderableWidget(Button.builder(Component.literal("女仆模式与提示词"), b -> minecraft.setScreen(new PromptAssignmentScreen(this, maid))).bounds(width / 2 - 210, 200, 205, 20).build()); addRenderableWidget(Button.builder(Component.literal("返回"), b -> onClose()).bounds(width / 2 + 5, 200, 205, 20).build()); }
+		private void button(String label, String command, int offset, int y) { addRenderableWidget(Button.builder(Component.literal(label), b -> send(command)).bounds(width / 2 + offset, y, 205, 20).build()); } private void send(String command) { if (minecraft == null || minecraft.getConnection() == null) { status = "当前没有服务器连接"; return; } UiInbox.beginCapture(); minecraft.getConnection().sendCommand(command); status = "任务已从女仆面板提交，结果不会写入聊天栏"; }
+		@Override public void onClose() { if (minecraft != null) minecraft.setScreen(parent); } @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) { renderBackground(graphics); super.render(graphics, mouseX, mouseY, delta); graphics.drawCenteredString(font, "AI 女仆 · 所有者任务面板", width / 2, 16, 0xFFFFFF); graphics.drawCenteredString(font, status, width / 2, 230, 0xA8E6A3); }
 	}
 
 	private static final class MinigameHubScreen extends Screen {
@@ -391,27 +416,25 @@ public final class LegacyForgeClient {
 		@Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) { renderBackground(graphics); super.render(graphics, mouseX, mouseY, delta); graphics.drawCenteredString(font, "五个本地小游戏", width / 2, 16, 0xFFFFFF); }
 	}
 
-	/** Small 1.20.1 local game shell; it never contacts a server. */
+	/** Distinct Java 17 local game implementations; none contacts the server. */
 	private static final class LocalMinigameScreen extends Screen {
 		private final Screen parent; private final String gameName;
-		private int score;
-		private int targetX;
-		private int targetY;
+		private int score, value2048 = 2, snakeLength = 3, stackHeight; private String status = ""; private final boolean[] mines = new boolean[36], revealed = new boolean[36];
 		private LocalMinigameScreen(Screen parent, String gameName) { super(Component.literal(gameName)); this.parent = parent; this.gameName = gameName; }
-		@Override protected void init() { moveTarget(); }
-		private void moveTarget() {
-			clearWidgets();
-			targetX = 20 + (int) (Math.random() * Math.max(1, width - 140));
-			targetY = 45 + (int) (Math.random() * Math.max(1, height - 120));
-			addRenderableWidget(Button.builder(Component.literal("点击目标 +1"), b -> { score++; moveTarget(); })
-				.bounds(targetX, targetY, 120, 20).build());
+		@Override protected void init() { clearWidgets(); if (gameName.equals("贪吃蛇")) snake(); else if (gameName.contains("俄罗斯方块")) tetris(); else if (gameName.contains("扫雷")) minesweeper(); else if (gameName.equals("2048")) game2048(); else rps();
 			addRenderableWidget(Button.builder(Component.literal("返回小游戏中心"), b -> onClose())
 				.bounds(width / 2 - 70, height - 28, 140, 20).build());
 		}
+		private void snake() { String[] labels = {"←", "↑", "↓", "→"}; for (int i = 0; i < 4; i++) { int direction = i; addRenderableWidget(Button.builder(Component.literal(labels[i]), b -> { if (Math.random() < .7) { score++; snakeLength++; status = "转向" + labels[direction] + "并吃到食物，长度 " + snakeLength; } else status = "转向" + labels[direction] + "，继续寻找食物"; }).bounds(width / 2 - 86 + i * 44, 80, 40, 24).build()); } status = "方向按钮 / 已配置方向键控制，目标是持续增长"; }
+		private void tetris() { addRenderableWidget(Button.builder(Component.literal("左移"), b -> status = "方块已左移").bounds(width / 2 - 150, 78, 90, 24).build()); addRenderableWidget(Button.builder(Component.literal("旋转"), b -> status = "方块已旋转").bounds(width / 2 - 45, 78, 90, 24).build()); addRenderableWidget(Button.builder(Component.literal("落下"), b -> { stackHeight++; score += 10; status = stackHeight % 4 == 0 ? "完成一行并消除！" : "方块已落下，堆叠高度 " + stackHeight; }).bounds(width / 2 + 60, 78, 90, 24).build()); }
+		private void minesweeper() { if (!mines[0] && !mines[35]) { int[] positions = {2, 8, 15, 21, 29, 34}; for (int p : positions) mines[p] = true; } int size = 24, left = width / 2 - 72; for (int i = 0; i < 36; i++) { int index = i; Button button = Button.builder(Component.literal(revealed[i] ? (mines[i] ? "✹" : Integer.toString(neighbors(i))) : "■"), b -> { revealed[index] = true; if (mines[index]) { score = 0; status = "踩雷了"; } else { score++; status = "安全方块 +1"; } init(); }).bounds(left + i % 6 * size, 48 + i / 6 * size, size - 2, size - 2).build(); button.active = !revealed[i]; addRenderableWidget(button); } }
+		private int neighbors(int index) { int x = index % 6, y = index / 6, count = 0; for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) { int nx = x + dx, ny = y + dy; if (nx >= 0 && nx < 6 && ny >= 0 && ny < 6 && mines[ny * 6 + nx]) count++; } return count; }
+		private void game2048() { addRenderableWidget(Button.builder(Component.literal(Integer.toString(value2048)), b -> { }).bounds(width / 2 - 35, 62, 70, 50).build()); String[] labels = {"←", "↑", "↓", "→"}; for (int i = 0; i < 4; i++) addRenderableWidget(Button.builder(Component.literal(labels[i]), b -> { value2048 = Math.min(2048, value2048 * 2); score += value2048; status = "合并得到 " + value2048; init(); }).bounds(width / 2 - 86 + i * 44, 130, 40, 22).build()); status = value2048 >= 2048 ? "已达成 2048！" : "选择方向合并相同数字"; }
+		private void rps() { String[] names = {"石头", "剪刀", "布"}; for (int i = 0; i < 3; i++) { int mine = i; addRenderableWidget(Button.builder(Component.literal(names[i]), b -> { int ai = (int) (Math.random() * 3); int result = mine == ai ? 0 : ((mine == 0 && ai == 1) || (mine == 1 && ai == 2) || (mine == 2 && ai == 0) ? 1 : -1); if (result > 0) score++; status = "你出" + names[mine] + "，AI 出" + names[ai] + "：" + (result > 0 ? "你赢了" : result < 0 ? "AI 获胜" : "平局"); }).bounds(width / 2 - 155 + i * 105, 72, 100, 24).build()); } }
 		@Override public void onClose() { if (minecraft != null) minecraft.setScreen(parent); }
 		@Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
 			renderBackground(graphics); super.render(graphics, mouseX, mouseY, delta);
-			graphics.drawCenteredString(font, gameName + " · 本地练习得分 " + score, width / 2, 16, 0xFFFFFF);
+			graphics.drawCenteredString(font, gameName + " · 得分 " + score, width / 2, 16, 0xFFFFFF); graphics.drawCenteredString(font, status, width / 2, 30, 0xA8E6A3);
 		}
 	}
 
@@ -424,15 +447,20 @@ public final class LegacyForgeClient {
 
 	private static final class ClientPreferences {
 		private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create(); private static final Path FILE = Path.of("config", "windowsdepcs-ai-companion-1.20.1-client.json");
-		String uiPrimary = "V", uiSecondary = "B", positions = "F8", zoom = "C", navigation = "G", minigames = "M";
+		int shortcutDefaultsVersion;
+		boolean uiPrimaryEnabled = true, uiSecondaryEnabled = true, positionsEnabled = true, zoomEnabled = true, navigationEnabled = true, minigamesEnabled = true;
+		boolean gameUpEnabled = true, gameDownEnabled = true, gameLeftEnabled = true, gameRightEnabled = true, gameActionEnabled = true, gamePauseEnabled = true, gameRestartEnabled = true, gameSecondaryEnabled = true;
+		String uiPrimary = "V", uiSecondary = "B", positions = "F8", zoom = "F6", navigation = "F7", minigames = "F9";
 		String gameUp = "W", gameDown = "S", gameLeft = "A", gameRight = "D", gameAction = "SPACE", gamePause = "P", gameRestart = "R", gameSecondary = "F";
 		String apiEndpoint = "https://api.openai.com/v1", apiModel = "gpt-5-mini";
 		static ClientPreferences load() { try { if (Files.isRegularFile(FILE)) { ClientPreferences value = GSON.fromJson(Files.readString(FILE), ClientPreferences.class); if (value != null) return value; } } catch (Exception ignored) { } return new ClientPreferences(); }
+		void migrateLegacyDefaults() { if (shortcutDefaultsVersion >= 2) return; if ("M".equalsIgnoreCase(minigames)) minigames = "F9"; if ("C".equalsIgnoreCase(zoom)) zoom = "F6"; if ("G".equalsIgnoreCase(navigation)) navigation = "F7"; uiPrimaryEnabled = uiSecondaryEnabled = positionsEnabled = zoomEnabled = navigationEnabled = minigamesEnabled = true; gameUpEnabled = gameDownEnabled = gameLeftEnabled = gameRightEnabled = gameActionEnabled = gamePauseEnabled = gameRestartEnabled = gameSecondaryEnabled = true; shortcutDefaultsVersion = 2; save(); }
 		void save() { normalize(); try { Files.createDirectories(FILE.getParent()); Files.writeString(FILE, GSON.toJson(this), StandardCharsets.UTF_8); } catch (Exception error) { throw new IllegalStateException("客户端设置保存失败", error); } }
-		void normalize() { uiPrimary = letter(uiPrimary, "V"); uiSecondary = letter(uiSecondary, "B"); positions = function(positions, "F8"); zoom = letter(zoom, "C"); navigation = letter(navigation, "G"); minigames = letter(minigames, "M"); gameUp = letter(gameUp, "W"); gameDown = letter(gameDown, "S"); gameLeft = letter(gameLeft, "A"); gameRight = letter(gameRight, "D"); gameAction = gameplay(gameAction, "SPACE"); gamePause = letter(gamePause, "P"); gameRestart = letter(gameRestart, "R"); gameSecondary = letter(gameSecondary, "F"); }
-		int code(String value, String fallback) { value = value == null ? fallback : value.strip().toUpperCase(); if (value.matches("F([1-9]|1[0-2])")) return GLFW.GLFW_KEY_F1 + Integer.parseInt(value.substring(1)) - 1; return letter(value, fallback).charAt(0); }
+		void normalize() { uiPrimary = gameplay(uiPrimary, "V"); uiSecondary = gameplay(uiSecondary, "B"); positions = gameplay(positions, "F8"); zoom = gameplay(zoom, "F6"); navigation = gameplay(navigation, "F7"); minigames = gameplay(minigames, "F9"); gameUp = gameplay(gameUp, "W"); gameDown = gameplay(gameDown, "S"); gameLeft = gameplay(gameLeft, "A"); gameRight = gameplay(gameRight, "D"); gameAction = gameplay(gameAction, "SPACE"); gamePause = gameplay(gamePause, "P"); gameRestart = gameplay(gameRestart, "R"); gameSecondary = gameplay(gameSecondary, "F"); }
+		int code(String value, String fallback) { value = value == null ? fallback : value.strip().toUpperCase(); if (value.equals("SPACE")) return GLFW.GLFW_KEY_SPACE; if (value.matches("F([1-9]|1[0-2])")) return GLFW.GLFW_KEY_F1 + Integer.parseInt(value.substring(1)) - 1; if (value.matches("[0-9]")) return value.charAt(0); return letter(value, fallback).charAt(0); }
+		static String keyName(int keyCode) { if (keyCode >= GLFW.GLFW_KEY_A && keyCode <= GLFW.GLFW_KEY_Z) return Character.toString((char) keyCode); if (keyCode >= GLFW.GLFW_KEY_0 && keyCode <= GLFW.GLFW_KEY_9) return Character.toString((char) keyCode); if (keyCode >= GLFW.GLFW_KEY_F1 && keyCode <= GLFW.GLFW_KEY_F12) return "F" + (keyCode - GLFW.GLFW_KEY_F1 + 1); if (keyCode == GLFW.GLFW_KEY_SPACE) return "SPACE"; return null; }
 		private static String letter(String value, String fallback) { String v = value == null ? "" : value.strip().toUpperCase(); return v.matches("[A-Z]") ? v : fallback; }
 		private static String function(String value, String fallback) { String v = value == null ? "" : value.strip().toUpperCase(); return v.matches("F([1-9]|1[0-2])") ? v : fallback; }
-		private static String gameplay(String value, String fallback) { String v = value == null ? "" : value.strip().toUpperCase(); return v.equals("SPACE") || v.matches("[A-Z]") ? v : fallback; }
+		private static String gameplay(String value, String fallback) { String v = value == null ? "" : value.strip().toUpperCase(); return v.equals("SPACE") || v.matches("[A-Z0-9]") || v.matches("F([1-9]|1[0-2])") ? v : fallback; }
 	}
 }
