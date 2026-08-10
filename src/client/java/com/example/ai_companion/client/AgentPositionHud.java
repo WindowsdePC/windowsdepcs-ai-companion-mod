@@ -34,7 +34,7 @@ public final class AgentPositionHud {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clear());
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			boolean pressed = InputConstants.isKeyDown(client.getWindow(), settings.positionsCode());
-			if (pressed && !keyHeld && client.getConnection() != null) {
+			if (settings.agentConsoleShortcutEnabled && pressed && !keyHeld && client.getConnection() != null) {
 				Screen current = client.gui.screen();
 				if (current instanceof AgentConsoleScreen console) console.onClose();
 				else client.setScreenAndShow(new AgentConsoleScreen(current, settings));

@@ -9,6 +9,7 @@ import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
 import com.example.ai_companion.gameplay.InventoryShuffleManager;
 import com.example.ai_companion.gameplay.MinigameRewardManager;
+import com.example.ai_companion.maid.MaidManager;
 import com.example.ai_companion.pet.PetAttribute;
 import com.example.ai_companion.pet.PetCompetitionEngine;
 import com.example.ai_companion.pet.PetCompetitionManager;
@@ -59,6 +60,7 @@ public final class UiActionService {
 	private final AiSocietyManager society;
 	private final WeatherEventManager weather;
 	private final MinigameRewardManager minigameRewards;
+	private final MaidManager maids;
 
 	public UiActionService(AgentManager agents, PromptStore prompts, Supplier<ModConfig> config,
 			Consumer<ModConfig> updateConfig, Supplier<GameplayConfig> gameplay,
@@ -67,7 +69,7 @@ public final class UiActionService {
 			SpyglassHighlightManager spyglass, AssistantOrbManager orb, PhotographyManager photography,
 			TravelLogManager travel, MinecraftDailyNewsManager news, LivestreamManager livestreams,
 			AiMusicManager music, AiSocietyManager society, WeatherEventManager weather,
-			MinigameRewardManager minigameRewards) {
+			MinigameRewardManager minigameRewards, MaidManager maids) {
 		this.agents = agents;
 		this.prompts = prompts;
 		this.config = config;
@@ -88,6 +90,7 @@ public final class UiActionService {
 		this.society = society;
 		this.weather = weather;
 		this.minigameRewards = minigameRewards;
+		this.maids = maids;
 	}
 
 	public void handle(ServerPlayer player, UiActionPayload request) {
@@ -98,10 +101,26 @@ public final class UiActionService {
 				case "agent.mode" -> setMode(player, arg(request, 0), AgentMode.valueOf(arg(request, 1)), arg(request, 2));
 				case "agent.idle" -> setMode(player, arg(request, 0), AgentMode.IDLE, "");
 				case "agent.ask" -> ask(player, arg(request, 0), arg(request, 1));
+				case "agent.voice_status" -> reply(player, agents.voiceStatus(arg(request, 0)));
 				case "prompt.put" -> putPrompt(player, arg(request, 0), arg(request, 1));
 				case "prompt.remove" -> mutatePrompt(player, () -> prompts.remove(arg(request, 0)), "提示词已删除");
 				case "prompt.reset" -> mutatePrompt(player, () -> prompts.reset(arg(request, 0)), "提示词已恢复");
 				case "prompt.assign" -> assignPrompt(player, arg(request, 0), arg(request, 1));
+				case "maid.summon" -> summonMaid(player, request);
+				case "maid.chat" -> chatMaid(player, arg(request, 0), arg(request, 1));
+				case "maid.voice" -> voiceMaid(player, arg(request, 0), arg(request, 1));
+				case "maid.collect" -> reply(player, "已收回女仆：" + maids.collect(player, arg(request, 0)).name());
+				case "maid.deploy" -> reply(player, "已重新召唤女仆：" + maids.deploy(player, arg(request, 0)).name());
+				case "maid.transfer" -> transferMaid(player, arg(request, 0), arg(request, 1));
+				case "maid.voice_status" -> reply(player, maidVoiceStatus(arg(request, 0)));
+				case "maid.progress" -> reply(player, maids.progressionStatus(arg(request, 0)));
+				case "maid.upgrade_work" -> reply(player, "升级完成：" + maids.upgradeWithWorkExperience(player,
+					arg(request, 0)).name());
+				case "maid.upgrade_player" -> reply(player, "升级完成：" + maids.upgradeWithPlayerExperience(player,
+					arg(request, 0)).name());
+				case "maid.inventory" -> openMaidInventory(player, arg(request, 0));
+				case "maid.sort" -> reply(player, "已整理 " + maids.sortInventory(player, arg(request, 0)) + " 个物品");
+				case "maid.list" -> listMaids(player);
 				case "arena.start" -> startArena(player, ArenaMode.valueOf(arg(request, 0)), arg(request, 1));
 				case "arena.status" -> reply(player, arena.view(player.level().getServer().getTickCount()).displayText());
 				case "arena.stop" -> stopArena(player);
@@ -149,6 +168,47 @@ public final class UiActionService {
 		} catch (Exception error) {
 			result(player, false, "UI 操作失败：" + rootMessage(error));
 		}
+	}
+
+	private void summonMaid(ServerPlayer player, UiActionPayload request) {
+		String cape = request.arguments().size() > 2 ? arg(request, 2) : "";
+		if (cape.equals("none")) cape = "";
+		reply(player, "已召唤 AI 女仆：" + maids.summon(player, arg(request, 0), arg(request, 1), cape).name());
+	}
+
+	private void chatMaid(ServerPlayer player, String name, String message) {
+		if (message.isBlank() || message.length() > 500) throw new IllegalArgumentException("女仆任务长度应为 1-500");
+		maids.chat(player, name, message, result -> reply(player, result));
+		reply(player, name + " 已收到任务，正在思考");
+	}
+
+	private void voiceMaid(ServerPlayer player, String name, String transcription) {
+		if (!maids.voiceChatAvailable()) throw new IllegalStateException("服务器未安装 Simple Voice Chat");
+		chatMaid(player, name, transcription);
+	}
+
+	private void transferMaid(ServerPlayer player, String name, String targetName) {
+		ServerPlayer target = player.level().getServer().getPlayerList().getPlayerByName(targetName);
+		if (target == null) throw new IllegalArgumentException("新所有者当前不在线");
+		reply(player, "已把 " + maids.transfer(player, name, target).name() + " 转让给 " + targetName);
+	}
+
+	private String maidVoiceStatus(String name) {
+		String detection = maids.voiceChatAvailable() ? "Simple Voice Chat 已安装" : "Simple Voice Chat 未安装";
+		return detection + " · " + agents.voiceStatus(name);
+	}
+
+	private void openMaidInventory(ServerPlayer player, String name) {
+		maids.openInventory(player, name);
+		reply(player, "已打开 " + name + " 的生物背包");
+	}
+
+	private void listMaids(ServerPlayer player) {
+		var values = maids.profiles();
+		if (values.isEmpty()) { reply(player, "当前没有 AI 女仆"); return; }
+		values.forEach(profile -> reply(player, profile.name() + " · 主人=" + profile.ownerName()
+			+ " · 心情=" + profile.mood().displayName() + " · 等级=" + profile.level()
+			+ (profile.stored() ? " · 已收回" : " · 在世界中")));
 	}
 
 	private void createMany(ServerPlayer player, String prefix, int count) {

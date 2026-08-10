@@ -10,7 +10,8 @@
 	"entrypoints": {
 		"main": ["com.example.ai_companion.AiCompanionMod"],
 		"client": ["com.example.ai_companion.client.AiCompanionClient"],
-		"modmenu": ["com.example.ai_companion.client.AiCompanionModMenuApi"]
+		"modmenu": ["com.example.ai_companion.client.AiCompanionModMenuApi"],
+		"voicechat": ["com.example.ai_companion.voice.AiCompanionVoicechatPlugin"]
 	},
 	"mixins": [
 		"ai_companion.mixins.json",

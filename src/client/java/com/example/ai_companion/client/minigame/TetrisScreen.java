@@ -54,31 +54,31 @@ public final class TetrisScreen extends Screen {
 	@Override
 	public boolean keyPressed(KeyEvent event) {
 		int key = event.key();
-		if (key == settings.minigameLeftCode()) {
+		if (settings.minigameLeftKeyEnabled && key == settings.minigameLeftCode()) {
 			game.moveLeft();
 			return true;
 		}
-		if (key == settings.minigameRightCode()) {
+		if (settings.minigameRightKeyEnabled && key == settings.minigameRightCode()) {
 			game.moveRight();
 			return true;
 		}
-		if (key == settings.minigameDownCode()) {
+		if (settings.minigameDownKeyEnabled && key == settings.minigameDownCode()) {
 			handleStep(game.softDrop());
 			return true;
 		}
-		if (key == settings.minigameUpCode()) {
+		if (settings.minigameUpKeyEnabled && key == settings.minigameUpCode()) {
 			game.rotateClockwise();
 			return true;
 		}
-		if (key == settings.minigameActionCode()) {
+		if (settings.minigameActionKeyEnabled && key == settings.minigameActionCode()) {
 			handleStep(game.hardDrop());
 			return true;
 		}
-		if (key == settings.minigamePauseCode()) {
+		if (settings.minigamePauseKeyEnabled && key == settings.minigamePauseCode()) {
 			togglePause();
 			return true;
 		}
-		if (key == settings.minigameRestartCode()) {
+		if (settings.minigameRestartKeyEnabled && key == settings.minigameRestartCode()) {
 			restart();
 			return true;
 		}

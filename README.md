@@ -4,15 +4,15 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前测试版本：[v0.9.10-beta.3](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.9.10-beta.3)（预发行版；稳定版仍为 `v0.9.9`）
+当前测试版本：[v0.9.10-beta.4](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.9.10-beta.4)（预发行版；稳定版仍为 `v0.9.9`）
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.10-beta.3.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.10-beta.3.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.10-beta.3.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.10-beta.4.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.10-beta.4.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.10-beta.4.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
@@ -58,6 +58,15 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 
 ## 主要功能
 
+### 0.9.10-beta.4 交互、AI 与小游戏修复
+
+- 新增四列式快捷键管理页：功能名称、开/关、更改按键、重置；小游戏中心默认键由 `M` 改为 `F9`，缩放/导航改为 `F6/F7`，且只迁移仍为旧默认值的配置。
+- 五个小游戏均打开各自的玩法页；1.20.1 兼容版不再把贪吃蛇、俄罗斯方块、扫雷、2048、AI 猜拳全部实现成反应训练。
+- 提示词编辑入口恢复到 AI 栏目，模式和预设名称显示中文；完整功能目录重新提供 AI 女仆入口。
+- 26.2 AI 保持原版生存、可受伤、可被 `/kill` 清理；新增主动防卫、受阻时安全挖掘低硬度普通方块，以及 `@AI名称 消息`/`AI名称: 消息`聊天寻址。
+- 安装 Simple Voice Chat 且使用 OpenAI API 时，AI 的文字回复会通过实体音频频道播放；未安装可选模组时文字功能不受影响。
+- 女仆页面的召唤、任务、收纳、部署、转让、升级、背包和整理都改为直接 UI 网络操作，不再把命令写入聊天栏。
+
 ### 0.9.10-beta.3 UI 完整目录
 
 - 九分类主界面的按钮现在进入独立功能页，不再把休闲/兼容查询压成聊天栏或单行状态。
@@ -68,7 +77,7 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 
 ### 结构、群系与维度导航
 
-- 默认关闭；管理员在“高级设置”中启用服务器导航后，玩家可用默认 `G` 键打开搜索界面。
+- 默认关闭；管理员在“高级设置”中启用服务器导航后，玩家可用默认 `F7` 键打开搜索界面。
 - 目录来自服务器当前的群系、结构与维度注册表，包含模组注册内容。
 - AR 模式显示方向、目标维度、剩余方块和进度条；传送模式仅允许管理员使用。
 - “仁慈的虚空”会在玩家跌出三个原版维度时将其送回本维度安全高空，并提供缓降与落地前无伤保护。
@@ -343,7 +352,7 @@ EclipseUI 模式提供分类卡片、图标、开关、滑块、下拉菜单和�
 
 ### 平滑屏幕缩放
 
-“客户端增强”提供默认关闭的屏幕缩放。开启后按住默认 `C` 键即可缩放，松开后恢复原视野。
+“客户端增强”提供默认关闭的屏幕缩放。开启后按住默认 `F6` 键即可缩放，松开后恢复原视野。
 
 - 缩放直接调整当前客户端相机的最终视野，不改写原版 FOV 设置。
 - 快捷键、1.5～12 倍缩放倍率和 0～1 秒过渡时间均可在双 UI 中调整。

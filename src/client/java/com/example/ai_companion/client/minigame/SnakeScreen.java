@@ -55,27 +55,28 @@ public final class SnakeScreen extends Screen {
 	@Override
 	public boolean keyPressed(KeyEvent event) {
 		int key = event.key();
-		if (key == settings.minigameUpCode()) {
+		if (settings.minigameUpKeyEnabled && key == settings.minigameUpCode()) {
 			game.queueDirection(SnakeGame.Direction.UP);
 			return true;
 		}
-		if (key == settings.minigameDownCode()) {
+		if (settings.minigameDownKeyEnabled && key == settings.minigameDownCode()) {
 			game.queueDirection(SnakeGame.Direction.DOWN);
 			return true;
 		}
-		if (key == settings.minigameLeftCode()) {
+		if (settings.minigameLeftKeyEnabled && key == settings.minigameLeftCode()) {
 			game.queueDirection(SnakeGame.Direction.LEFT);
 			return true;
 		}
-		if (key == settings.minigameRightCode()) {
+		if (settings.minigameRightKeyEnabled && key == settings.minigameRightCode()) {
 			game.queueDirection(SnakeGame.Direction.RIGHT);
 			return true;
 		}
-		if (key == settings.minigamePauseCode() || key == settings.minigameActionCode()) {
+		if (settings.minigamePauseKeyEnabled && key == settings.minigamePauseCode()
+				|| settings.minigameActionKeyEnabled && key == settings.minigameActionCode()) {
 			togglePause();
 			return true;
 		}
-		if (key == settings.minigameRestartCode()) {
+		if (settings.minigameRestartKeyEnabled && key == settings.minigameRestartCode()) {
 			restart();
 			return true;
 		}

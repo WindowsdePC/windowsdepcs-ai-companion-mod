@@ -13,7 +13,7 @@ WindowsdePC's AI Companion Mod
 
 当前版本：
 
-0.9.10-beta.3
+0.9.10-beta.4
 
 
 目标版本：
@@ -26,6 +26,15 @@ WindowsdePC's AI Companion Mod
 - Minecraft 26.2 / Fabric Loader / JDK 25
 - Minecraft 1.20.1 / Fabric Loader / JDK 17
 - Minecraft 1.20.1 / Forge / JDK 17
+
+
+0.9.10-beta.4 交互与 AI 修复状态：
+
+- 快捷键界面采用“功能名称 / 开关 / 更改按键 / 重置”四列布局；小游戏中心默认 F9，缩放 F6，导航 F7。
+- 旧 M/C/G 仅在仍为旧默认值时迁移，不覆盖玩家自定义配置；三个发行目标分别使用自己的客户端按键 API。
+- 五个小游戏使用独立玩法，1.20.1 兼容版不再将全部游戏路由到反应训练。
+- AI 提示词编辑入口和中文模式/预设名称恢复；AI 女仆任务、所有权、背包和成长入口恢复。
+- 26.2 AI 支持生存伤害、主动防卫、路线受阻时挖掘低硬度普通方块、聊天寻址及可选 Simple Voice Chat 实体 TTS。
 
 
 0.9.10-beta.3 完整 UI 目录状态：
@@ -137,7 +146,7 @@ WindowsdePC's AI Companion Mod
 0.9.10-beta.2 配置、快捷键与 F8 交互修复状态：
 
 - API 配置页面以服务器持久化快照为准，保存后回传并刷新客户端镜像，重新打开不会恢复旧值。
-- 模组内快捷键页可保存并立即应用 UI、F8 控制台、缩放、导航和小游戏中心按键；默认 M 打开五游戏中心。
+- 模组内快捷键页可保存并立即应用 UI、F8 控制台、缩放、导航和小游戏中心按键；0.9.10-beta.4 起默认 F9 打开五游戏中心。
 - F8 改为真正的 AI 控制台弹窗，AI 请求与服务器结果直接显示在弹窗消息区，不写入聊天栏。
 - Minecraft 1.20.1 Fabric/Forge 使用 Java 17 和旧版 `Screen`、`GuiGraphics`、`ResourceLocation` 体系实现同一可见语义。
 

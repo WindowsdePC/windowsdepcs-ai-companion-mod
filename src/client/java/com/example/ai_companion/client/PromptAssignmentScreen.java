@@ -87,7 +87,7 @@ public final class PromptAssignmentScreen extends Screen {
 			if (!players.isEmpty()) playerIndex = (playerIndex + 1) % players.size();
 			rebuildWidgets();
 		}).bounds(left + (panelWidth + 10) / 2, 97, (panelWidth - 10) / 2, 22).build());
-		addRenderableWidget(Button.builder(Component.literal("提示词：" + selectedPrompt()), b -> {
+		addRenderableWidget(Button.builder(Component.literal("提示词：" + selectedPromptLabel()), b -> {
 			if (!promptIds.isEmpty()) promptIndex = (promptIndex + 1) % promptIds.size();
 			rebuildWidgets();
 		}).bounds(left, 129, panelWidth, 22).build());
@@ -121,6 +121,7 @@ public final class PromptAssignmentScreen extends Screen {
 
 	private String selectedAgent() { return agents.isEmpty() ? "暂无 AI" : agents.get(agentIndex).name(); }
 	private String selectedPrompt() { return promptIds.isEmpty() ? "暂无预设" : promptIds.get(promptIndex); }
+	private String selectedPromptLabel() { return promptLabel(selectedPrompt()); }
 	private String selectedPlayer() { return players.isEmpty() ? "未选择" : players.get(playerIndex); }
 	private String modeLabel() {
 		return switch (mode) {
@@ -129,6 +130,17 @@ public final class PromptAssignmentScreen extends Screen {
 			case HUNTER -> "追杀";
 			case TEAMMATE -> "队友";
 			case PVP_COACH -> "PvP 教练";
+		};
+	}
+	private static String promptLabel(String id) {
+		return switch (id) {
+			case "survival" -> "生存玩家";
+			case "idle" -> "空闲/通用";
+			case "hunter" -> "猎人追杀";
+			case "teammate" -> "队友协作";
+			case "pvp_coach" -> "PvP 教练";
+			case "maid" -> "AI 女仆";
+			default -> "自定义 · " + id;
 		};
 	}
 	private static boolean requiresTarget(AgentMode mode) {

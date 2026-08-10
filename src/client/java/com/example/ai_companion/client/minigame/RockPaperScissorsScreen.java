@@ -49,15 +49,16 @@ public final class RockPaperScissorsScreen extends Screen {
 	}
 
 	@Override public boolean keyPressed(KeyEvent event) {
-		if (event.key() == settings.minigameLeftCode()) {
+		if (settings.minigameLeftKeyEnabled && event.key() == settings.minigameLeftCode()) {
 			play(RockPaperScissorsGame.Choice.ROCK);
 			return true;
 		}
-		if (event.key() == settings.minigameUpCode() || event.key() == settings.minigameActionCode()) {
+		if (settings.minigameUpKeyEnabled && event.key() == settings.minigameUpCode()
+				|| settings.minigameActionKeyEnabled && event.key() == settings.minigameActionCode()) {
 			play(RockPaperScissorsGame.Choice.SCISSORS);
 			return true;
 		}
-		if (event.key() == settings.minigameRightCode()) {
+		if (settings.minigameRightKeyEnabled && event.key() == settings.minigameRightCode()) {
 			play(RockPaperScissorsGame.Choice.PAPER);
 			return true;
 		}

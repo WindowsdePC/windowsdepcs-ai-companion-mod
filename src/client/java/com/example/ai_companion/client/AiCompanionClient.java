@@ -11,6 +11,11 @@ import com.example.ai_companion.client.navigation.NavigationHud;
 import com.example.ai_companion.client.maid.MaidClientRegistry;
 import com.example.ai_companion.client.minigame.MinigameCenterScreen;
 import com.example.ai_companion.client.minigame.MinigameProgress;
+import com.example.ai_companion.client.minigame.SnakeScreen;
+import com.example.ai_companion.client.minigame.TetrisScreen;
+import com.example.ai_companion.client.minigame.MinesweeperScreen;
+import com.example.ai_companion.client.minigame.Game2048Screen;
+import com.example.ai_companion.client.minigame.RockPaperScissorsScreen;
 
 /** Opens the unified settings screen with a configurable two-key chord. */
 public final class AiCompanionClient implements ClientModInitializer {
@@ -30,13 +35,14 @@ public final class AiCompanionClient implements ClientModInitializer {
 		boolean[] chordHeld = {false};
 		boolean[] navigatorHeld = {false};
 		boolean[] minigameHeld = {false};
+		boolean[] directGameHeld = new boolean[5];
 		boolean[] sprintJumpLatch = {false};
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			if (settings.sprintJumpEnabled && client.player != null && client.options.keyUp.isDown()
 					&& !client.player.isShiftKeyDown()) client.player.setSprinting(true);
 			boolean pressed = InputConstants.isKeyDown(client.getWindow(), settings.primaryCode())
 				&& InputConstants.isKeyDown(client.getWindow(), settings.secondaryCode());
-			if (pressed && !chordHeld[0] && client.getConnection() != null) {
+			if (settings.uiShortcutEnabled && pressed && !chordHeld[0] && client.getConnection() != null) {
 				client.setScreenAndShow(new PromptConfigScreen(localPrompts, settings, backend));
 			}
 			chordHeld[0] = pressed;
@@ -47,11 +53,38 @@ public final class AiCompanionClient implements ClientModInitializer {
 			}
 			navigatorHeld[0] = navigatorPressed;
 			boolean minigamePressed = InputConstants.isKeyDown(client.getWindow(), settings.minigameMenuCode());
-			if (minigamePressed && !minigameHeld[0] && client.getConnection() != null
+			if (settings.minigameShortcutEnabled && minigamePressed && !minigameHeld[0]
+					&& client.getConnection() != null
 					&& client.gui.screen() == null) {
 				client.setScreenAndShow(new MinigameCenterScreen(null, MinigameProgress.load(), settings));
 			}
 			minigameHeld[0] = minigamePressed;
+			boolean[] pressedGames = {
+					InputConstants.isKeyDown(client.getWindow(), settings.snakeShortcutCode()),
+					InputConstants.isKeyDown(client.getWindow(), settings.tetrisShortcutCode()),
+					InputConstants.isKeyDown(client.getWindow(), settings.minesweeperShortcutCode()),
+					InputConstants.isKeyDown(client.getWindow(), settings.game2048ShortcutCode()),
+					InputConstants.isKeyDown(client.getWindow(), settings.rockPaperScissorsShortcutCode())
+				};
+			if (client.getConnection() != null && client.gui.screen() == null) {
+				boolean[] enabledGames = {settings.snakeShortcutEnabled, settings.tetrisShortcutEnabled,
+					settings.minesweeperShortcutEnabled, settings.game2048ShortcutEnabled,
+					settings.rockPaperScissorsShortcutEnabled};
+				for (int index = 0; index < pressedGames.length; index++) {
+					if (!enabledGames[index] || !pressedGames[index] || directGameHeld[index]) continue;
+					MinigameProgress progress = MinigameProgress.load();
+					Screen game = switch (index) {
+						case 0 -> new SnakeScreen(null, progress, settings);
+						case 1 -> new TetrisScreen(null, progress, settings);
+						case 2 -> new MinesweeperScreen(null, progress, settings);
+						case 3 -> new Game2048Screen(null, progress, settings);
+						default -> new RockPaperScissorsScreen(null, progress, settings);
+					};
+					client.setScreenAndShow(game);
+					break;
+				}
+			}
+			System.arraycopy(pressedGames, 0, directGameHeld, 0, pressedGames.length);
 			if (client.player != null) {
 				if (client.player.onGround()) {
 					sprintJumpLatch[0] = settings.sprintJumpEnabled && client.player.isSprinting();

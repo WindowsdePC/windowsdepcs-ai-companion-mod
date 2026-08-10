@@ -25,6 +25,7 @@ public final class FeatureCatalogScreen extends Screen {
 	public enum Feature {
 		AI_PLAYER(Group.ALL, "AI 玩家系统", "生成、选择、模式、目标、提示词、天眼与任务控制。",
 			new Action("检查服务端能力", "feature.status")),
+		PROMPTS(Group.ALL, "AI 提示词修改与分配", "中文预设名称、正文编辑、自定义预设、模式和目标分配。"),
 		MAID(Group.ALL, "AI 女仆", "召唤、皮肤/披风、对话、心情、背包、成长和所有权。"),
 		COLLABORATION(Group.ALL, "多 AI 协作", "共享任务、提案投票、共识与领队选举。",
 			new Action("检查服务端能力", "feature.status")),
@@ -157,6 +158,18 @@ public final class FeatureCatalogScreen extends Screen {
 			: Math.min(220, (panelWidth - Math.max(0, selected.actions.size() - 1) * 8)
 			/ selected.actions.size());
 		int x = left;
+		if (selected == Feature.PROMPTS) {
+			addRenderableWidget(Button.builder(Component.literal("打开提示词编辑与分配"), b -> {
+				if (minecraft != null) minecraft.setScreenAndShow(PromptConfigScreen.promptEditor(this));
+			}).bounds(left, 104, Math.min(260, panelWidth), 22).build());
+			x = left + Math.min(260, panelWidth) + 8;
+		} else if (selected == Feature.MAID) {
+			addRenderableWidget(Button.builder(Component.literal("打开 AI 女仆任务与管理"), b -> {
+				if (minecraft != null) minecraft.setScreenAndShow(
+					new com.example.ai_companion.client.maid.MaidScreen(this));
+			}).bounds(left, 104, Math.min(260, panelWidth), 22).build());
+			x = left + Math.min(260, panelWidth) + 8;
+		}
 		for (Action action : selected.actions) {
 			addRenderableWidget(Button.builder(Component.literal(action.label), b -> request(action))
 				.bounds(x, 104, actionWidth, 22).build());

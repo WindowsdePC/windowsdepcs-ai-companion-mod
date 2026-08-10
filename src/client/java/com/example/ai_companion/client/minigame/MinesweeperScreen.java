@@ -78,11 +78,11 @@ public final class MinesweeperScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
-		if (event.key() == settings.minigameRestartCode()) {
+		if (settings.minigameRestartKeyEnabled && event.key() == settings.minigameRestartCode()) {
 			restart();
 			return true;
 		}
-		if (event.key() == settings.minigameSecondaryCode()) {
+		if (settings.minigameSecondaryKeyEnabled && event.key() == settings.minigameSecondaryCode()) {
 			flagMode = !flagMode;
 			status = flagMode ? "当前操作：插旗" : "当前操作：翻开";
 			return true;

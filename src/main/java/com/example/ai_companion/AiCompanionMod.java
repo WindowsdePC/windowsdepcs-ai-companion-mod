@@ -49,6 +49,7 @@ import com.example.ai_companion.world.WorldFeatureManager;
 import com.example.ai_companion.spyglass.SpyglassHighlightManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,7 +114,7 @@ public final class AiCompanionMod implements ModInitializer {
 			updated -> config = updated, () -> gameplay, updated -> gameplay = updated, arena,
 			petCompetitions, () -> worldFeatures, updated -> worldFeatures = updated, spyglassHighlights,
 			assistantOrb, photography, travelLog, dailyNews, livestreams, music, society, weatherEvents,
-			minigameRewards));
+			minigameRewards, maids));
 		goldenSpearRush = new GoldenSpearRush(() -> gameplay);
 		goldenSpearRush.register();
 		AiPlayerCommands.register(agents, prompts, () -> config, updated -> config = updated,
@@ -148,6 +149,8 @@ public final class AiCompanionMod implements ModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(worldFeatureManager::tick);
 		ServerTickEvents.END_SERVER_TICK.register(weatherEvents::tick);
 		ServerTickEvents.END_SERVER_TICK.register(spyglassHighlights::tick);
+		ServerMessageEvents.CHAT_MESSAGE.register((message, sender, boundChatType) ->
+			agents.handlePlayerChat(sender, message.signedContent()));
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			agents.restore(server);
 			maids.restore(server);

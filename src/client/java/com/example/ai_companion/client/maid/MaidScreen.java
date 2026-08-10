@@ -1,6 +1,7 @@
 package com.example.ai_companion.client.maid;
 
 import com.example.ai_companion.maid.MaidSkins;
+import com.example.ai_companion.client.UiActionClient;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -29,6 +30,7 @@ public final class MaidScreen extends Screen {
 	private String message = "请介绍自己，并告诉我你现在的心情";
 	private String transferTarget = "";
 	private String status = "选择皮肤、可选披风，然后召唤 AI 女仆";
+	private long resultRevision = UiActionClient.revision();
 
 	public MaidScreen(Screen parent) {
 		super(Component.literal("AI 女仆"));
@@ -92,6 +94,16 @@ public final class MaidScreen extends Screen {
 			.bounds(left + 290, 273, 120, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("返回"), button -> onClose())
 			.bounds(left + 390, height - 34, 100, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("刷新女仆列表"), button ->
+			UiActionClient.send("maid.list")).bounds(left + 380, 337, 160, 20).build());
+	}
+
+	@Override public void tick() {
+		super.tick();
+		if (resultRevision != UiActionClient.revision()) {
+			resultRevision = UiActionClient.revision();
+			status = UiActionClient.lastMessage();
+		}
 	}
 
 	private void cycleSkin() {
@@ -104,8 +116,7 @@ public final class MaidScreen extends Screen {
 	private void summon() {
 		try {
 			validateName();
-			sendCommand("aimaid summon " + name + " " + skinKey + " "
-				+ (capeKey.isBlank() ? "none" : capeKey));
+			UiActionClient.send("maid.summon", name, skinKey, capeKey.isBlank() ? "none" : capeKey);
 			status = "已请求召唤 " + name + "；皮肤=" + skinKey;
 		} catch (RuntimeException error) { status = "召唤失败：" + error.getMessage(); }
 	}
@@ -114,7 +125,7 @@ public final class MaidScreen extends Screen {
 		try {
 			validateName();
 			if (message.isBlank()) throw new IllegalArgumentException("指令不能为空");
-			sendCommand("aimaid chat " + name + " " + message);
+			UiActionClient.send("maid.chat", name, message);
 			status = name + " 正在思考；心情会显示在她头顶的对话标记中";
 		} catch (RuntimeException error) { status = "发送失败：" + error.getMessage(); }
 	}
@@ -123,7 +134,7 @@ public final class MaidScreen extends Screen {
 		try {
 			validateName();
 			if (message.isBlank()) throw new IllegalArgumentException("语音转写不能为空");
-			sendCommand("aimaid voice " + name + " " + message);
+			UiActionClient.send("maid.voice", name, message);
 			status = "已通过可选语音转写通道发送给 " + name;
 		} catch (RuntimeException error) { status = "语音发送失败：" + error.getMessage(); }
 	}
@@ -131,7 +142,7 @@ public final class MaidScreen extends Screen {
 	private void maidCommand(String action) {
 		try {
 			validateName();
-			sendCommand("aimaid " + action + " " + name);
+			UiActionClient.send("maid." + action, name);
 			status = action.equals("collect") ? "已请求收回背包" : "已请求从背包重新召唤";
 		} catch (RuntimeException error) { status = "操作失败：" + error.getMessage(); }
 	}
@@ -140,20 +151,23 @@ public final class MaidScreen extends Screen {
 		try {
 			validateName();
 			if (!transferTarget.matches("[A-Za-z0-9_]{3,16}")) throw new IllegalArgumentException("请输入在线玩家名");
-			sendCommand("aimaid transfer " + name + " " + transferTarget);
+			UiActionClient.send("maid.transfer", name, transferTarget);
 			status = "已请求把 " + name + " 转让给 " + transferTarget;
 		} catch (RuntimeException error) { status = "转让失败：" + error.getMessage(); }
 	}
 
 	private void voiceStatus() {
-		sendCommand("aimaid voice-status");
-		status = "已查询 Simple Voice Chat 可选兼容状态";
+		try {
+			validateName();
+			UiActionClient.send("maid.voice_status", name);
+			status = "正在查询语音模组、TTS 与实体语音频道状态";
+		} catch (RuntimeException error) { status = "查询失败：" + error.getMessage(); }
 	}
 
 	private void progression() {
 		try {
 			validateName();
-			sendCommand("aimaid progress " + name);
+			UiActionClient.send("maid.progress", name);
 			status = "已查询 " + name + " 的等级、工作经验和生命成长";
 		} catch (RuntimeException error) { status = "查询失败：" + error.getMessage(); }
 	}
@@ -161,7 +175,7 @@ public final class MaidScreen extends Screen {
 	private void upgrade(boolean playerExperience) {
 		try {
 			validateName();
-			sendCommand("aimaid upgrade " + name + (playerExperience ? " player" : " work"));
+			UiActionClient.send(playerExperience ? "maid.upgrade_player" : "maid.upgrade_work", name);
 			status = "已请求升级；只有所有者主动点击后才会扣除对应经验";
 		} catch (RuntimeException error) { status = "升级失败：" + error.getMessage(); }
 	}
@@ -169,7 +183,7 @@ public final class MaidScreen extends Screen {
 	private void inventory() {
 		try {
 			validateName();
-			sendCommand("aimaid inventory " + name);
+			UiActionClient.send("maid.inventory", name);
 			status = "已请求打开：上方生物背包，下方玩家背包";
 		} catch (RuntimeException error) { status = "打开背包失败：" + error.getMessage(); }
 	}
@@ -177,7 +191,7 @@ public final class MaidScreen extends Screen {
 	private void sortInventory() {
 		try {
 			validateName();
-			sendCommand("aimaid sort " + name);
+			UiActionClient.send("maid.sort", name);
 			status = "已请求整理已解锁的生物背包格；两个外部背包槽保持不变";
 		} catch (RuntimeException error) { status = "整理失败：" + error.getMessage(); }
 	}
@@ -223,11 +237,6 @@ public final class MaidScreen extends Screen {
 		}
 	}
 
-	private void sendCommand(String command) {
-		if (minecraft == null || minecraft.getConnection() == null) throw new IllegalStateException("未连接服务器");
-		minecraft.getConnection().sendCommand(command);
-	}
-
 	@Override public void onClose() { if (minecraft != null) minecraft.setScreenAndShow(parent); }
 
 	@Override public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
@@ -240,6 +249,14 @@ public final class MaidScreen extends Screen {
 		graphics.text(font, "第三版成长：工作经验 / 玩家经验（二选一，由玩家确认）", left, 296, 0xFFA0A0A0);
 		graphics.text(font, "默认皮肤名称来自上传文件名；括号内容不会进入名称。", left, 176, 0xFFB0BEC5);
 		graphics.text(font, status, left, height - 31, status.contains("失败") ? 0xFFFF7777 : 0xFFA8E6A3);
+		int resultY = Math.min(height - 76, 372);
+		graphics.text(font, "窗口内返回：", left, resultY, 0xFFFFD54F);
+		var messages = UiActionClient.messages();
+		int start = Math.max(0, messages.size() - 3);
+		for (int index = start; index < messages.size(); index++) {
+			graphics.text(font, messages.get(index).text(), left + 8, resultY + 14 + (index - start) * 13,
+				messages.get(index).success() ? 0xFFE3F2FD : 0xFFFF8A80);
+		}
 	}
 
 	@Override public boolean isPauseScreen() { return false; }

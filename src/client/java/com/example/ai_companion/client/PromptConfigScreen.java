@@ -176,6 +176,13 @@ public final class PromptConfigScreen extends Screen {
 		if (!promptIds.isEmpty()) loadPrompt(promptIds.getFirst());
 	}
 
+	public static PromptConfigScreen promptEditor(Screen parent) {
+		PromptConfigScreen screen = new PromptConfigScreen(PromptStore.loadClient(), ClientSettings.shared(),
+			UiBackend.detectOrThrow(), parent);
+		screen.aiSection = AiSection.PROMPTS;
+		return screen;
+	}
+
 	@Override
 	public void onClose() {
 		if (minecraft != null && parent != null) minecraft.setScreenAndShow(parent);
@@ -415,7 +422,7 @@ public final class PromptConfigScreen extends Screen {
 		addRenderableWidget(Button.builder(Component.literal(selectedPlayer.isBlank()
 				? "选择当前玩家 ▼" : "目标：" + selectedPlayer + " ▼"), b -> togglePlayers())
 			.bounds(left + 350, 120, 190, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("提示词：" + promptId), b -> cyclePrompt())
+		addRenderableWidget(Button.builder(Component.literal("提示词：" + promptLabel(promptId)), b -> cyclePrompt())
 			.bounds(left + 550, 120, panelWidth - 550, 20).build());
 
 		if (playersExpanded) {
@@ -433,6 +440,10 @@ public final class PromptConfigScreen extends Screen {
 			.bounds(left, 155, 220, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("设为空闲"), b -> setIdle())
 			.bounds(left + 230, 155, 110, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("提示词修改与分配（中文名称）"), b -> {
+			aiSection = AiSection.PROMPTS;
+			rebuildPanel();
+		}).bounds(left + 350, 155, Math.max(190, panelWidth - 350), 20).build());
 
 		EditBox ask = addRenderableWidget(new EditBox(font, left, 205, panelWidth - 120, 20,
 			Component.literal("给 AI 的任务")));
@@ -546,24 +557,18 @@ public final class PromptConfigScreen extends Screen {
 	}
 
 	private void buildShortcutPanel(int left, int panelWidth) {
-		int column = Math.max(86, (panelWidth - 18) / 4);
-		shortcutBox(left, 66, column, "设置键1", primaryKey, v -> primaryKey = v, 1);
-		shortcutBox(left + column + 6, 66, column, "设置键2", secondaryKey, v -> secondaryKey = v, 1);
-		shortcutBox(left + (column + 6) * 2, 66, column, "F8 AI窗", positionsKey, v -> positionsKey = v, 3);
-		shortcutBox(left + (column + 6) * 3, 66, column, "小游戏中心", minigameMenuKey, v -> minigameMenuKey = v, 1);
-		shortcutBox(left, 116, column, "缩放", zoomKey, v -> zoomKey = v, 1);
-		shortcutBox(left + column + 6, 116, column, "导航", navigatorKey, v -> navigatorKey = v, 1);
-		shortcutBox(left + (column + 6) * 2, 116, column, "小游戏上", minigameUpKey, v -> minigameUpKey = v, 1);
-		shortcutBox(left + (column + 6) * 3, 116, column, "小游戏下", minigameDownKey, v -> minigameDownKey = v, 1);
-		shortcutBox(left, 166, column, "小游戏左", minigameLeftKey, v -> minigameLeftKey = v, 1);
-		shortcutBox(left + column + 6, 166, column, "小游戏右", minigameRightKey, v -> minigameRightKey = v, 1);
-		shortcutBox(left + (column + 6) * 2, 166, column, "动作/硬降", minigameActionKey, v -> minigameActionKey = v, 5);
-		shortcutBox(left + (column + 6) * 3, 166, column, "暂停", minigamePauseKey, v -> minigamePauseKey = v, 1);
-		shortcutBox(left, 216, column, "重新开始", minigameRestartKey, v -> minigameRestartKey = v, 1);
-		shortcutBox(left + column + 6, 216, column, "插旗/撤销", minigameSecondaryKey, v -> minigameSecondaryKey = v, 1);
-		addRenderableWidget(Button.builder(Component.literal("保存全部快捷键"), b -> saveShortcuts())
-			.bounds(left + (column + 6) * 2, 216, column * 2 + 6, 20).build());
-		status = "小游戏方向、动作、暂停、重开和辅助键均可修改；不注册到原版控制列表";
+		addRenderableWidget(Button.builder(Component.literal("打开行式快捷键管理器"), b -> {
+			if (minecraft != null) minecraft.setScreenAndShow(new ShortcutSettingsScreen(this, settings));
+		}).bounds(left, 64, panelWidth, 24).build());
+		addRenderableWidget(Button.builder(Component.literal("模组设置：" + settings.primaryKey + "+" + settings.secondaryKey),
+			b -> { }).bounds(left, 104, (panelWidth - 10) / 2, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("AI 窗口：" + settings.positionsKey),
+			b -> { }).bounds(left + (panelWidth + 10) / 2, 104, (panelWidth - 10) / 2, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("小游戏中心：" + settings.minigameMenuKey),
+			b -> { }).bounds(left, 134, (panelWidth - 10) / 2, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("缩放 / 导航：" + settings.zoomKey + " / " + settings.navigatorKey),
+			b -> { }).bounds(left + (panelWidth + 10) / 2, 134, (panelWidth - 10) / 2, 20).build());
+		status = "管理器按“功能名称｜开/关｜更改按键｜重置”排版；小游戏默认 F9，不再占用 M";
 	}
 
 	private void shortcutBox(int x, int y, int width, String label, String value,
@@ -692,6 +697,17 @@ public final class PromptConfigScreen extends Screen {
 			case TEAMMATE -> "队友";
 			case PVP_COACH -> "PvP 教练";
 			case IDLE -> "空闲";
+		};
+	}
+	private static String promptLabel(String id) {
+		return switch (id == null ? "" : id) {
+			case "survival" -> "生存玩家";
+			case "idle" -> "空闲/通用";
+			case "hunter" -> "猎人追杀";
+			case "teammate" -> "队友协作";
+			case "pvp_coach" -> "PvP 教练";
+			case "maid" -> "AI 女仆";
+			default -> "自定义 · " + id;
 		};
 	}
 

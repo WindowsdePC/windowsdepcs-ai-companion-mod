@@ -23,6 +23,10 @@ loom {
 
 repositories {
 	maven {
+		name = "MaxHenkel"
+		url = "https://maven.maxhenkel.de/repository/public"
+	}
+	maven {
 		name = "Terraformers"
 		url = "https://maven.terraformersmc.com/"
 	}
@@ -42,6 +46,7 @@ dependencies {
 	clientCompileOnly "maven.modrinth:eclipseui:EW0sBZm4"
 	clientCompileOnly "maven.modrinth:cloth-config:Nv3xnWXd"
 	clientCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+	compileOnly "de.maxhenkel.voicechat:voicechat-api:2.6.20"
 
 	testImplementation platform("org.junit:junit-bom:5.13.4")
 	testImplementation "org.junit.jupiter:junit-jupiter"

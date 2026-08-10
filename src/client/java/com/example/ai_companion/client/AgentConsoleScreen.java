@@ -59,6 +59,10 @@ public final class AgentConsoleScreen extends Screen {
 			if (minecraft != null) minecraft.setScreenAndShow(new PromptAssignmentScreen(this,
 				com.example.ai_companion.config.PromptStore.loadClient(), settings));
 		}).bounds(left + 110, height - 28, 140, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("语音状态"), b -> {
+			if (selectedAgent.isBlank()) UiActionClient.note("请先选择 AI");
+			else UiActionClient.send("agent.voice_status", selectedAgent);
+		}).bounds(left + 260, height - 28, 120, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("关闭"), b -> onClose())
 			.bounds(left + panelWidth - 100, height - 28, 100, 20).build());
 	}

@@ -44,23 +44,24 @@ public final class Game2048Screen extends Screen {
 	@Override
 	public boolean keyPressed(KeyEvent event) {
 		int key = event.key();
-		if (key == settings.minigameLeftCode()) return move(Game2048.Direction.LEFT);
-		if (key == settings.minigameRightCode()) return move(Game2048.Direction.RIGHT);
-		if (key == settings.minigameUpCode()) return move(Game2048.Direction.UP);
-		if (key == settings.minigameDownCode()) return move(Game2048.Direction.DOWN);
-		if (key == settings.minigamePauseCode()) {
+		if (settings.minigameLeftKeyEnabled && key == settings.minigameLeftCode()) return move(Game2048.Direction.LEFT);
+		if (settings.minigameRightKeyEnabled && key == settings.minigameRightCode()) return move(Game2048.Direction.RIGHT);
+		if (settings.minigameUpKeyEnabled && key == settings.minigameUpCode()) return move(Game2048.Direction.UP);
+		if (settings.minigameDownKeyEnabled && key == settings.minigameDownCode()) return move(Game2048.Direction.DOWN);
+		if (settings.minigamePauseKeyEnabled && key == settings.minigamePauseCode()) {
 			togglePause();
 			return true;
 		}
-		if (key == settings.minigameRestartCode()) {
+		if (settings.minigameRestartKeyEnabled && key == settings.minigameRestartCode()) {
 			restart();
 			return true;
 		}
-		if (key == settings.minigameSecondaryCode()) {
+		if (settings.minigameSecondaryKeyEnabled && key == settings.minigameSecondaryCode()) {
 			undo();
 			return true;
 		}
-		if (key == settings.minigameActionCode() && game.state() == Game2048.State.WON) {
+		if (settings.minigameActionKeyEnabled && key == settings.minigameActionCode()
+				&& game.state() == Game2048.State.WON) {
 			continueGame();
 			return true;
 		}

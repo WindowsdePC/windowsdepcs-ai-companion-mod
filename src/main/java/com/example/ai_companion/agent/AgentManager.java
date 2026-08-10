@@ -8,6 +8,7 @@ import com.example.ai_companion.ai.OpenAiCompatibleClient;
 import com.example.ai_companion.ai.PromptTemplates;
 import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
+import com.example.ai_companion.voice.AiSpeechService;
 import net.fabricmc.fabric.api.entity.FakePlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.BlockPos;
@@ -67,6 +68,8 @@ public final class AgentManager implements AutoCloseable {
 		long nextAutomaticTick;
 		long nextWanderTick;
 		long lastAttackTick;
+		long nextMineTick;
+		int blockedMovementTicks;
 		String lastMessage = "已生成，正在以生存模式观察附近环境";
 
 		Agent(String name, FakePlayer player, String textureValue, String textureSignature,
@@ -81,6 +84,7 @@ public final class AgentManager implements AutoCloseable {
 
 	private final Map<String, Agent> agents = new LinkedHashMap<>();
 	private final OpenAiCompatibleClient client = new OpenAiCompatibleClient();
+	private final AiSpeechService speech = new AiSpeechService();
 	private final Supplier<ModConfig> config;
 	private final PromptStore prompts;
 	private AgentIdentityStore identityStore;
@@ -365,6 +369,34 @@ public final class AgentManager implements AutoCloseable {
 		requestDecision(server, agent, instruction, result);
 	}
 
+	/** Lets normal chat address an AI with "@Name message", "Name: message" or "Name message". */
+	public boolean handlePlayerChat(ServerPlayer sender, String chatText) {
+		if (sender == null || chatText == null || chatText.isBlank() || hasAgent(sender.getScoreboardName())) {
+			return false;
+		}
+		String stripped = chatText.strip();
+		Agent matched = null;
+		String instruction = "";
+		synchronized (this) {
+			for (Agent candidate : agents.values()) {
+				String[] prefixes = {"@" + candidate.name + " ", candidate.name + ": ", candidate.name + " "};
+				for (String prefix : prefixes) {
+					if (stripped.regionMatches(true, 0, prefix, 0, prefix.length())) {
+						matched = candidate;
+						instruction = stripped.substring(prefix.length()).strip();
+						break;
+					}
+				}
+				if (matched != null) break;
+			}
+		}
+		if (matched == null || instruction.isBlank()) return false;
+		String name = matched.name;
+		ask(sender.level().getServer(), name, instruction, result ->
+			sender.sendSystemMessage(Component.literal("[AI " + name + "] " + result)));
+		return true;
+	}
+
 	private void requestDecision(MinecraftServer server, Agent agent, String instruction,
 			Consumer<String> result) {
 		long now = server.getTickCount();
@@ -385,6 +417,9 @@ public final class AgentManager implements AutoCloseable {
 						return;
 					}
 					apply(server, agent, decision);
+					if (!decision.say().isBlank()) {
+						speech.speak(agent.player, agent.player.getUUID(), decision.say(), config.get());
+					}
 					String detail = decision.say().isBlank() ? "" : " · " + decision.say();
 					result.accept("AI " + agent.name + " 已执行: " + decision.action() + detail);
 				}));
@@ -392,6 +427,18 @@ public final class AgentManager implements AutoCloseable {
 			agent.thinking.set(false);
 			throw error;
 		}
+	}
+
+	public synchronized String voiceStatus(String name) {
+		Agent agent = requireAgent(name);
+		ModConfig current = config.get();
+		if (!com.example.ai_companion.voice.VoicechatBridge.available()) {
+			return agent.name + " · Simple Voice Chat 未安装或语音 API 尚未连接；文字 AI 仍可用";
+		}
+		if (!current.apiBase().toLowerCase(java.util.Locale.ROOT).contains("openai.com")) {
+			return agent.name + " · 语音模组已连接；当前兼容 API 未提供本模组可用的 PCM TTS，回复保留为文字";
+		}
+		return agent.name + " · 语音模组与 OpenAI PCM TTS 已就绪；下一条 AI 回复会从实体位置播放";
 	}
 
 	public synchronized void tick(MinecraftServer server) {
@@ -417,7 +464,16 @@ public final class AgentManager implements AutoCloseable {
 			double step = Math.min(0.18, distance);
 			double dx = agent.remainingX / distance * step;
 			double dz = agent.remainingZ / distance * step;
+			double beforeX = agent.player.getX();
+			double beforeZ = agent.player.getZ();
 			agent.player.move(MoverType.SELF, new Vec3(dx, 0, dz));
+			double moved = Math.hypot(agent.player.getX() - beforeX, agent.player.getZ() - beforeZ);
+			if (moved < 0.015) {
+				agent.blockedMovementTicks++;
+				if (agent.blockedMovementTicks >= 12 && now >= agent.nextMineTick) {
+					tryMineObstacle(agent, dx, dz, now);
+				}
+			} else agent.blockedMovementTicks = 0;
 			agent.remainingX -= dx;
 			agent.remainingZ -= dz;
 			float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
@@ -499,7 +555,21 @@ public final class AgentManager implements AutoCloseable {
 	private void tickBuiltInBehaviour(MinecraftServer server, Agent agent, long now) {
 		if (agent.mode == AgentMode.IDLE) return;
 		if (agent.mode == AgentMode.SURVIVAL) {
-			if (Math.hypot(agent.remainingX, agent.remainingZ) < 0.05 && now >= agent.nextWanderTick) {
+			Mob threat = nearestHostile(agent, 12.0);
+			if (threat != null) {
+				double dx = threat.getX() - agent.player.getX();
+				double dz = threat.getZ() - agent.player.getZ();
+				double distance = Math.hypot(dx, dz);
+				if (distance > 2.4) {
+					agent.remainingX = dx / Math.max(0.001, distance) * Math.min(3.0, distance - 2.2);
+					agent.remainingZ = dz / Math.max(0.001, distance) * Math.min(3.0, distance - 2.2);
+				} else if (now - agent.lastAttackTick >= 12) {
+					agent.player.attack(threat);
+					agent.player.swing(InteractionHand.MAIN_HAND);
+					agent.lastAttackTick = now;
+					agent.lastMessage = "生存防卫：正在攻击 " + threat.getName().getString();
+				}
+			} else if (Math.hypot(agent.remainingX, agent.remainingZ) < 0.05 && now >= agent.nextWanderTick) {
 				double angle = agent.player.getRandom().nextDouble() * Math.PI * 2.0;
 				double distance = 2.0 + agent.player.getRandom().nextDouble() * 4.0;
 				agent.remainingX = Math.cos(angle) * distance;
@@ -538,6 +608,33 @@ public final class AgentManager implements AutoCloseable {
 				.min(java.util.Comparator.comparingDouble(mob -> mob.distanceToSqr(agent.player)))
 				.ifPresent(mob -> mob.setTarget(agent.player));
 		}
+	}
+
+	private Mob nearestHostile(Agent agent, double radius) {
+		if (!(agent.player.level() instanceof ServerLevel level)) return null;
+		return level.getEntitiesOfClass(Mob.class, agent.player.getBoundingBox().inflate(radius),
+			mob -> mob instanceof Enemy && mob.isAlive()).stream()
+			.min(java.util.Comparator.comparingDouble(mob -> mob.distanceToSqr(agent.player))).orElse(null);
+	}
+
+	private void tryMineObstacle(Agent agent, double dx, double dz, long now) {
+		if (!(agent.player.level() instanceof ServerLevel level)) return;
+		int stepX = Math.abs(dx) < 0.001 ? 0 : dx > 0 ? 1 : -1;
+		int stepZ = Math.abs(dz) < 0.001 ? 0 : dz > 0 ? 1 : -1;
+		for (int yOffset = 0; yOffset <= 1; yOffset++) {
+			BlockPos position = agent.player.blockPosition().offset(stepX, yOffset, stepZ);
+			var state = level.getBlockState(position);
+			float hardness = state.getDestroySpeed(level, position);
+			if (state.isAir() || hardness < 0.0F || hardness > 3.0F
+					|| level.getBlockEntity(position) != null) continue;
+			if (level.destroyBlock(position, true, agent.player)) {
+				agent.lastMessage = "正在清理移动路线上的 " + state.getBlock().getName().getString();
+				agent.nextMineTick = now + 20;
+				agent.blockedMovementTicks = 0;
+				return;
+			}
+		}
+		agent.nextMineTick = now + 10;
 	}
 
 	private static boolean requiresTarget(AgentMode mode) {
