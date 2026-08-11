@@ -16,7 +16,7 @@ import java.nio.file.Path;
 
 /** Client-local UI preferences and an editable mirror of server gameplay defaults. */
 public final class ClientSettings {
-	public static final int SHORTCUT_DEFAULTS_VERSION = 2;
+	public static final int SHORTCUT_DEFAULTS_VERSION = 3;
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Path PATH = FabricLoader.getInstance().getConfigDir()
 		.resolve("windowsdepcs-ai-companion-client-settings.json");
@@ -48,7 +48,7 @@ public final class ClientSettings {
 	public int spyglassCooldownSeconds = 10;
 	public int spyglassMaxTargets = 256;
 	public boolean screenZoomEnabled = false;
-	public String zoomKey = "F6";
+	public String zoomKey = "C";
 	public double zoomFactor = 4.0;
 	public double zoomTransitionSeconds = 0.18;
 	public boolean clientPerformanceOptimizerEnabled = false;
@@ -56,7 +56,7 @@ public final class ClientSettings {
 	public int performanceTargetFps = 60;
 	public int extraRenderDistance = 96;
 	public int minimumExtraRenderDistance = 24;
-	public boolean worldNavigatorEnabled = false;
+	public boolean worldNavigatorEnabled = true;
 	public String navigatorKey = "F7";
 	public String minigameMenuKey = "F9";
 	public boolean snakeShortcutEnabled;
@@ -106,11 +106,12 @@ public final class ClientSettings {
 				// M commonly belongs to minimap mods. Migrate only unchanged legacy defaults so
 				// deliberate user choices survive upgrades.
 				if ("M".equalsIgnoreCase(loaded.minigameMenuKey)) loaded.minigameMenuKey = "F9";
-				if ("C".equalsIgnoreCase(loaded.zoomKey)) loaded.zoomKey = "F6";
+				if ("F6".equalsIgnoreCase(loaded.zoomKey)) loaded.zoomKey = "C";
 				if ("G".equalsIgnoreCase(loaded.navigatorKey)) loaded.navigatorKey = "F7";
 				loaded.uiShortcutEnabled = true;
 				loaded.agentConsoleShortcutEnabled = true;
 				loaded.minigameShortcutEnabled = true;
+				loaded.worldNavigatorEnabled = true;
 				loaded.minigameUpKeyEnabled = true;
 				loaded.minigameDownKeyEnabled = true;
 				loaded.minigameLeftKeyEnabled = true;
@@ -157,7 +158,7 @@ public final class ClientSettings {
 		try { spyglassTargetCondition = com.example.ai_companion.spyglass.SpyglassTargetCondition.valueOf(spyglassTargetCondition).name(); }
 		catch (RuntimeException ignored) { spyglassTargetCondition = "ALL_LIVING"; }
 		shortcutDefaultsVersion = SHORTCUT_DEFAULTS_VERSION;
-		zoomKey = normalizeGlobalKey(zoomKey, "F6");
+		zoomKey = normalizeGlobalKey(zoomKey, "C");
 		zoomFactor = Math.clamp(zoomFactor, 1.5, 12.0);
 		zoomTransitionSeconds = Math.clamp(zoomTransitionSeconds, 0.0, 1.0);
 		performanceTargetFps = Math.clamp(performanceTargetFps, 30, 240);

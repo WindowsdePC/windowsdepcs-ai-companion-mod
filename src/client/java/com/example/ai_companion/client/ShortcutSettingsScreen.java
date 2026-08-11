@@ -44,7 +44,7 @@ public final class ShortcutSettingsScreen extends Screen {
 			v -> settings.positionsKey = v, "F8"));
 		rows.add(row("zoom", "按住缩放", () -> settings.screenZoomEnabled,
 			v -> settings.screenZoomEnabled = v, () -> settings.zoomKey,
-			v -> settings.zoomKey = v, "F6"));
+			v -> settings.zoomKey = v, "C"));
 		rows.add(row("navigator", "结构/群系导航", () -> settings.worldNavigatorEnabled,
 			v -> settings.worldNavigatorEnabled = v, () -> settings.navigatorKey,
 			v -> settings.navigatorKey = v, "F7"));

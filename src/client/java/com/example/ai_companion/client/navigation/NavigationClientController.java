@@ -2,9 +2,11 @@ package com.example.ai_companion.client.navigation;
 
 import com.example.ai_companion.navigation.NavigationCatalogPayload;
 import com.example.ai_companion.navigation.NavigationCatalogRequestPayload;
+import com.example.ai_companion.navigation.NavigationCancelRequestPayload;
 import com.example.ai_companion.navigation.NavigationEntry;
 import com.example.ai_companion.navigation.NavigationLocateRequestPayload;
 import com.example.ai_companion.navigation.NavigationTargetPayload;
+import com.example.ai_companion.navigation.NavigationStatePayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
@@ -35,6 +37,12 @@ public final class NavigationClientController {
 			message = payload.message();
 			if (payload.success()) NavigationHud.setTarget(payload);
 		});
+		ClientPlayNetworking.registerGlobalReceiver(NavigationStatePayload.TYPE, (payload, context) -> {
+			message = payload.message();
+			waiting = false;
+			if (!payload.active()) NavigationHud.clear();
+			revision++;
+		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clear());
 	}
 
@@ -53,6 +61,17 @@ public final class NavigationClientController {
 		waiting = true;
 		message = teleport ? "正在验证传送权限并搜索……" : "正在搜索目标……";
 		ClientPlayNetworking.send(new NavigationLocateRequestPayload(entry.type(), entry.id(), teleport));
+	}
+
+	public static void cancel() {
+		waiting = true;
+		message = "正在回收临时导航物品……";
+		if (!ClientPlayNetworking.canSend(NavigationCancelRequestPayload.TYPE)) {
+			waiting = false;
+			message = "服务器不支持导航清理";
+			return;
+		}
+		ClientPlayNetworking.send(new NavigationCancelRequestPayload());
 	}
 
 	public static List<NavigationEntry> entries() { return entries; }

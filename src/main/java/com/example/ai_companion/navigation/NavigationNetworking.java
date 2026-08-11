@@ -35,7 +35,7 @@ public final class NavigationNetworking {
 	private NavigationNetworking() {
 	}
 
-	public static void registerServer(Supplier<WorldFeatureConfig> config) {
+	public static void registerServer(Supplier<WorldFeatureConfig> config, NavigationSessionManager sessions) {
 		PayloadTypeRegistry.serverboundPlay().register(NavigationCatalogRequestPayload.TYPE,
 			NavigationCatalogRequestPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(NavigationCatalogPayload.TYPE,
@@ -44,10 +44,17 @@ public final class NavigationNetworking {
 			NavigationLocateRequestPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(NavigationTargetPayload.TYPE,
 			NavigationTargetPayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(NavigationCancelRequestPayload.TYPE,
+			NavigationCancelRequestPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(NavigationStatePayload.TYPE,
+			NavigationStatePayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(NavigationCatalogRequestPayload.TYPE,
 			(payload, context) -> context.responseSender().sendPacket(catalog(context.player(), config.get())));
 		ServerPlayNetworking.registerGlobalReceiver(NavigationLocateRequestPayload.TYPE,
-			(payload, context) -> context.responseSender().sendPacket(locate(context.player(), payload, config.get())));
+			(payload, context) -> context.responseSender().sendPacket(
+				locate(context.player(), payload, config.get(), sessions)));
+		ServerPlayNetworking.registerGlobalReceiver(NavigationCancelRequestPayload.TYPE,
+			(payload, context) -> sessions.cancel(context.player(), "导航已取消，临时磁石与方向导航指南针已回收", true));
 	}
 
 	private static NavigationCatalogPayload catalog(ServerPlayer player, WorldFeatureConfig config) {
@@ -71,7 +78,7 @@ public final class NavigationNetworking {
 	}
 
 	private static NavigationTargetPayload locate(ServerPlayer player, NavigationLocateRequestPayload request,
-			WorldFeatureConfig config) {
+			WorldFeatureConfig config, NavigationSessionManager sessions) {
 		if (!config.navigatorEnabled()) return failure(request, "服务器尚未开启结构与群系导航");
 		int now = player.level().getServer().getTickCount();
 		Integer next = NEXT_SEARCH_TICK.get(player.getUUID());
@@ -116,7 +123,10 @@ public final class NavigationNetworking {
 					java.util.Set.of(), player.getYRot(), player.getXRot(), false);
 				return success(request, targetLevel, target, 0, "已传送到目标附近");
 			}
-			return success(request, targetLevel, target, distance, "AR 导航已开始");
+			NavigationSessionManager.StartedRoute route = sessions.begin(player, request.targetType(),
+				request.id(), targetLevel, target);
+			return success(request, targetLevel, route.target(), route.startingDistance(),
+				"导航已开始；方向导航指南针已绑定到目标附近的临时磁石");
 		} catch (RuntimeException error) {
 			return failure(request, error.getMessage() == null ? "导航搜索失败" : error.getMessage());
 		}

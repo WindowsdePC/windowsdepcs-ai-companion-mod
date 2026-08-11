@@ -36,11 +36,19 @@ public final class NavigationHud {
 		int barWidth = Math.min(220, screenWidth - 80);
 		int left = (screenWidth - barWidth) / 2;
 		int top = 8;
+		String navigationType = switch (target.targetType()) {
+			case "biome" -> "群系";
+			case "structure" -> "结构";
+			case "dimension" -> "维度";
+			default -> "目标";
+		};
+		graphics.fill(4, 4, Math.min(screenWidth - 4, 260), 28, 0xB010151B);
+		graphics.text(client.font, "正在导航 · " + navigationType, 9, 8, 0xFF90CAF9);
+		graphics.text(client.font, target.id(), 9, 18, 0xFFFFD54F);
 		graphics.fill(left - 4, top - 3, left + barWidth + 4, top + 34, 0xB010151B);
-		graphics.text(client.font, currentDimension, left - 2, top, 0xFF90CAF9);
-		String targetLabel = target.dimension() + " · " + target.id();
-		graphics.text(client.font, targetLabel,
-			Math.max(left, left + barWidth - client.font.width(targetLabel)), top, 0xFFFFD54F);
+		String targetLabel = sameDimension ? navigationType + " · " + target.id()
+			: "目标维度 · " + target.dimension();
+		graphics.centeredText(client.font, targetLabel, screenWidth / 2, top, 0xFFFFD54F);
 		graphics.fill(left, top + 12, left + barWidth, top + 19, 0xFF401010);
 		int progressWidth = sameDimension ? (int) Math.round(barWidth * NavigationMath.progress(distance,
 			target.startingDistance())) : 0;
@@ -52,6 +60,13 @@ public final class NavigationHud {
 				client.player.getYRot(), target.x(), target.z());
 			String arrow = arrow(bearing);
 			graphics.centeredText(client.font, arrow, screenWidth / 2, top + 38, 0xFF80D8FF);
+			if (distance > 12 && NavigationMath.offCourse(bearing)) {
+				int warningY = Math.max(70, client.getWindow().getGuiScaledHeight() / 3);
+				graphics.centeredText(client.font, "您已偏航", screenWidth / 2, warningY, 0xFFFF3030);
+				String correct = "正确方向：" + NavigationMath.cardinalDirection(client.player.getX(),
+					client.player.getZ(), target.x(), target.z()) + " · " + arrow;
+				graphics.centeredText(client.font, correct, screenWidth / 2, warningY + 14, 0xFFFFFFFF);
+			}
 			if (distance <= 8) graphics.centeredText(client.font, "已到达目标附近", screenWidth / 2,
 				top + 50, 0xFF69F0AE);
 		}

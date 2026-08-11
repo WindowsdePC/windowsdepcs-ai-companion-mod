@@ -16,6 +16,7 @@ public final class NavigatorScreen extends Screen {
 	private String query = "";
 	private String type = "all";
 	private boolean teleport;
+	private int page;
 	private int observedRevision;
 
 	public NavigatorScreen(Screen parent) {
@@ -59,7 +60,11 @@ public final class NavigatorScreen extends Screen {
 			.filter(entry -> type.equals("all") || entry.type().equals(type))
 			.filter(entry -> query.isBlank() || entry.id().toLowerCase(Locale.ROOT)
 				.contains(query.strip().toLowerCase(Locale.ROOT)))
-			.limit(12).toList();
+			.toList();
+		int pageSize = Math.max(4, Math.min(12, (height - 150) / 23));
+		int pages = Math.max(1, (filtered.size() + pageSize - 1) / pageSize);
+		page = Math.clamp(page, 0, pages - 1);
+		filtered = filtered.stream().skip((long) page * pageSize).limit(pageSize).toList();
 		int y = 70;
 		for (NavigationEntry entry : filtered) {
 			String label = entryType(entry.type()) + " · " + entry.id();
@@ -72,7 +77,7 @@ public final class NavigatorScreen extends Screen {
 		addRenderableWidget(Button.builder(Component.literal("模式：" + (teleport ? "传送（管理员）" : "AR 导航")),
 			button -> { teleport = !teleport; rebuild(); }).bounds(left, height - 50, 190, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("取消当前导航"), button -> {
-			NavigationHud.clear();
+			NavigationClientController.cancel();
 		}).bounds(left + 200, height - 50, 160, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("刷新注册表"), button -> {
 			NavigationClientController.requestCatalog();
@@ -80,6 +85,15 @@ public final class NavigatorScreen extends Screen {
 		}).bounds(left + 370, height - 50, 140, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("返回"), button -> onClose())
 			.bounds(left + width - 100, height - 50, 100, 20).build());
+		if (pages > 1) {
+			addRenderableWidget(Button.builder(Component.literal("上一页"), button -> { page--; rebuild(); })
+				.bounds(left, height - 26, 90, 20).build());
+			addRenderableWidget(Button.builder(Component.literal("下一页"), button -> { page++; rebuild(); })
+				.bounds(left + 98, height - 26, 90, 20).build());
+		}
+		addRenderableWidget(Button.builder(Component.literal("第 " + (page + 1) + "/" + pages + " 页 · "
+			+ NavigationClientController.entries().size() + " 项"), button -> { })
+			.bounds(left + 200, height - 26, 210, 20).build());
 	}
 
 	private String typeLabel() {

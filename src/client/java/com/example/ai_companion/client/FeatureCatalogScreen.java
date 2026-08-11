@@ -40,8 +40,7 @@ public final class FeatureCatalogScreen extends Screen {
 			new Action("检查服务端能力", "feature.status")),
 		SPYGLASS(Group.ALL, "望远镜生物发光", "范围、观察时间、持续、冷却、目标类型和上限。",
 			new Action("检查服务端能力", "feature.status")),
-		NAVIGATION(Group.ALL, "结构/群系/维度导航", "动态目录、搜索、AR 方向、进度与跨维度提示。",
-			new Action("检查服务端能力", "feature.status")),
+		NAVIGATION(Group.ALL, "结构/群系/维度导航", "动态目录、磁石指南针、距离条、偏航提醒与抵达清理。"),
 		WORLD_SAFETY(Group.ALL, "世界安全增强", "仁慈虚空与原版最大世界边界开关。",
 			new Action("检查服务端能力", "feature.status")),
 		PERFORMANCE(Group.ALL, "客户端性能优化", "本模组附加模型渲染距离、目标 FPS 与自适应距离。"),
@@ -167,6 +166,12 @@ public final class FeatureCatalogScreen extends Screen {
 			addRenderableWidget(Button.builder(Component.literal("打开 AI 女仆任务与管理"), b -> {
 				if (minecraft != null) minecraft.setScreenAndShow(
 					new com.example.ai_companion.client.maid.MaidScreen(this));
+			}).bounds(left, 104, Math.min(260, panelWidth), 22).build());
+			x = left + Math.min(260, panelWidth) + 8;
+		} else if (selected == Feature.NAVIGATION) {
+			addRenderableWidget(Button.builder(Component.literal("打开方向导航目录"), b -> {
+				if (minecraft != null) com.example.ai_companion.client.navigation.NavigationClientController
+					.open(minecraft, this);
 			}).bounds(left, 104, Math.min(260, panelWidth), 22).build());
 			x = left + Math.min(260, panelWidth) + 8;
 		}

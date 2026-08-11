@@ -33,6 +33,7 @@ import com.example.ai_companion.photo.PhotographyManager;
 import com.example.ai_companion.travel.TravelLogManager;
 import com.example.ai_companion.news.MinecraftDailyNewsManager;
 import com.example.ai_companion.navigation.NavigationNetworking;
+import com.example.ai_companion.navigation.NavigationSessionManager;
 import com.example.ai_companion.livestream.LivestreamManager;
 import com.example.ai_companion.furniture.FurnitureBlocks;
 import com.example.ai_companion.furniture.FurnitureManager;
@@ -50,6 +51,7 @@ import com.example.ai_companion.spyglass.SpyglassHighlightManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,6 +82,7 @@ public final class AiCompanionMod implements ModInitializer {
 	private WeatherEventManager weatherEvents;
 	private WorldFeatureConfig worldFeatures;
 	private WorldFeatureManager worldFeatureManager;
+	private NavigationSessionManager navigationSessions;
 	private SpyglassHighlightManager spyglassHighlights;
 
 	@Override
@@ -105,11 +108,12 @@ public final class AiCompanionMod implements ModInitializer {
 		weatherEvents = new WeatherEventManager();
 		worldFeatures = WorldFeatureConfig.load();
 		worldFeatureManager = new WorldFeatureManager(() -> worldFeatures);
+		navigationSessions = new NavigationSessionManager();
 		spyglassHighlights = new SpyglassHighlightManager();
 		minigameRewards = new MinigameRewardManager();
 		AgentPositionNetworking.registerServer(agents);
 		MaidNetworking.registerServer(maids);
-		NavigationNetworking.registerServer(() -> worldFeatures);
+		NavigationNetworking.registerServer(() -> worldFeatures, navigationSessions);
 		UiActionNetworking.registerServer(new UiActionService(agents, prompts, () -> config,
 			updated -> config = updated, () -> gameplay, updated -> gameplay = updated, arena,
 			petCompetitions, () -> worldFeatures, updated -> worldFeatures = updated, spyglassHighlights,
@@ -147,10 +151,13 @@ public final class AiCompanionMod implements ModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(livestreams::tick);
 		ServerTickEvents.END_SERVER_TICK.register(music::tick);
 		ServerTickEvents.END_SERVER_TICK.register(worldFeatureManager::tick);
+		ServerTickEvents.END_SERVER_TICK.register(navigationSessions::tick);
 		ServerTickEvents.END_SERVER_TICK.register(weatherEvents::tick);
 		ServerTickEvents.END_SERVER_TICK.register(spyglassHighlights::tick);
 		ServerMessageEvents.CHAT_MESSAGE.register((message, sender, boundChatType) ->
 			agents.handlePlayerChat(sender, message.signedContent()));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
+			navigationSessions.disconnect(handler.player));
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			agents.restore(server);
 			maids.restore(server);
@@ -169,6 +176,7 @@ public final class AiCompanionMod implements ModInitializer {
 			music.close();
 			petCompetitions.close();
 			society.close();
+			navigationSessions.close();
 			weatherEvents.close();
 			maids.close();
 			worldFeatureManager.close();
