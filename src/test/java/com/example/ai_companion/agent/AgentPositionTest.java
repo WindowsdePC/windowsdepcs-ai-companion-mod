@@ -39,4 +39,15 @@ final class AgentPositionTest {
 		assertEquals(AgentMode.HUNTER, position.mode());
 		assertEquals(512, position.lastMessage().length());
 	}
+
+	@Test
+	void detailedSnapshotCarriesEntityAndPlannerState() {
+		AgentPosition position = new AgentPosition("Maid_01", "12345678-1234-1234-1234-123456789012",
+			"minecraft:overworld", 1, 65, 2, 17.5F, 24.0F, "survival", AgentMode.TEAMMATE,
+			"Owner", "maid", true, "跟随主人并收集木头", "正在规划");
+		assertEquals("survival", position.gameMode());
+		assertEquals("maid", position.promptId());
+		assertEquals("跟随主人并收集木头", position.activeTask());
+		assertEquals(17.5F, position.health());
+	}
 }

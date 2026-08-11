@@ -4,7 +4,9 @@ package com.example.ai_companion.ai;
 public record AiDecision(String action, String say, double dx, double dz) {
 	public AiDecision sanitized() {
 		String selected = action == null ? "wait" : action.toLowerCase();
-		if (!selected.equals("say") && !selected.equals("move") && !selected.equals("wait")) {
+		if (!selected.equals("say") && !selected.equals("move") && !selected.equals("wait")
+				&& !selected.equals("attack") && !selected.equals("mine")
+				&& !selected.equals("complete")) {
 			selected = "wait";
 		}
 		String message = say == null ? "" : say.strip();

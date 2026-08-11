@@ -157,7 +157,12 @@ public final class FeatureCatalogScreen extends Screen {
 			: Math.min(220, (panelWidth - Math.max(0, selected.actions.size() - 1) * 8)
 			/ selected.actions.size());
 		int x = left;
-		if (selected == Feature.PROMPTS) {
+		if (selected == Feature.AI_PLAYER) {
+			addRenderableWidget(Button.builder(Component.literal("打开 AI 模式与实体详情"), b -> {
+				if (minecraft != null) minecraft.setScreenAndShow(new AgentListScreen(this));
+			}).bounds(left, 104, Math.min(260, panelWidth), 22).build());
+			x = left + Math.min(260, panelWidth) + 8;
+		} else if (selected == Feature.PROMPTS) {
 			addRenderableWidget(Button.builder(Component.literal("打开提示词编辑与分配"), b -> {
 				if (minecraft != null) minecraft.setScreenAndShow(PromptConfigScreen.promptEditor(this));
 			}).bounds(left, 104, Math.min(260, panelWidth), 22).build());

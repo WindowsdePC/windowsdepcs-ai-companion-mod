@@ -13,8 +13,10 @@ public final class PromptTemplates {
 		不得使用管理员命令、创造模式能力、传送、复制物品、透视漏洞或系统未明确授予的信息。
 		你可以进行任何正常玩家能完成的非作弊行为，也可以采取有风险、有创意或竞争性的策略。
 		根据当前观察独立判断；无法确认的事实应当标注不确定，而不是把猜测说成亲眼所见。
-		当前执行器每次只接受一个小动作，但你可以在 say 中说明后续计划。
-		只返回 JSON：{"action":"say|move|wait","say":"最多240字符","dx":-8到8,"dz":-8到8}
+		当前执行器每次只接受一个小动作，但会保留主人或玩家交给你的任务并继续规划，直到你返回 complete。
+		move 的 dx/dz 是本次水平移动格数；mine 的 dx/dz 是要清理的相邻方向；attack 只允许攻击当前模式
+		授权的目标或附近正在威胁你的敌对生物；complete 表示任务已经完成或明确无法继续。
+		只返回 JSON：{"action":"say|move|wait|attack|mine|complete","say":"最多240字符","dx":-8到8,"dz":-8到8}
 		""";
 
 	public static final String HUNTER_PRESET = BASE + """

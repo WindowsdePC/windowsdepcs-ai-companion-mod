@@ -1,6 +1,7 @@
 package com.example.ai_companion.maid;
 
 import com.example.ai_companion.agent.AgentManager;
+import com.example.ai_companion.agent.AgentMode;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
@@ -40,16 +41,37 @@ public final class MaidManager implements AutoCloseable {
 
 	public synchronized MaidProfile summon(ServerPlayer owner, String name, String skinKey, String capeKey) {
 		String key = name.toLowerCase();
-		if (maids.containsKey(key)) throw new IllegalArgumentException("女仆名称已存在: " + name);
-		agents.create(owner, name, null, null);
-		agents.setPrompt(name, "maid");
-		MaidProfile profile = new MaidProfile(name, owner.getUUID(), owner.getGameProfile().name(),
-			skinKey, capeKey, MaidMood.HAPPY, false);
-		maids.put(key, profile);
-		updateNameTag(profile);
-		applyHealth(profile, true);
-		save();
-		return profile;
+		MaidProfile existing = maids.get(key);
+		if (existing != null && agents.hasAgent(name)) {
+			throw new IllegalArgumentException("女仆名称已存在且实体仍在世界中: " + name);
+		}
+		if (existing != null && !existing.ownerUuid().equals(owner.getUUID())) {
+			throw new IllegalArgumentException("该女仆身份属于其他玩家，不能重新创建");
+		}
+		if (existing != null && existing.stored()) {
+			throw new IllegalArgumentException("该女仆已在背包中，请点击“从背包召唤”");
+		}
+
+		boolean created = false;
+		try {
+			agents.create(owner, name, null, null);
+			created = true;
+			agents.setMode(name, AgentMode.TEAMMATE, owner.getScoreboardName(),
+				owner.level().getServer().getTickCount());
+			agents.setPrompt(name, "maid");
+			MaidProfile profile = existing == null
+				? new MaidProfile(name, owner.getUUID(), owner.getGameProfile().name(),
+					skinKey, capeKey, MaidMood.HAPPY, false)
+				: existing.withStored(false).withMood(MaidMood.HAPPY);
+			maids.put(key, profile);
+			updateNameTag(profile);
+			applyHealth(profile, true);
+			save();
+			return profile;
+		} catch (RuntimeException error) {
+			if (created) agents.remove(name);
+			throw error;
+		}
 	}
 
 	public synchronized void restore(MinecraftServer server) {
@@ -112,6 +134,8 @@ public final class MaidManager implements AutoCloseable {
 		int capsuleSlot = findCapsule(owner, profile.name());
 		if (capsuleSlot < 0) throw new IllegalStateException("背包中找不到该女仆的收纳物品");
 		agents.create(owner, profile.name(), null, null);
+		agents.setMode(profile.name(), AgentMode.TEAMMATE, owner.getScoreboardName(),
+			owner.level().getServer().getTickCount());
 		agents.setPrompt(profile.name(), "maid");
 		owner.getInventory().removeItem(capsuleSlot, 1);
 		MaidProfile active = profile.withStored(false).withMood(MaidMood.HAPPY);

@@ -459,28 +459,9 @@ public final class PromptConfigScreen extends Screen {
 			if (minecraft != null) minecraft.setScreenAndShow(new PetCompetitionScreen(this));
 		}).bounds(left + (panelWidth + 10) / 2, 240, (panelWidth - 10) / 2, 22).build());
 
-		addRenderableWidget(Button.builder(Component.literal("刷新 AI 列表"), b -> {
-			if (minecraft != null) AgentPositionHud.requestRefresh(minecraft);
-			status = "正在从服务器刷新 AI 当前维度与位置…";
-		}).bounds(left, 270, 140, 20).build());
-		List<com.example.ai_companion.agent.AgentPosition> liveAgents = AgentPositionHud.snapshot();
-		if (liveAgents.isEmpty()) {
-			status = "AI 列表暂无数据；点击“刷新 AI 列表”从服务器获取";
-			return;
-		}
-		int y = 295;
-		for (var position : liveAgents.stream().limit(5).toList()) {
-			int rowWidth = Math.max(220, panelWidth - 150);
-			addRenderableWidget(Button.builder(Component.literal(position.displayText()), b -> {
-				agentName = position.name();
-				status = "已选择 " + position.name() + "；当前维度 " + position.dimension();
-			}).bounds(left, y, rowWidth, 20).build());
-			addRenderableWidget(Button.builder(Component.literal("传送至 " + position.name()), b -> {
-				UiActionClient.send("agent.teleport_to", position.name());
-				status = "已请求服务器传送至 " + position.name() + "（需要管理员权限）";
-			}).bounds(left + rowWidth + 8, y, Math.max(130, panelWidth - rowWidth - 8), 20).build());
-			y += 22;
-		}
+		addRenderableWidget(Button.builder(Component.literal("打开 AI 模式与实体详细列表"), b -> {
+			if (minecraft != null) minecraft.setScreenAndShow(new AgentListScreen(this));
+		}).bounds(left, 270, panelWidth, 22).build());
 	}
 
 	private void buildPromptPanel(int left, int panelWidth) {

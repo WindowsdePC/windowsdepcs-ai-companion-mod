@@ -143,8 +143,8 @@ public final class UiActionService {
 					.map(value -> value.displayText()).collect(java.util.stream.Collectors.joining(" | ", "相册：", "")));
 				case "travel.stats" -> reply(player, "旅行日志：" + travel.categoryCounts(player));
 				case "news.today" -> reply(player, news.generateCurrent(player.level().getServer()).summaryText());
-				case "live.status" -> reply(player, describe(livestreams.status(player)));
-				case "music.status" -> reply(player, describe(music.status(player)));
+				case "live.status" -> reply(player, liveStatus(player));
+				case "music.status" -> reply(player, musicStatus(player));
 				case "society.leaderboard" -> reply(player, society.leaderboard().stream().limit(8)
 					.map(value -> value.agentName() + "=" + value.balance()).collect(java.util.stream.Collectors.joining(", ", "社会排行：", "")));
 				case "weather.status" -> reply(player, weather.active() == null ? "当前没有自然事件"
@@ -270,7 +270,7 @@ public final class UiActionService {
 	private void assignPrompt(ServerPlayer player, String name, String id) {
 		requireAdmin(player);
 		agents.setPrompt(name, id);
-		reply(player, "已分配提示词 " + id + " 给 " + name);
+		reply(player, "已分配提示词 " + id + " 给 " + name + "；自动决策已开启并立即开始");
 	}
 
 	private void startArena(ServerPlayer player, ArenaMode mode, String names) {
@@ -390,6 +390,16 @@ public final class UiActionService {
 		return "合奏：" + value.style().displayName() + " · AI=" + value.members() + " · 音符=" + value.notesPlayed();
 	}
 
+	private String liveStatus(ServerPlayer player) {
+		try { return describe(livestreams.status(player)); }
+		catch (IllegalArgumentException missing) { return "当前没有 AI 直播会话；请先在直播界面创建会话"; }
+	}
+
+	private String musicStatus(ServerPlayer player) {
+		try { return describe(music.status(player)); }
+		catch (IllegalStateException missing) { return "当前没有进行中的 AI 合奏；请先在合奏界面选择成员并开始"; }
+	}
+
 	private static String arg(UiActionPayload request, int index) {
 		if (index < 0 || index >= request.arguments().size()) throw new IllegalArgumentException("UI 参数不完整");
 		return request.arguments().get(index);
@@ -425,8 +435,11 @@ public final class UiActionService {
 		if (ServerPlayNetworking.canSend(player, UiActionResultPayload.TYPE)) {
 			ServerPlayNetworking.send(player, new UiActionResultPayload(success, message));
 		} else {
-			// Compatibility fallback for clients older than the direct UI result protocol.
-			player.sendSystemMessage(Component.literal(message));
+			// UI operations must never leak their results into vanilla chat. A mismatched/old client
+			// cannot render this protocol, so keep the diagnostic in the server log instead.
+			com.example.ai_companion.AiCompanionMod.LOGGER.warn(
+				"Cannot deliver UI result to {} because the client lacks the result payload: {}",
+				player.getScoreboardName(), message);
 		}
 	}
 

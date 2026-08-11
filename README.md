@@ -4,15 +4,15 @@ WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 
 它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前测试版本：[v0.9.10-beta.5](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.9.10-beta.5)（预发行版；稳定版仍为 `v0.9.9`）
+当前测试版本：[v0.9.10-beta.6](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.9.10-beta.6)（预发行版；稳定版仍为 `v0.9.9`）
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.10-beta.5.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.10-beta.5.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.10-beta.5.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.10-beta.6.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.10-beta.6.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.10-beta.6.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
@@ -58,6 +58,16 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 
 ## 主要功能
 
+### 0.9.10-beta.6 AI 实体生命周期、任务与详情界面修复
+
+- 修复 Fabric `FakePlayer` 默认永久无敌且空 Tick 的根本问题：AI/女仆现在使用原版玩家伤害、死亡、火焰、溺水和传送门处理；实际游戏模式会服从 `/gamemode`，`/kill` 后实体会死亡并清理。
+- 女仆创建采用可回滚流程；旧存档中“有女仆资料但无实体”的同所有者记录可重新召唤，创建成功后默认以队友模式跟随所有者。
+- 分配提示词会立即开启自动决策；没有 API 令牌时界面明确显示原因，不再静默随机游走。直接任务会持续保存到规划器，直到 AI 返回 `complete`。
+- AI 动作白名单新增安全 `attack`、相邻低硬度方块 `mine` 与任务 `complete`；直接任务期间不会再被内置随机巡查/跟随移动覆盖。
+- “AI 玩家系统”、AI 管理页和 F8 控制台均可进入独立“AI 模式与实体详情”界面，显示 UUID、维度、坐标、生命、实际游戏模式、AI 模式、目标、提示词、自动决策、持续任务和最近状态，并提供管理员传送按钮。
+- UI 网络结果不再回退到原版聊天栏；客户端/服务端协议不匹配时只写服务器诊断日志，当前版本的结果保留在模组窗口。
+- Minecraft 1.20.1 Fabric 同步覆盖官方旧版 `FakePlayer` 的永久无敌与空 Tick；三个发行文件继续使用各自版本/加载器命名。
+
 ### 0.9.10-beta.5 方向导航闭环与缩放键修复
 
 - 缩放默认键恢复为 `C`；beta.4 仍保持默认 `F6` 的客户端配置会迁移回 `C`，玩家自己设置的其他按键不会被覆盖。
@@ -98,7 +108,7 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 ### AI 玩家
 
 - 0.9.7 起完整 UI 使用带边界校验的自定义网络操作通道直接调用服务端管理器；创建、模式、提示词、API、游戏增强、望远镜、AI 宠物与 AI 竞技按钮不再发送聊天命令。命令仍保留给服务器控制台、脚本和无客户端场景。
-- 0.9.8 将相册、旅行日志、日报、直播、音乐、模拟社会、自然事件、助手球等 UI 查询也改为直接调用服务端 Java 管理器；UI 操作结果显示在模组界面内，不再刷聊天栏，旧客户端连接时才回退为系统消息。
+- 0.9.8 将相册、旅行日志、日报、直播、音乐、模拟社会、自然事件、助手球等 UI 查询也改为直接调用服务端 Java 管理器；UI 操作结果显示在模组界面内，不再刷聊天栏。
 - V+B 现在直接打开可操作的九分类中心；检测到 EclipseUI 时可从“兼容设置”进入现代化数值页，不再把小游戏、AI 宠物和 AI 竞技入口藏在返回页。
 - AI 管理页会实时列出 AI 的当前维度与 XYZ，并提供“传送至该 AI”按钮；传送属于服务器管理操作，需要管理员权限。`F8` 现在打开独立“AI 控制与消息”窗口，位置、请求状态和 AI 回复都留在该窗口内，不写入聊天栏。
 - 新创建的 AI 不再在半径内随机选点，而是从发起创建的玩家当前位置加入世界，并继续执行 PlayerList/世界实体双重可见性校验。
@@ -108,7 +118,7 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 - 创建、批量创建、列出和移除具有独立名称与 UUID 的可见 `FakePlayer`。
 - 生存、猎人、队友、PvP 教练和空闲五种任务模式；新 AI 默认为可受伤的生存模式，并会巡查附近环境、被敌对生物选为目标。
 - 选择当前在线玩家作为目标，并为指定 AI 分配提示词预设。
-- 通过异步 OpenAI 兼容 API 请求取得 `say`、`move`、`wait` 白名单动作。
+- 通过异步 OpenAI 兼容 API 请求取得 `say`、`move`、`wait`、安全 `attack`、相邻方块 `mine` 与任务 `complete` 白名单动作。
 - 天眼快照记录目标当时的维度、坐标与采集时间，不传送 AI。
 - `/aiplayer positions` 从服务器查询所有已登记 AI 当前所在维度与 XYZ 坐标。
 - 按一下 `F8` 打开 AI 控制与消息窗口，再按一次关闭；窗口可直接选择 AI、发送任务、查看回复，并进入提示词分配弹窗。
@@ -118,7 +128,7 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 - AI 使用独立的原版 `PlayerAdvancements` 进度存档；可用 `/aiplayer identity <名称>` 和
   `/aiplayer advancements <名称>` 查询身份与已完成进度。
 - 每个 AI 可独立开启自动连续决策，间隔可设为 5 秒至 1 小时；设置随身份存档恢复。
-- 自动决策沿用模式提示词、天眼快照和 `say`、`move`、`wait` 白名单，不执行任意命令。
+- 自动决策沿用模式提示词、天眼快照和受限动作白名单，不执行任意命令；分配提示词会立即启用自动决策。
 - 可创建持久化多 AI 协作组；成员共享任务、提案、严格多数票共识和领队选举。
 - 协作组的领队、任务与最近通过的共识会加入成员的后续手动或自动决策观察信息。
 - 玩家可开启由 1～16 名已登记 AI 观看的直播会话；AI 依据服务器提供的维度、位置、生命、饥饿和主手物品生成事实约束弹幕。

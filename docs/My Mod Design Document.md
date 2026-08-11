@@ -13,7 +13,7 @@ WindowsdePC's AI Companion Mod
 
 当前版本：
 
-0.9.10-beta.5
+0.9.10-beta.6
 
 
 目标版本：
@@ -26,6 +26,17 @@ WindowsdePC's AI Companion Mod
 - Minecraft 26.2 / Fabric Loader / JDK 25
 - Minecraft 1.20.1 / Fabric Loader / JDK 17
 - Minecraft 1.20.1 / Forge / JDK 17
+
+
+0.9.10-beta.6 AI 实体与任务修复状态：
+
+- 26.2 Fabric AI/女仆覆盖工具 FakePlayer 的永久无敌与空 Tick，使用原版玩家伤害、死亡、游戏模式、火焰、溺水和传送门流程。
+- 1.20.1 Fabric 使用旧版 `isInvulnerableTo(DamageSource)` 签名完成同一修复；Forge 仍使用 1.20.1 原版 `ServerPlayer` 生命周期。
+- 女仆创建失败必须回滚运行时实体；同所有者的旧女仆资料在实体缺失时允许重新生成，召唤后默认跟随所有者。
+- 分配提示词即启用自动决策；直接任务持续执行到 AI 返回 `complete`，且任务移动不再被随机巡查覆盖。
+- 安全执行器允许 `say`、`move`、`wait`、攻击授权目标/近身敌对生物、挖掘相邻低硬度普通方块及 `complete`，禁止任意命令、创造能力和传送作弊。
+- AI 列表必须进入独立详情界面，显示 UUID、维度、坐标、生命、实际游戏模式、行为模式、目标、提示词、自动决策、持续任务和最近状态，并提供管理员传送按钮；不得只在聊天栏或左下角输出列表。
+- UI 返回只显示在模组窗口；协议不匹配的诊断写入服务器日志，不回退到原版聊天栏。
 
 
 0.9.10-beta.5 方向导航与快捷键状态：

@@ -20,6 +20,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.AABB;
@@ -64,6 +65,7 @@ public final class AgentManager implements AutoCloseable {
 		boolean arenaLocked;
 		boolean automaticEnabled;
 		boolean furnitureSeated;
+		String activeTask = "";
 		int automaticIntervalTicks = DEFAULT_AUTOMATIC_INTERVAL_TICKS;
 		long nextAutomaticTick;
 		long nextWanderTick;
@@ -212,10 +214,13 @@ public final class AgentManager implements AutoCloseable {
 		pruneStaleAgents();
 		return agents.values().stream().map(agent -> new AgentPosition(
 			agent.name,
+			agent.player.getUUID().toString(),
 			agent.player.level().dimension().identifier().toString(),
 			agent.player.getX(),
 			agent.player.getY(),
-			agent.player.getZ(), agent.mode, agent.lastMessage
+			agent.player.getZ(), agent.player.getHealth(), agent.player.getMaxHealth(),
+			agent.player.gameMode.getGameModeForPlayer().getName(), agent.mode, agent.targetName,
+			agent.promptId, agent.automaticEnabled, agent.activeTask, agent.lastMessage
 		)).toList();
 	}
 
@@ -304,6 +309,13 @@ public final class AgentManager implements AutoCloseable {
 		Agent agent = requireAgent(name);
 		if (!prompts.contains(promptId)) throw new IllegalArgumentException("找不到提示词预设: " + promptId);
 		agent.promptId = PromptStore.validateId(promptId);
+		// Assigning a prompt is an instruction to use it, not merely to store its ID. Older builds left
+		// automatic decisions disabled here, which made a correctly assigned AI keep wandering forever.
+		agent.automaticEnabled = true;
+		agent.nextAutomaticTick = agent.player.level().getServer().getTickCount() + 1L;
+		agent.lastMessage = config.get().hasApiKey()
+			? "提示词已生效，自动决策将在下一 Tick 开始"
+			: "提示词已分配，但服务器尚未配置 AI API 令牌";
 		saveIdentities();
 	}
 
@@ -365,7 +377,14 @@ public final class AgentManager implements AutoCloseable {
 		}
 		if (agent == null) throw new IllegalArgumentException("找不到 AI: " + name);
 		if (agent.arenaLocked) throw new IllegalStateException("该 AI 正在参加竞技场比赛");
+		if (!config.get().hasApiKey()) throw new IllegalStateException("服务器尚未配置 AI API 令牌");
 		if (!agent.thinking.compareAndSet(false, true)) throw new IllegalStateException("该 AI 正在思考");
+		synchronized (this) {
+			agent.activeTask = instruction.strip();
+			agent.automaticEnabled = true;
+			agent.nextAutomaticTick = server.getTickCount() + agent.automaticIntervalTicks;
+			agent.lastMessage = "正在规划任务：" + bounded(instruction, 160);
+		}
 		requestDecision(server, agent, instruction, result);
 	}
 
@@ -402,9 +421,12 @@ public final class AgentManager implements AutoCloseable {
 		long now = server.getTickCount();
 		String eye = agent.eyeSnapshot == null ? "天眼快照=无"
 			: agent.eyeSnapshot.promptText(now);
-		String observation = "名字=%s，模式=%s，维度=%s，位置=(%.1f,%.1f,%.1f)，任务=%s，%s".formatted(
-			agent.name, agent.mode, agent.player.level().dimension().identifier(), agent.player.getX(),
-			agent.player.getY(), agent.player.getZ(), instruction, eye);
+		String observation = "名字=%s，行为模式=%s，游戏模式=%s，生命=%.1f/%.1f，维度=%s，位置=(%.1f,%.1f,%.1f)，持续任务=%s，本轮要求=%s，%s".formatted(
+			agent.name, agent.mode, agent.player.gameMode.getGameModeForPlayer().getName(),
+			agent.player.getHealth(), agent.player.getMaxHealth(), agent.player.level().dimension().identifier(),
+			agent.player.getX(), agent.player.getY(), agent.player.getZ(),
+			agent.activeTask.isBlank() ? "无" : agent.activeTask, instruction, eye);
+		observation += "，" + nearbyObservation(agent);
 		String cooperation = collaborationContext.apply(agent.name);
 		if (!cooperation.isBlank()) observation += "，" + cooperation;
 		try {
@@ -443,12 +465,17 @@ public final class AgentManager implements AutoCloseable {
 
 	public synchronized void tick(MinecraftServer server) {
 		pruneStaleAgents();
+		pruneFinishedDeaths();
 		long now = server.getTickCount();
 		if (now >= nextIdentitySaveTick) {
 			nextIdentitySaveTick = now + 200;
 			saveIdentities();
 		}
 		for (Agent agent : agents.values()) {
+			if (!agent.player.isAlive()) {
+				agent.lastMessage = "实体已死亡；可重新创建同名 AI";
+				continue;
+			}
 			if (requiresTarget(agent.mode) && now >= agent.nextEyeTick) {
 				captureEye(server, agent, now);
 			}
@@ -483,7 +510,22 @@ public final class AgentManager implements AutoCloseable {
 	}
 
 	private void startAutomaticDecision(MinecraftServer server, Agent agent) {
-		if (!config.get().hasApiKey() || !agent.thinking.compareAndSet(false, true)) return;
+		if (!config.get().hasApiKey()) {
+			agent.lastMessage = "自动决策已开启，但服务器尚未配置 AI API 令牌";
+			return;
+		}
+		if (!agent.thinking.compareAndSet(false, true)) return;
+		if (!agent.activeTask.isBlank()) {
+			requestDecision(server, agent,
+				"继续执行尚未完成的持续任务；根据当前观察只选择下一小步，完成后返回 complete。任务："
+					+ agent.activeTask,
+				message -> {
+					if (message.startsWith("AI 请求失败")) {
+						AiCompanionMod.LOGGER.warn("Automatic task failed for {}: {}", agent.name, message);
+					}
+				});
+			return;
+		}
 		String instruction = switch (agent.mode) {
 			case SURVIVAL -> "像普通生存玩家一样，根据当前环境自主决定下一步非作弊行动。";
 			case HUNTER -> "根据追杀目标、当前观察和天眼快照自主决定下一步；优先正常移动与侦察。";
@@ -542,9 +584,20 @@ public final class AgentManager implements AutoCloseable {
 		synchronized (this) {
 			agent.lastMessage = decision.say().isBlank()
 				? "已执行动作：" + decision.action() : decision.say();
-			if (decision.action().equals("move") && !agent.furnitureSeated) {
-				agent.remainingX = decision.dx();
-				agent.remainingZ = decision.dz();
+			switch (decision.action()) {
+				case "move" -> {
+					if (!agent.furnitureSeated) {
+						agent.remainingX = decision.dx();
+						agent.remainingZ = decision.dz();
+					}
+				}
+				case "attack" -> attackAuthorizedTarget(server, agent);
+				case "mine" -> tryMineObstacle(agent, decision.dx(), decision.dz(), server.getTickCount());
+				case "complete" -> {
+					agent.activeTask = "";
+					agent.lastMessage = decision.say().isBlank() ? "任务已完成" : decision.say();
+				}
+				default -> { }
 			}
 			observer = actionObserver;
 		}
@@ -554,6 +607,9 @@ public final class AgentManager implements AutoCloseable {
 
 	private void tickBuiltInBehaviour(MinecraftServer server, Agent agent, long now) {
 		if (agent.mode == AgentMode.IDLE) return;
+		// A direct task owns movement until the planner marks it complete. Without this guard the
+		// built-in follow/wander controller overwrote every movement chosen from the assigned prompt.
+		if (!agent.activeTask.isBlank()) return;
 		if (agent.mode == AgentMode.SURVIVAL) {
 			Mob threat = nearestHostile(agent, 12.0);
 			if (threat != null) {
@@ -569,7 +625,8 @@ public final class AgentManager implements AutoCloseable {
 					agent.lastAttackTick = now;
 					agent.lastMessage = "生存防卫：正在攻击 " + threat.getName().getString();
 				}
-			} else if (Math.hypot(agent.remainingX, agent.remainingZ) < 0.05 && now >= agent.nextWanderTick) {
+			} else if (agent.activeTask.isBlank() && !agent.thinking.get()
+					&& Math.hypot(agent.remainingX, agent.remainingZ) < 0.05 && now >= agent.nextWanderTick) {
 				double angle = agent.player.getRandom().nextDouble() * Math.PI * 2.0;
 				double distance = 2.0 + agent.player.getRandom().nextDouble() * 4.0;
 				agent.remainingX = Math.cos(angle) * distance;
@@ -617,6 +674,40 @@ public final class AgentManager implements AutoCloseable {
 			.min(java.util.Comparator.comparingDouble(mob -> mob.distanceToSqr(agent.player))).orElse(null);
 	}
 
+	private void attackAuthorizedTarget(MinecraftServer server, Agent agent) {
+		if (agent.mode == AgentMode.HUNTER || agent.mode == AgentMode.PVP_COACH) {
+			ServerPlayer target = server.getPlayerList().getPlayerByName(agent.targetName);
+			if (target != null && target.level() == agent.player.level()
+					&& target.isAlive() && agent.player.distanceToSqr(target) <= 16.0) {
+				agent.player.attack(target);
+				agent.player.swing(InteractionHand.MAIN_HAND);
+				agent.lastMessage = "正在攻击模式授权目标 " + target.getScoreboardName();
+				return;
+			}
+		}
+		Mob hostile = nearestHostile(agent, 4.0);
+		if (hostile == null) {
+			agent.lastMessage = "攻击动作未执行：近身范围没有获准目标";
+			return;
+		}
+		agent.player.attack(hostile);
+		agent.player.swing(InteractionHand.MAIN_HAND);
+		agent.lastMessage = "正在防卫，攻击 " + hostile.getName().getString();
+	}
+
+	private String nearbyObservation(Agent agent) {
+		if (!(agent.player.level() instanceof ServerLevel level)) return "附近实体=不可用";
+		String entities = level.getEntitiesOfClass(LivingEntity.class,
+			agent.player.getBoundingBox().inflate(12.0), entity -> entity != agent.player && entity.isAlive())
+			.stream().sorted(java.util.Comparator.comparingDouble(entity -> entity.distanceToSqr(agent.player)))
+			.limit(8).map(entity -> "%s(%.1f格%s)".formatted(entity.getName().getString(),
+				Math.sqrt(entity.distanceToSqr(agent.player)), entity instanceof Enemy ? ",敌对" : ""))
+			.collect(java.util.stream.Collectors.joining("、"));
+		BlockPos feet = agent.player.blockPosition();
+		String below = level.getBlockState(feet.below()).getBlock().getName().getString();
+		return "脚下方块=" + below + "，附近实体=" + (entities.isBlank() ? "无" : entities);
+	}
+
 	private void tryMineObstacle(Agent agent, double dx, double dz, long now) {
 		if (!(agent.player.level() instanceof ServerLevel level)) return;
 		int stepX = Math.abs(dx) < 0.001 ? 0 : dx > 0 ? 1 : -1;
@@ -647,6 +738,11 @@ public final class AgentManager implements AutoCloseable {
 		return current.getMessage() == null ? current.getClass().getSimpleName() : current.getMessage();
 	}
 
+	private static String bounded(String value, int maximum) {
+		String safe = value == null ? "" : value.strip();
+		return safe.length() <= maximum ? safe : safe.substring(0, maximum);
+	}
+
 	private void bindStore(MinecraftServer server) {
 		Path worldRoot = server.getWorldPath(LevelResource.ROOT).toAbsolutePath().normalize();
 		if (boundWorldRoot != null && !boundWorldRoot.equals(worldRoot)) {
@@ -673,6 +769,24 @@ public final class AgentManager implements AutoCloseable {
 			AiCompanionMod.LOGGER.warn("Removed stale AI runtime identities that no longer have live entities");
 			saveIdentities();
 		}
+	}
+
+	private void pruneFinishedDeaths() {
+		boolean removed = false;
+		var iterator = agents.entrySet().iterator();
+		while (iterator.hasNext()) {
+			Agent agent = iterator.next().getValue();
+			if (agent.player.isAlive() || agent.player.deathTime < 20) continue;
+			MinecraftServer server = agent.player.level().getServer();
+			if (server != null && server.getPlayerList().getPlayer(agent.player.getUUID()) == agent.player) {
+				server.getPlayerList().remove(agent.player);
+			} else agent.player.discard();
+			iterator.remove();
+			removed = true;
+			AiCompanionMod.LOGGER.info("Removed dead AI entity {}; the same name may now be created again",
+				agent.name);
+		}
+		if (removed) saveIdentities();
 	}
 
 	private synchronized void saveIdentities() {
