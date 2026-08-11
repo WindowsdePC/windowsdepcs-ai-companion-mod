@@ -88,10 +88,10 @@ final class LegacyNavigationManager implements AutoCloseable {
 		access.registryOrThrow(Registries.STRUCTURE).keySet().forEach(value -> entries.add(new Entry("structure", value.toString())));
 		player.server.getAllLevels().forEach(level -> entries.add(new Entry("dimension", level.dimension().location().toString())));
 		entries.sort(Comparator.comparing((Entry value) -> value.type).thenComparing(value -> value.id));
-		if (entries.size() > MAX_ENTRIES) entries = entries.subList(0, MAX_ENTRIES);
+		List<Entry> limited = entries.size() > MAX_ENTRIES ? entries.subList(0, MAX_ENTRIES) : entries;
 		FriendlyByteBuf response = PacketByteBufs.create();
-		response.writeVarInt(entries.size());
-		for (Entry entry : entries) { response.writeUtf(entry.type, 16); response.writeUtf(entry.id, 160); }
+		response.writeVarInt(limited.size());
+		for (Entry entry : limited) { response.writeUtf(entry.type, 16); response.writeUtf(entry.id, 160); }
 		response.writeUtf("目录来自服务器动态注册表，包含模组群系和结构", 240);
 		ServerPlayNetworking.send(player, CATALOG, response);
 	}
