@@ -10,7 +10,6 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.entity.FakePlayer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.commands.CommandSourceStack;
@@ -795,7 +794,7 @@ public final class LegacyFabricMod implements ModInitializer {
 		if (level == null) throw new IllegalStateException("AI 所在维度当前不存在：" + data.dimension);
 		UUID uuid = UUID.fromString(data.uuid);
 		if (server.getPlayerList().getPlayer(uuid) != null) throw new IllegalStateException("相同 UUID 的 AI 已在线");
-		FakePlayer fake = new LegacyVisibleFakePlayer(level, new GameProfile(uuid, data.name));
+		ServerPlayer fake = new LegacyVisibleFakePlayer(level, new GameProfile(uuid, data.name));
 		fake.moveTo(data.x, data.y, data.z, 0, 0);
 		server.getPlayerList().placeNewPlayer(new LegacySilentConnection(), fake);
 		fake.teleportTo(level, data.x, data.y, data.z, 0.0F, 0.0F);
@@ -978,12 +977,12 @@ public final class LegacyFabricMod implements ModInitializer {
 
 	private static final class RuntimeAgent {
 		private final AgentData data;
-		private final FakePlayer player;
+		private final ServerPlayer player;
 		private boolean thinking;
 		private double remainingX, remainingZ;
 		private long nextWanderTick, lastAttackTick;
 		private String lastMessage = "已生成，正在以生存模式观察附近环境";
-		private RuntimeAgent(AgentData data, FakePlayer player) { this.data = data; this.player = player; }
+		private RuntimeAgent(AgentData data, ServerPlayer player) { this.data = data; this.player = player; }
 	}
 
 	private static final class State {
