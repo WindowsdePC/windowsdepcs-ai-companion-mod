@@ -82,9 +82,9 @@ final class LegacyForgeNavigation implements AutoCloseable {
 		player.level().registryAccess().registryOrThrow(Registries.STRUCTURE).keySet().forEach(id -> values.add(new Entry("structure", id.toString())));
 		player.server.getAllLevels().forEach(level -> values.add(new Entry("dimension", level.dimension().location().toString())));
 		values.sort(Comparator.comparing((Entry value) -> value.type).thenComparing(value -> value.id));
-		if (values.size() > 4096) values = List.copyOf(values.subList(0, 4096));
+		List<Entry> limited = values.size() > 4096 ? List.copyOf(values.subList(0, 4096)) : values;
 		CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-			new CatalogResponse(values, "目录来自服务器动态注册表，包含模组群系和结构"));
+			new CatalogResponse(limited, "目录来自服务器动态注册表，包含模组群系和结构"));
 	}
 
 	private void locate(ServerPlayer player, String type, String rawId) {
