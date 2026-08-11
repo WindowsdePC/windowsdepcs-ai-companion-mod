@@ -72,10 +72,12 @@ public final class LegacyFabricMod implements ModInitializer {
 		DATA_FILE.resolveSibling("ai_companion-weather-1.20.1.json"));
 	private static final LegacySpyglassManager SPYGLASS = new LegacySpyglassManager(
 		DATA_FILE.resolveSibling("ai_companion-spyglass-1.20.1.json"));
+	private static final LegacyNavigationManager NAVIGATION = new LegacyNavigationManager();
 
 	@Override
 	public void onInitialize() {
 		LegacyWeatherItems.register();
+		NAVIGATION.register();
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
 			dispatcher.register(literal("aiplayer")
 				.then(literal("create").requires(source -> source.hasPermission(2))
@@ -208,6 +210,7 @@ public final class LegacyFabricMod implements ModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(WEATHER::tick);
 		ServerTickEvents.END_SERVER_TICK.register(SPYGLASS::tick);
 		ServerTickEvents.END_SERVER_TICK.register(LegacyFabricMod::tickAgents);
+		ServerTickEvents.END_SERVER_TICK.register(NAVIGATION::tick);
 	}
 
 	private static void start(MinecraftServer minecraftServer) {
@@ -230,6 +233,7 @@ public final class LegacyFabricMod implements ModInitializer {
 	private static void stop() {
 		save();
 		SPYGLASS.close();
+		NAVIGATION.close();
 		for (RuntimeAgent runtime : AGENTS.values()) {
 			if (server != null && server.getPlayerList().getPlayer(runtime.player.getUUID()) == runtime.player) {
 				server.getPlayerList().remove(runtime.player);
