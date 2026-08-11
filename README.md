@@ -1,18 +1,18 @@
 # WindowsdePC's AI Companion Mod
 
 WindowsdePC's AI Companion Mod 是同时面向 Minecraft 26.2 与 1.20.1 的 AI 玩家与游戏增强模组。
-它以 Fabric `FakePlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
+它以服务端控制的原版 `ServerPlayer` 作为 AI 身份，通过 OpenAI Chat Completions 兼容接口取得受约束的
 动作决策，并提供游戏内配置、提示词管理、目标模式、天眼快照与可选玩法增强。
 
-当前测试版本：[v0.9.10-beta.6](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.9.10-beta.6)（预发行版；稳定版仍为 `v0.9.9`）
+当前测试版本：[v0.9.10-beta.7](https://github.com/WindowsdePC/windowsdepcs-ai-companion-mod/releases/tag/v0.9.10-beta.7)（预发行版；稳定版仍为 `v0.9.9`）
 
 ## 下载版本
 
 | Minecraft | 加载器 | Java | 发行文件 |
 | --- | --- | --- | --- |
-| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.10-beta.6.jar` |
-| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.10-beta.6.jar` |
-| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.10-beta.6.jar` |
+| 26.2 | Fabric | 25 | `windowsdepcs-ai-companion-mc26.2-fabric-0.9.10-beta.7.jar` |
+| 1.20.1 | Fabric | 17 | `windowsdepcs-ai-companion-mc1.20.1-fabric-0.9.10-beta.7.jar` |
+| 1.20.1 | Forge | 17 | `windowsdepcs-ai-companion-mc1.20.1-forge-0.9.10-beta.7.jar` |
 
 三个文件互相替代，只安装与当前游戏版本和加载器完全匹配的一个。
 
@@ -58,15 +58,15 @@ EclipseUI 与 Cloth Config 对 26.2 Fabric 版属于“二选一”的条件必�
 
 ## 主要功能
 
-### 0.9.10-beta.6 AI 实体生命周期、任务与详情界面修复
+### 0.9.10-beta.7 AI 实体生命周期、任务与详情界面修复
 
-- 修复 Fabric `FakePlayer` 默认永久无敌且空 Tick 的根本问题：AI/女仆现在使用原版玩家伤害、死亡、火焰、溺水和传送门处理；实际游戏模式会服从 `/gamemode`，`/kill` 后实体会死亡并清理。
+- AI/女仆不再继承 Fabric 工具 `FakePlayer`（该类硬编码永久无敌且空 Tick），而是直接使用原版 `ServerPlayer` 生命周期；现在恢复伤害、死亡、火焰、溺水和传送门处理，实际游戏模式会服从 `/gamemode`，`/kill` 后实体会死亡并清理。
 - 女仆创建采用可回滚流程；旧存档中“有女仆资料但无实体”的同所有者记录可重新召唤，创建成功后默认以队友模式跟随所有者。
 - 分配提示词会立即开启自动决策；没有 API 令牌时界面明确显示原因，不再静默随机游走。直接任务会持续保存到规划器，直到 AI 返回 `complete`。
 - AI 动作白名单新增安全 `attack`、相邻低硬度方块 `mine` 与任务 `complete`；直接任务期间不会再被内置随机巡查/跟随移动覆盖。
 - “AI 玩家系统”、AI 管理页和 F8 控制台均可进入独立“AI 模式与实体详情”界面，显示 UUID、维度、坐标、生命、实际游戏模式、AI 模式、目标、提示词、自动决策、持续任务和最近状态，并提供管理员传送按钮。
 - UI 网络结果不再回退到原版聊天栏；客户端/服务端协议不匹配时只写服务器诊断日志，当前版本的结果保留在模组窗口。
-- Minecraft 1.20.1 Fabric 同步覆盖官方旧版 `FakePlayer` 的永久无敌与空 Tick；三个发行文件继续使用各自版本/加载器命名。
+- Minecraft 1.20.1 Fabric 同样改为直接使用旧版原版 `ServerPlayer` 生命周期；三个发行文件继续使用各自版本/加载器命名。
 
 ### 0.9.10-beta.5 方向导航闭环与缩放键修复
 

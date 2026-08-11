@@ -9,7 +9,6 @@ import com.example.ai_companion.ai.PromptTemplates;
 import com.example.ai_companion.config.ModConfig;
 import com.example.ai_companion.config.PromptStore;
 import com.example.ai_companion.voice.AiSpeechService;
-import net.fabricmc.fabric.api.entity.FakePlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -50,7 +49,7 @@ public final class AgentManager implements AutoCloseable {
 
 	private static final class Agent {
 		final String name;
-		final FakePlayer player;
+		final ServerPlayer player;
 		final String textureValue;
 		final String textureSignature;
 		final long createdAtEpochMillis;
@@ -74,7 +73,7 @@ public final class AgentManager implements AutoCloseable {
 		int blockedMovementTicks;
 		String lastMessage = "已生成，正在以生存模式观察附近环境";
 
-		Agent(String name, FakePlayer player, String textureValue, String textureSignature,
+		Agent(String name, ServerPlayer player, String textureValue, String textureSignature,
 				long createdAtEpochMillis) {
 			this.name = name;
 			this.player = player;
@@ -129,7 +128,7 @@ public final class AgentManager implements AutoCloseable {
 		this.prompts = prompts;
 	}
 
-	public synchronized FakePlayer create(ServerPlayer owner, String name,
+	public synchronized ServerPlayer create(ServerPlayer owner, String name,
 										  String textureValue, String textureSignature) {
 		bindStore(owner.level().getServer());
 		String key = name.toLowerCase();
@@ -139,7 +138,7 @@ public final class AgentManager implements AutoCloseable {
 		if (textureValue != null && !textureValue.isBlank()) {
 			profile.properties().put("textures", new Property("textures", textureValue, textureSignature));
 		}
-		FakePlayer bot = VisibleAgentSpawner.spawnNear(owner, profile, agents.size());
+		ServerPlayer bot = VisibleAgentSpawner.spawnNear(owner, profile, agents.size());
 		bot.setCustomName(Component.literal(name));
 		bot.setCustomNameVisible(true);
 		agents.put(key, new Agent(name, bot, textureValue, textureSignature, System.currentTimeMillis()));
@@ -163,7 +162,7 @@ public final class AgentManager implements AutoCloseable {
 					profile.properties().put("textures", new Property("textures", stored.textureValue(),
 						stored.textureSignature()));
 				}
-				FakePlayer bot = VisibleAgentSpawner.restore(server, level, profile,
+				ServerPlayer bot = VisibleAgentSpawner.restore(server, level, profile,
 					stored.x(), stored.y(), stored.z());
 				bot.setCustomName(Component.literal(stored.name()));
 				bot.setCustomNameVisible(true);
@@ -225,7 +224,7 @@ public final class AgentManager implements AutoCloseable {
 	}
 
 	/** Returns one managed fake player for server-side feature integrations such as the arena. */
-	public synchronized FakePlayer managedPlayer(String name) {
+	public synchronized ServerPlayer managedPlayer(String name) {
 		return requireAgent(name).player;
 	}
 

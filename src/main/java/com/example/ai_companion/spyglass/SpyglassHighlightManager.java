@@ -3,7 +3,7 @@ package com.example.ai_companion.spyglass;
 import com.example.ai_companion.AiCompanionMod;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.fabricmc.fabric.api.entity.FakePlayer;
+import com.example.ai_companion.agent.ManagedAiAvatar;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -49,7 +49,7 @@ public final class SpyglassHighlightManager {
 	public void tick(MinecraftServer server) {
 		Set<UUID> online = new HashSet<>();
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-			if (player instanceof FakePlayer) continue;
+			if (player instanceof ManagedAiAvatar) continue;
 			UUID id = player.getUUID();
 			online.add(id);
 			cooldownTicks.computeIfPresent(id, (ignored, remaining) -> remaining <= 1 ? null : remaining - 1);

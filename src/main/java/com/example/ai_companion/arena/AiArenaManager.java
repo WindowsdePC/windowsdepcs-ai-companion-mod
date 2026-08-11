@@ -1,7 +1,7 @@
 package com.example.ai_companion.arena;
 
 import com.example.ai_companion.agent.AgentManager;
-import net.fabricmc.fabric.api.entity.FakePlayer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -52,7 +52,7 @@ public final class AiArenaManager implements AutoCloseable {
 		double centerY = 0;
 		double centerZ = 0;
 		for (ArenaRoster.Entry entry : roster.entries()) {
-			FakePlayer player = agents.managedPlayer(entry.name());
+			ServerPlayer player = agents.managedPlayer(entry.name());
 			if (!player.isAlive() || player.isRemoved()) {
 				throw new IllegalStateException("AI 当前不能参赛: " + entry.name());
 			}
@@ -132,8 +132,8 @@ public final class AiArenaManager implements AutoCloseable {
 	}
 
 	private void act(Participant participant, Participant enemy, int now) {
-		FakePlayer player = participant.player;
-		FakePlayer target = enemy.player;
+		ServerPlayer player = participant.player;
+		ServerPlayer target = enemy.player;
 		double distance = horizontalDistance(player, target);
 		float healthRatio = player.getHealth() / Math.max(1.0F, player.getMaxHealth());
 
@@ -177,7 +177,7 @@ public final class AiArenaManager implements AutoCloseable {
 		target.setHealth(Math.max(1.0F, target.getHealth() - damage));
 	}
 
-	private boolean buildTemporaryCover(FakePlayer player, FakePlayer enemy) {
+	private boolean buildTemporaryCover(ServerPlayer player, ServerPlayer enemy) {
 		if (battle.coverBlocks.size() >= MAX_COVER_BLOCKS) return false;
 		double distance = Math.max(0.01, horizontalDistance(player, enemy));
 		double directionX = (enemy.getX() - player.getX()) / distance;
@@ -269,23 +269,23 @@ public final class AiArenaManager implements AutoCloseable {
 		}
 	}
 
-	private static void advance(FakePlayer player, FakePlayer enemy, double step) {
+	private static void advance(ServerPlayer player, ServerPlayer enemy, double step) {
 		double distance = Math.max(0.01, horizontalDistance(player, enemy));
 		player.move(MoverType.SELF, new Vec3((enemy.getX() - player.getX()) / distance * step,
 			0, (enemy.getZ() - player.getZ()) / distance * step));
 	}
 
-	private static void retreat(FakePlayer player, FakePlayer enemy) {
+	private static void retreat(ServerPlayer player, ServerPlayer enemy) {
 		double distance = Math.max(0.01, horizontalDistance(player, enemy));
 		player.move(MoverType.SELF, new Vec3((player.getX() - enemy.getX()) / distance * MOVE_STEP,
 			0, (player.getZ() - enemy.getZ()) / distance * MOVE_STEP));
 	}
 
-	private static double horizontalDistance(FakePlayer first, FakePlayer second) {
+	private static double horizontalDistance(ServerPlayer first, ServerPlayer second) {
 		return Math.hypot(first.getX() - second.getX(), first.getZ() - second.getZ());
 	}
 
-	private static void face(FakePlayer player, double targetX, double targetZ) {
+	private static void face(ServerPlayer player, double targetX, double targetZ) {
 		float yaw = (float) Math.toDegrees(Math.atan2(-(targetX - player.getX()), targetZ - player.getZ()));
 		player.setYRot(yaw);
 		player.setYHeadRot(yaw);
@@ -323,7 +323,7 @@ public final class AiArenaManager implements AutoCloseable {
 
 	private static final class Participant {
 		final ArenaRoster.Entry entry;
-		final FakePlayer player;
+		final ServerPlayer player;
 		final Snapshot snapshot;
 		boolean eliminated;
 		int healingPotions = 2;
@@ -332,7 +332,7 @@ public final class AiArenaManager implements AutoCloseable {
 		int lastAttackTick = Integer.MIN_VALUE / 2;
 		int attackNumber;
 
-		Participant(ArenaRoster.Entry entry, FakePlayer player, Snapshot snapshot) {
+		Participant(ArenaRoster.Entry entry, ServerPlayer player, Snapshot snapshot) {
 			this.entry = entry;
 			this.player = player;
 			this.snapshot = snapshot;
@@ -345,13 +345,13 @@ public final class AiArenaManager implements AutoCloseable {
 
 	private record Snapshot(double x, double y, double z, float health, boolean invulnerable,
 			ItemStack mainHand, ItemStack offHand) {
-		static Snapshot capture(FakePlayer player) {
+		static Snapshot capture(ServerPlayer player) {
 			return new Snapshot(player.getX(), player.getY(), player.getZ(), player.getHealth(),
 				player.isInvulnerable(), player.getItemBySlot(EquipmentSlot.MAINHAND).copy(),
 				player.getItemBySlot(EquipmentSlot.OFFHAND).copy());
 		}
 
-		void restore(FakePlayer player) {
+		void restore(ServerPlayer player) {
 			if (player.isRemoved()) return;
 			player.stopUsingItem();
 			player.removeEffect(MobEffects.REGENERATION);

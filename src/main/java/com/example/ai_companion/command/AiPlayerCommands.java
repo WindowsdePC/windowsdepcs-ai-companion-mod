@@ -15,10 +15,10 @@ import com.example.ai_companion.config.PromptStore;
 import com.example.ai_companion.gameplay.MinigameRewardManager;
 import com.example.ai_companion.gameplay.InventoryShuffleManager;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.entity.FakePlayer;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 
 import java.io.IOException;
@@ -406,7 +406,7 @@ public final class AiPlayerCommands {
 			return 0;
 		}
 		try {
-			FakePlayer created = agents.create(source.getPlayerOrException(), name, value, signature);
+			ServerPlayer created = agents.create(source.getPlayerOrException(), name, value, signature);
 			source.sendSuccess(() -> Component.literal("已在你身边创建可见 AI 玩家 " + name
 				+ " · " + created.level().dimension().identifier() + " · X "
 				+ String.format(java.util.Locale.ROOT, "%.1f Y %.1f Z %.1f",

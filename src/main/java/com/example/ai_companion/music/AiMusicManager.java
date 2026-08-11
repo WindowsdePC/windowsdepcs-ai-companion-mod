@@ -1,14 +1,13 @@
 package com.example.ai_companion.music;
 
 import com.example.ai_companion.agent.AgentManager;
-import net.fabricmc.fabric.api.entity.FakePlayer;
+import net.minecraft.server.level.ServerPlayer;
 import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -65,7 +64,7 @@ public final class AiMusicManager implements AutoCloseable {
 			if (occupied.contains(name.toLowerCase(Locale.ROOT))) {
 				throw new IllegalStateException("AI 已在其他合奏中: " + name);
 			}
-			FakePlayer agent = agents.managedPlayer(name);
+			ServerPlayer agent = agents.managedPlayer(name);
 			if (agent.level() != owner.level()) throw new IllegalStateException("AI 与玩家不在同一维度: " + name);
 			if (!agent.isAlive() || agent.isRemoved()) throw new IllegalStateException("AI 当前无法合奏: " + name);
 			if (agents.isArenaLocked(name)) throw new IllegalStateException("AI 正在参加竞技场: " + name);
@@ -141,7 +140,7 @@ public final class AiMusicManager implements AutoCloseable {
 
 	private void playAgentNote(ServerPlayer owner, ScheduledNote scheduled) {
 		if (!agents.hasAgent(scheduled.agentName) || agents.isArenaLocked(scheduled.agentName)) return;
-		FakePlayer agent = agents.managedPlayer(scheduled.agentName);
+		ServerPlayer agent = agents.managedPlayer(scheduled.agentName);
 		if (agent.level() != owner.level() || agent.distanceToSqr(owner) > PLAY_RADIUS * PLAY_RADIUS
 				|| !agent.isAlive() || agent.isRemoved()) return;
 		ServerLevel level = agent.level();
