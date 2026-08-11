@@ -29,6 +29,7 @@ import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.loading.FMLPaths;
@@ -74,9 +75,11 @@ public final class LegacyForgeMod {
 		DATA_FILE.resolveSibling("ai_companion-weather-1.20.1.json"));
 	private static final LegacySpyglassManager SPYGLASS = new LegacySpyglassManager(
 		DATA_FILE.resolveSibling("ai_companion-spyglass-1.20.1.json"));
+	private static final LegacyForgeNavigation NAVIGATION = new LegacyForgeNavigation();
 
 	public LegacyForgeMod() {
 		LegacyWeatherItems.register();
+		NAVIGATION.register();
 		MinecraftForge.EVENT_BUS.register(this);
 	}
 
@@ -230,6 +233,7 @@ public final class LegacyForgeMod {
 	@SubscribeEvent
 	public void serverStopping(ServerStoppingEvent event) {
 		SPYGLASS.close();
+		NAVIGATION.close();
 		save();
 		for (RuntimeAgent runtime : AGENTS.values()) {
 			if (server != null && server.getPlayerList().getPlayer(runtime.player.getUUID()) == runtime.player) {
@@ -247,9 +251,16 @@ public final class LegacyForgeMod {
 	@SubscribeEvent
 	public void serverTick(TickEvent.ServerTickEvent event) {
 		if (event.phase == TickEvent.Phase.END && server != null) {
-			WEATHER.tick(server); SPYGLASS.tick(server); tickAgents(server);
+			WEATHER.tick(server); SPYGLASS.tick(server); NAVIGATION.tick(server); tickAgents(server);
 		}
 	}
+
+	@SubscribeEvent
+	public void playerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+		if (event.getEntity() instanceof ServerPlayer player) NAVIGATION.disconnect(player);
+	}
+
+	static LegacyForgeNavigation navigation() { return NAVIGATION; }
 
 	private static int create(CommandContext<CommandSourceStack> context) {
 		String name = StringArgumentType.getString(context, "name");

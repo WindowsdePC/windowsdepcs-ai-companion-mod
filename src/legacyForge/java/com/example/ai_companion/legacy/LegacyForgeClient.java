@@ -13,7 +13,9 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.ConfigScreenHandler;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
@@ -43,7 +45,7 @@ public final class LegacyForgeClient {
 		boolean v = preferences.uiPrimaryEnabled && InputConstants.isKeyDown(window, preferences.code(preferences.uiPrimary, "V"));
 		boolean b = preferences.uiSecondaryEnabled && InputConstants.isKeyDown(window, preferences.code(preferences.uiSecondary, "B"));
 		boolean f8 = preferences.positionsEnabled && InputConstants.isKeyDown(window, preferences.code(preferences.positions, "F8"));
-		boolean c = preferences.zoomEnabled && InputConstants.isKeyDown(window, preferences.code(preferences.zoom, "F6"));
+		boolean c = preferences.zoomEnabled && InputConstants.isKeyDown(window, preferences.code(preferences.zoom, "C"));
 		boolean g = preferences.navigationEnabled && InputConstants.isKeyDown(window, preferences.code(preferences.navigation, "F7"));
 		boolean m = preferences.minigamesEnabled && InputConstants.isKeyDown(window, preferences.code(preferences.minigames, "F9"));
 		if (v && b && !comboDown && client.screen == null) client.setScreen(new CompanionScreen(false, null));
@@ -53,7 +55,7 @@ public final class LegacyForgeClient {
 		}
 		if (m && !minigameDown && client.screen == null) client.setScreen(new MinigameHubScreen(null));
 		if (sprintJumpEnabled && client.player != null && client.options.keyUp.isDown() && !client.player.isShiftKeyDown()) client.player.setSprinting(true);
-		if (g && !navigationDown && client.screen == null) client.setScreen(new CompanionScreen(true, null));
+		if (g && !navigationDown && client.screen == null && client.getConnection() != null) LegacyForgeNavigationClient.open(client, null);
 		if (c && !zoomDown) { savedFov = client.options.fov().get(); client.options.fov().set(Math.max(30, savedFov / 4)); }
 		if (!c && zoomDown && savedFov != null) { client.options.fov().set(savedFov); savedFov = null; }
 		if (client.player != null) {
@@ -65,6 +67,14 @@ public final class LegacyForgeClient {
 	}
 	@SubscribeEvent public static void systemMessage(ClientChatReceivedEvent.System event) {
 		if (UiInbox.capture(event.getMessage())) event.setCanceled(true);
+	}
+	@SubscribeEvent public static void renderNavigation(RenderGuiOverlayEvent.Post event) {
+		if (event.getOverlay().id().equals(VanillaGuiOverlay.HOTBAR.id())) {
+			LegacyForgeNavigationClient.renderHud(event.getGuiGraphics());
+		}
+	}
+	@SubscribeEvent public static void clientLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+		LegacyForgeNavigationClient.clear();
 	}
 
 	public static Screen configScreen(Screen parent) { return new CompanionScreen(false, parent); }
@@ -164,13 +174,15 @@ public final class LegacyForgeClient {
 					addRenderableWidget(Button.builder(Component.literal("全部已完成功能与修改入口"), value ->
 						minecraft.setScreen(new LegacyFeatureDirectoryScreen(this, FeatureGroup.ALL)))
 						.bounds(left, 65, panelWidth, 24).build());
+					addRenderableWidget(Button.builder(Component.literal("打开方向导航：群系 / 结构 / 维度"), value ->
+						LegacyForgeNavigationClient.open(minecraft, this)).bounds(left, 97, panelWidth, 24).build());
 				}
 			}
 		}
 
 		private void buildShortcuts(int left, int panelWidth) {
 			addRenderableWidget(Button.builder(Component.literal("打开四列式快捷键管理（功能 / 开关 / 改键 / 重置）"), b -> minecraft.setScreen(new ShortcutSettingsScreen(this))).bounds(left, 58, panelWidth, 24).build());
-			status = "小游戏中心默认 F9；缩放 F6；导航 F7。旧 M/C/G 默认值会安全迁移";
+			status = "小游戏中心默认 F9；缩放 C；导航 F7。旧 M/G 与 beta.4 的 F6 会安全迁移";
 		}
 
 		private void buildAi(int left, int panelWidth) {
@@ -287,6 +299,7 @@ public final class LegacyForgeClient {
 		MUSIC("AI 音乐合奏", "和声、回声和低音跟奏", FeatureGroup.LEISURE, null),
 		SOCIETY("AI 模拟社会", "住宅、职业、工作、交易和关系", FeatureGroup.LEISURE, "aiplayer society leaderboard"),
 		WEATHER("世界自然事件", "极光、流星雨、沙尘暴、雷暴和日程", FeatureGroup.LEISURE, "aiplayer weather status"),
+		NAVIGATION("方向导航", "全部群系、结构和维度；磁石指南针、距离条与偏航提醒", FeatureGroup.ALL, null),
 		ORB("AI 助手球", "聊天、提醒、坐标和探索", FeatureGroup.LEISURE, null),
 		API("AI API 与模型", "服务器保存接口、模型和令牌状态", FeatureGroup.COMPATIBILITY, "aiplayer config status"),
 		SPYGLASS("望远镜生物发光", "范围、时间、冷却、条件和目标上限", FeatureGroup.COMPATIBILITY, "aiplayer spyglass status"),
@@ -314,7 +327,7 @@ public final class LegacyForgeClient {
 				List<LegacyFeature> entries = values(); int pages = Math.max(1, (entries.size() + 7) / 8);
 				page = Math.max(0, Math.min(page, pages - 1)); int card = (panel - 10) / 2; int start = page * 8;
 				for (int i = 0; i < 8 && start + i < entries.size(); i++) { LegacyFeature feature = entries.get(start + i); int column = i % 2, row = i / 2;
-					addRenderableWidget(Button.builder(Component.literal("进入 · " + feature.title), b -> { if (feature == LegacyFeature.MAID) minecraft.setScreen(new MaidTaskScreen(this, "AI_1")); else if (feature == LegacyFeature.PROMPTS) minecraft.setScreen(new PromptEditorScreen(this)); else { selected = feature; rebuild(); } })
+					addRenderableWidget(Button.builder(Component.literal("进入 · " + feature.title), b -> { if (feature == LegacyFeature.MAID) minecraft.setScreen(new MaidTaskScreen(this, "AI_1")); else if (feature == LegacyFeature.PROMPTS) minecraft.setScreen(new PromptEditorScreen(this)); else if (feature == LegacyFeature.NAVIGATION) LegacyForgeNavigationClient.open(minecraft, this); else { selected = feature; rebuild(); } })
 						.bounds(left + column * (card + 10), 45 + row * 45, card, 22).build()); }
 				if (pages > 1) { addRenderableWidget(Button.builder(Component.literal("上一页"), b -> { page--; rebuild(); }).bounds(left, height - 52, 90, 20).build()); addRenderableWidget(Button.builder(Component.literal("下一页"), b -> { page++; rebuild(); }).bounds(left + 100, height - 52, 90, 20).build()); }
 			} else {
@@ -340,7 +353,7 @@ public final class LegacyForgeClient {
 			rows.add(row("主界面组合键（主键）", () -> preferences.uiPrimaryEnabled, v -> preferences.uiPrimaryEnabled = v, () -> preferences.uiPrimary, v -> preferences.uiPrimary = v, "V"));
 			rows.add(row("主界面组合键（副键）", () -> preferences.uiSecondaryEnabled, v -> preferences.uiSecondaryEnabled = v, () -> preferences.uiSecondary, v -> preferences.uiSecondary = v, "B"));
 			rows.add(row("F8 AI 控制台", () -> preferences.positionsEnabled, v -> preferences.positionsEnabled = v, () -> preferences.positions, v -> preferences.positions = v, "F8"));
-			rows.add(row("视野缩放", () -> preferences.zoomEnabled, v -> preferences.zoomEnabled = v, () -> preferences.zoom, v -> preferences.zoom = v, "F6"));
+			rows.add(row("视野缩放", () -> preferences.zoomEnabled, v -> preferences.zoomEnabled = v, () -> preferences.zoom, v -> preferences.zoom = v, "C"));
 			rows.add(row("AI 导航", () -> preferences.navigationEnabled, v -> preferences.navigationEnabled = v, () -> preferences.navigation, v -> preferences.navigation = v, "F7"));
 			rows.add(row("小游戏中心", () -> preferences.minigamesEnabled, v -> preferences.minigamesEnabled = v, () -> preferences.minigames, v -> preferences.minigames = v, "F9"));
 			rows.add(row("小游戏：上", () -> preferences.gameUpEnabled, v -> preferences.gameUpEnabled = v, () -> preferences.gameUp, v -> preferences.gameUp = v, "W")); rows.add(row("小游戏：下", () -> preferences.gameDownEnabled, v -> preferences.gameDownEnabled = v, () -> preferences.gameDown, v -> preferences.gameDown = v, "S")); rows.add(row("小游戏：左", () -> preferences.gameLeftEnabled, v -> preferences.gameLeftEnabled = v, () -> preferences.gameLeft, v -> preferences.gameLeft = v, "A")); rows.add(row("小游戏：右", () -> preferences.gameRightEnabled, v -> preferences.gameRightEnabled = v, () -> preferences.gameRight, v -> preferences.gameRight = v, "D"));
@@ -450,13 +463,13 @@ public final class LegacyForgeClient {
 		int shortcutDefaultsVersion;
 		boolean uiPrimaryEnabled = true, uiSecondaryEnabled = true, positionsEnabled = true, zoomEnabled = true, navigationEnabled = true, minigamesEnabled = true;
 		boolean gameUpEnabled = true, gameDownEnabled = true, gameLeftEnabled = true, gameRightEnabled = true, gameActionEnabled = true, gamePauseEnabled = true, gameRestartEnabled = true, gameSecondaryEnabled = true;
-		String uiPrimary = "V", uiSecondary = "B", positions = "F8", zoom = "F6", navigation = "F7", minigames = "F9";
+		String uiPrimary = "V", uiSecondary = "B", positions = "F8", zoom = "C", navigation = "F7", minigames = "F9";
 		String gameUp = "W", gameDown = "S", gameLeft = "A", gameRight = "D", gameAction = "SPACE", gamePause = "P", gameRestart = "R", gameSecondary = "F";
 		String apiEndpoint = "https://api.openai.com/v1", apiModel = "gpt-5-mini";
 		static ClientPreferences load() { try { if (Files.isRegularFile(FILE)) { ClientPreferences value = GSON.fromJson(Files.readString(FILE), ClientPreferences.class); if (value != null) return value; } } catch (Exception ignored) { } return new ClientPreferences(); }
-		void migrateLegacyDefaults() { if (shortcutDefaultsVersion >= 2) return; if ("M".equalsIgnoreCase(minigames)) minigames = "F9"; if ("C".equalsIgnoreCase(zoom)) zoom = "F6"; if ("G".equalsIgnoreCase(navigation)) navigation = "F7"; uiPrimaryEnabled = uiSecondaryEnabled = positionsEnabled = zoomEnabled = navigationEnabled = minigamesEnabled = true; gameUpEnabled = gameDownEnabled = gameLeftEnabled = gameRightEnabled = gameActionEnabled = gamePauseEnabled = gameRestartEnabled = gameSecondaryEnabled = true; shortcutDefaultsVersion = 2; save(); }
+		void migrateLegacyDefaults() { if (shortcutDefaultsVersion >= 3) return; if ("M".equalsIgnoreCase(minigames)) minigames = "F9"; if ("F6".equalsIgnoreCase(zoom)) zoom = "C"; if ("G".equalsIgnoreCase(navigation)) navigation = "F7"; uiPrimaryEnabled = uiSecondaryEnabled = positionsEnabled = zoomEnabled = navigationEnabled = minigamesEnabled = true; gameUpEnabled = gameDownEnabled = gameLeftEnabled = gameRightEnabled = gameActionEnabled = gamePauseEnabled = gameRestartEnabled = gameSecondaryEnabled = true; shortcutDefaultsVersion = 3; save(); }
 		void save() { normalize(); try { Files.createDirectories(FILE.getParent()); Files.writeString(FILE, GSON.toJson(this), StandardCharsets.UTF_8); } catch (Exception error) { throw new IllegalStateException("客户端设置保存失败", error); } }
-		void normalize() { uiPrimary = gameplay(uiPrimary, "V"); uiSecondary = gameplay(uiSecondary, "B"); positions = gameplay(positions, "F8"); zoom = gameplay(zoom, "F6"); navigation = gameplay(navigation, "F7"); minigames = gameplay(minigames, "F9"); gameUp = gameplay(gameUp, "W"); gameDown = gameplay(gameDown, "S"); gameLeft = gameplay(gameLeft, "A"); gameRight = gameplay(gameRight, "D"); gameAction = gameplay(gameAction, "SPACE"); gamePause = gameplay(gamePause, "P"); gameRestart = gameplay(gameRestart, "R"); gameSecondary = gameplay(gameSecondary, "F"); }
+		void normalize() { uiPrimary = gameplay(uiPrimary, "V"); uiSecondary = gameplay(uiSecondary, "B"); positions = gameplay(positions, "F8"); zoom = gameplay(zoom, "C"); navigation = gameplay(navigation, "F7"); minigames = gameplay(minigames, "F9"); gameUp = gameplay(gameUp, "W"); gameDown = gameplay(gameDown, "S"); gameLeft = gameplay(gameLeft, "A"); gameRight = gameplay(gameRight, "D"); gameAction = gameplay(gameAction, "SPACE"); gamePause = gameplay(gamePause, "P"); gameRestart = gameplay(gameRestart, "R"); gameSecondary = gameplay(gameSecondary, "F"); }
 		int code(String value, String fallback) { value = value == null ? fallback : value.strip().toUpperCase(); if (value.equals("SPACE")) return GLFW.GLFW_KEY_SPACE; if (value.matches("F([1-9]|1[0-2])")) return GLFW.GLFW_KEY_F1 + Integer.parseInt(value.substring(1)) - 1; if (value.matches("[0-9]")) return value.charAt(0); return letter(value, fallback).charAt(0); }
 		static String keyName(int keyCode) { if (keyCode >= GLFW.GLFW_KEY_A && keyCode <= GLFW.GLFW_KEY_Z) return Character.toString((char) keyCode); if (keyCode >= GLFW.GLFW_KEY_0 && keyCode <= GLFW.GLFW_KEY_9) return Character.toString((char) keyCode); if (keyCode >= GLFW.GLFW_KEY_F1 && keyCode <= GLFW.GLFW_KEY_F12) return "F" + (keyCode - GLFW.GLFW_KEY_F1 + 1); if (keyCode == GLFW.GLFW_KEY_SPACE) return "SPACE"; return null; }
 		private static String letter(String value, String fallback) { String v = value == null ? "" : value.strip().toUpperCase(); return v.matches("[A-Z]") ? v : fallback; }
